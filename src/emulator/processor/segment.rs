@@ -1,0 +1,1 @@
+enum SgReg { ES, CS, SS, DS, FS, GS } 
