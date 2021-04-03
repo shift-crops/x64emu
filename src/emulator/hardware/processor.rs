@@ -1,10 +1,12 @@
 use general::*;
+use segment::*;
 
 mod general;
 mod rflags;
 mod segment;
 mod descriptor;
 
+#[derive(Clone, Copy)]
 pub struct Processor {
     rip: u64,
     gpregs: general::GpRegisters,
@@ -30,7 +32,7 @@ impl Processor {
         self.gpregs.set(GpReg8l::DIL, 0xff);
 
         self.rflags = rflags::RFlags::from_u64(0xdeadbeef);
-        self.sgregs.regs[0].selector.IDX = 1145;
+        self.sgregs.regs[SgReg::ES as usize].selector.IDX = 1145;
     }
 
     pub fn dump(&self) {

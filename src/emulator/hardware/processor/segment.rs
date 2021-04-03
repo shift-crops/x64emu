@@ -51,13 +51,13 @@ impl SgRegUnit {
     */
 }
 
+#[derive(Clone, Copy)]
 pub struct SgRegisters {
     pub regs: [SgRegUnit; SGREGS_COUNT],
 }
 
 impl SgRegisters {
     pub fn new() -> Self {
-        let sgr = SgRegUnit::new();
-        SgRegisters {regs: [sgr; SGREGS_COUNT]}
+        SgRegisters {regs: [SgRegUnit::new(); SGREGS_COUNT]}
     }
 }

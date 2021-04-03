@@ -1,7 +1,7 @@
 #![allow(non_snake_case)]
 use packed_struct::prelude::*;
 
-#[derive(Debug, Default, PackedStruct)]
+#[derive(Debug, Default, Clone, Copy, PackedStruct)]
 #[packed_struct(bit_numbering="lsb0", size_bytes="8")]
 pub struct RFlags {
     #[packed_field(bits="0")]  pub CF:  u8,

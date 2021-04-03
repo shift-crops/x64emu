@@ -28,14 +28,14 @@ impl GpRegUnit {
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct GpRegisters {
     regs: [GpRegUnit; GPREGS_COUNT],
 }
 
 impl GpRegisters {
     pub fn new() -> Self {
-        let gpr = GpRegUnit::new();
-        GpRegisters {regs: [gpr; GPREGS_COUNT]}
+        GpRegisters {regs: [GpRegUnit::new(); GPREGS_COUNT]}
     }
 
     fn get64(&self, r: usize) -> u64 { unsafe { self.regs[r].reg64 } }
