@@ -49,34 +49,46 @@ impl GpRegisters {
     fn set16(&mut self, r: usize, v: u16) -> () { self.regs[r].reg16 = v; }
     fn set8h(&mut self, r: usize, v: u8) -> () { unsafe { self.regs[r].reg8[1] = v; } }
     fn set8l(&mut self, r: usize, v: u8) -> () { unsafe { self.regs[r].reg8[0] = v; } }
+
+    fn update64(&mut self, r: usize, v: i64) -> () { unsafe { self.regs[r].reg64 = (self.regs[r].reg64 as i64 + v) as u64; } }
+    fn update32(&mut self, r: usize, v: i32) -> () { unsafe { self.regs[r].reg32 = (self.regs[r].reg32 as i32 + v) as u32; } }
+    fn update16(&mut self, r: usize, v: i16) -> () { unsafe { self.regs[r].reg16 = (self.regs[r].reg16 as i16 + v) as u16; } }
+    fn update8h(&mut self, r: usize, v: i8) -> () { unsafe { self.regs[r].reg8[1] = (self.regs[r].reg8[1] as i8 + v) as u8; } }
+    fn update8l(&mut self, r: usize, v: i8) -> () { unsafe { self.regs[r].reg8[0] = (self.regs[r].reg8[0] as i8 + v) as u8; } }
 }
 
-pub trait AutoRegSize<T, U> {
+pub trait RegAccess<T, U, V> {
     fn get(&self, r: T) -> U;
     fn set(&mut self, r: T, v: U) -> ();
+    fn update(&mut self, r: T, v: V) -> ();
 }
 
-impl AutoRegSize<GpReg64, u64> for GpRegisters {
+impl RegAccess<GpReg64, u64, i64> for GpRegisters {
     fn get(&self, r: GpReg64) -> u64 { self.get64(r as usize) }
     fn set(&mut self, r: GpReg64, v: u64) -> () { self.set64(r as usize, v); }
+    fn update(&mut self, r: GpReg64, v: i64) -> () { self.update64(r as usize, v); }
 }
 
-impl AutoRegSize<GpReg32, u32> for GpRegisters {
+impl RegAccess<GpReg32, u32, i32> for GpRegisters {
     fn get(&self, r: GpReg32) -> u32 { self.get32(r as usize) }
     fn set(&mut self, r: GpReg32, v: u32) -> () { self.set32(r as usize, v); }
+    fn update(&mut self, r: GpReg32, v: i32) -> () { self.update32(r as usize, v); }
 }
 
-impl AutoRegSize<GpReg16, u16> for GpRegisters {
+impl RegAccess<GpReg16, u16, i16> for GpRegisters {
     fn get(&self, r: GpReg16) -> u16 { self.get16(r as usize) }
     fn set(&mut self, r: GpReg16, v: u16) -> () { self.set16(r as usize, v); }
+    fn update(&mut self, r: GpReg16, v: i16) -> () { self.update16(r as usize, v); }
 }
 
-impl AutoRegSize<GpReg8h, u8> for GpRegisters {
+impl RegAccess<GpReg8h, u8, i8> for GpRegisters {
     fn get(&self, r: GpReg8h) -> u8 { self.get8h(r as usize) }
     fn set(&mut self, r: GpReg8h, v: u8) -> () { self.set8h(r as usize, v); }
+    fn update(&mut self, r: GpReg8h, v: i8) -> () { self.update8h(r as usize, v); }
 }
 
-impl AutoRegSize<GpReg8l, u8> for GpRegisters {
+impl RegAccess<GpReg8l, u8, i8> for GpRegisters {
     fn get(&self, r: GpReg8l) -> u8 { self.get8l(r as usize) }
     fn set(&mut self, r: GpReg8l, v: u8) -> () { self.set8l(r as usize, v); }
+    fn update(&mut self, r: GpReg8l, v: i8) -> () { self.update8l(r as usize, v); }
 }

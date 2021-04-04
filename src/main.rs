@@ -1,8 +1,15 @@
 mod emulator;
+mod hardware;
 mod interface;
 
-fn main() {
-    let mut emu = emulator::Emulator::new(1, 0x1000*2);
+use crate::hardware::Hardware;
+use crate::emulator::Emulator;
 
-    emu.test();
+fn main() {
+    let mut hw = Hardware::new();
+    hw.init_memory(0x1000*2);
+    //hw.test();
+
+    let mut emu = Emulator::new(hw);
+    emu.run();
 }

@@ -28,7 +28,7 @@ pub struct RFlags {
 }
 
 impl RFlags {
-    pub fn new() -> RFlags {
+    pub fn new() -> Self {
         RFlags::default()
     }
 
@@ -36,7 +36,7 @@ impl RFlags {
         u64::from_be_bytes(self.pack().unwrap())
     }
 
-    pub fn from_u64(v: u64) -> Self {
-        RFlags::unpack(&v.to_be_bytes()).unwrap()
+    pub fn from_u64(&mut self, v: u64) -> () {
+        *self = RFlags::unpack(&v.to_be_bytes()).unwrap();
     }
 }
