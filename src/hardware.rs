@@ -21,12 +21,6 @@ impl Hardware {
         self.mem.set_size(size);
     }
 
-    pub fn dump(&mut self) -> () {
-        self.core.dump();
-        self.mem.dump(self.core.rip().get() as usize -0x10 , 0x20);
-        self.mem.dump(self.core.gpregs().get(GpReg64::RSP) as usize, 0x40);
-    }
-
     pub fn test(&mut self) -> () {
         self.core.test();
         self.core.dump();

@@ -49,14 +49,14 @@ impl Memory {
         if let Some(slice) = self.mem.get(addr..) {
             Ok(slice.as_ptr())
         }
-        else { Err("addr: Out of range") }
+        else { Err("as_ptr: Out of range") }
     }
 
     pub fn as_mut_ptr(&mut self, addr: usize) -> Result<*mut u8, &'static str> {
         if let Some(slice) = self.mem.get_mut(addr..) {
             Ok(slice.as_mut_ptr())
         }
-        else { Err("addr: Out of range") }
+        else { Err("as_mut_ptr: Out of range") }
     }
 
     pub fn dump(&self, addr: usize, len: usize) -> () {

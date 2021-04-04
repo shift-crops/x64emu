@@ -39,4 +39,11 @@ impl Access {
         self.core.gpregs_mut().update(GpReg64::RSP, 8);
         self.mem.read64((self.core.gpregs().get(GpReg64::RSP)-8) as usize)
     }
+
+    pub fn dump(&self) -> () {
+        self.core.dump();
+        self.mem.dump(self.core.rip().get() as usize -0x10 , 0x20);
+        self.mem.dump(self.core.gpregs().get(GpReg64::RSP) as usize, 0x40);
+    }
+
 }

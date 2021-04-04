@@ -25,10 +25,10 @@ impl Processor {
         }
     }
 
-    pub fn rip(&self) -> ip::InstructionPointer { self.rip }
-    pub fn gpregs(&self) -> general::GpRegisters { self.gpregs }
-    pub fn sgregs(&self) -> segment::SgRegisters { self.sgregs }
-    pub fn rflags(&self) -> rflags::RFlags { self.rflags }
+    pub fn rip(&self) -> &ip::InstructionPointer { &self.rip }
+    pub fn gpregs(&self) -> &general::GpRegisters { &self.gpregs }
+    pub fn sgregs(&self) -> &segment::SgRegisters { &self.sgregs }
+    pub fn rflags(&self) -> &rflags::RFlags { &self.rflags }
 
     pub fn rip_mut(&mut self) -> &mut ip::InstructionPointer { &mut self.rip }
     pub fn gpregs_mut(&mut self) -> &mut general::GpRegisters { &mut self.gpregs }
