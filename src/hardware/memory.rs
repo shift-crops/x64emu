@@ -70,9 +70,19 @@ impl Memory {
         println!("");
     }
 
+    #[cfg(test)]
     pub fn test(&mut self) -> () {
-        self.write32(0x1000, 0xdeadbeef);
-        self.write16(0x1010, 0xbabe);
-        self.write16(0x1012, 0xcafe);
+        self.write16(0x100, 0xbabe);
+        self.write16(0x102, 0xcafe);
+        self.write32(0x104, 0xdeadbeef);
+        assert_eq!(self.read64(0x100), 0xdeadbeefcafebabe);
+
+        let mut x = self.as_mut_ptr(0x200).unwrap() as *mut u32;
+        unsafe {
+            *x = 0x55667788;
+            x = (x as usize + 4) as *mut u32;
+            *x = 0x11223344;
+        }
+        assert_eq!(self.read64(0x200), 0x1122334455667788);
     }
 }

@@ -1,9 +1,8 @@
 use packed_struct::prelude::*;
-use crate::hardware::processor::segment;
-use crate::emulator::access::Access;
+use crate::emulator::access;
 
 #[derive(Debug, Default)]
-pub struct ParseInstr {
+pub struct InstrData {
     //pre_segment: Option<segment::SgReg>,
     //pre_repeat: Option<Rep>,
     //segment: Option<segment::SgReg>,
@@ -46,12 +45,12 @@ pub struct Sib {
     #[packed_field(bits="6..7")] scale:  u8,
 }
 
-impl ParseInstr {
+impl InstrData {
     pub fn new() -> Self {
         Default::default()
     }
 
-    pub fn parse(&mut self, ac: &mut Access) -> () {
+    pub fn parse(&mut self, ac: &mut access::Access) -> () {
         self.parse_legacy_prefix(ac);
         // self.parse_rex_prefix(ac); 64 bit mode
 
@@ -93,7 +92,7 @@ impl ParseInstr {
         */
     }
 
-    fn parse_legacy_prefix(&self, ac: &mut Access) -> () {
+    fn parse_legacy_prefix(&self, ac: &mut access::Access) -> () {
         for _ in 0..4 {
             match ac.get_code8(0) {
                 0x26 => {},
@@ -112,7 +111,7 @@ impl ParseInstr {
         }
     }
 
-    fn parse_rex_prefix(&mut self, ac: &mut Access) -> () {
+    fn parse_rex_prefix(&mut self, ac: &mut access::Access) -> () {
         let code = ac.get_code8(0);
         if code < 0x40 || code > 0x4f { return; }
 
@@ -120,7 +119,7 @@ impl ParseInstr {
         ac.update_rip(1);
     }
 
-    fn parse_opcode(&mut self, ac: &mut Access) -> () {
+    fn parse_opcode(&mut self, ac: &mut access::Access) -> () {
         self.opcode = ac.get_code8(0) as u16;
         ac.update_rip(1);
 
@@ -129,7 +128,7 @@ impl ParseInstr {
         }
     }
 
-    fn parse_modrm(&mut self, ac: &mut Access) -> () {
+    fn parse_modrm(&mut self, ac: &mut access::Access) -> () {
         let code = ac.get_code8(0);
         self.modrm = ModRM::unpack(&code.to_be_bytes()).unwrap();
         ac.update_rip(1);

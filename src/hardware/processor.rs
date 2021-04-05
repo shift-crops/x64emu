@@ -54,13 +54,16 @@ impl Processor {
         println!("");
     }
  
+    #[cfg(test)]
     pub fn test(&mut self) -> () {
         self.gpregs.set(GpReg64::from(0), 0xdeadbeefcafebabe);
         self.gpregs.set(GpReg32::EAX, 0x11223344);
-        self.gpregs.set(GpReg8l::AL, 0x00);
-        self.gpregs.update(GpReg64::RAX, -1);
+        self.gpregs.set(GpReg8h::AH, 0x00);
+        self.gpregs.update(GpReg64::RAX, -0x10);
+        assert_eq!(self.gpregs.get(GpReg64::RAX), 0xdeadbeef11220034);
 
         self.gpregs.set(GpReg8l::DIL, 0xff);
+        assert_eq!(self.gpregs.get(GpReg64::RDI), 0xff);
 
         self.rflags.from_u64(0xdeadbeef);
         self.sgregs.set_sel(SgReg::ES, 0x114);

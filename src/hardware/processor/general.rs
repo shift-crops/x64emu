@@ -29,32 +29,30 @@ impl GpRegUnit {
 }
 
 #[derive(Clone, Copy)]
-pub struct GpRegisters {
-    regs: [GpRegUnit; GPREGS_COUNT],
-}
+pub struct GpRegisters([GpRegUnit; GPREGS_COUNT]);
 
 impl GpRegisters {
     pub fn new() -> Self {
-        GpRegisters {regs: [GpRegUnit::new(); GPREGS_COUNT]}
+        GpRegisters ([GpRegUnit::new(); GPREGS_COUNT])
     }
 
-    fn get64(&self, r: usize) -> u64 { unsafe { self.regs[r].reg64 } }
-    fn get32(&self, r: usize) -> u32 { unsafe { self.regs[r].reg32 } }
-    fn get16(&self, r: usize) -> u16 { unsafe { self.regs[r].reg16 } }
-    fn get8h(&self, r: usize) -> u8 { unsafe { self.regs[r].reg8[1] } }
-    fn get8l(&self, r: usize) -> u8 { unsafe { self.regs[r].reg8[0] } }
+    fn get64(&self, r: usize) -> u64 { unsafe { self.0[r].reg64 } }
+    fn get32(&self, r: usize) -> u32 { unsafe { self.0[r].reg32 } }
+    fn get16(&self, r: usize) -> u16 { unsafe { self.0[r].reg16 } }
+    fn get8h(&self, r: usize) -> u8 { unsafe { self.0[r].reg8[1] } }
+    fn get8l(&self, r: usize) -> u8 { unsafe { self.0[r].reg8[0] } }
 
-    fn set64(&mut self, r: usize, v: u64) -> () { self.regs[r].reg64 = v; }
-    fn set32(&mut self, r: usize, v: u32) -> () { self.regs[r].reg32 = v; }
-    fn set16(&mut self, r: usize, v: u16) -> () { self.regs[r].reg16 = v; }
-    fn set8h(&mut self, r: usize, v: u8) -> () { unsafe { self.regs[r].reg8[1] = v; } }
-    fn set8l(&mut self, r: usize, v: u8) -> () { unsafe { self.regs[r].reg8[0] = v; } }
+    fn set64(&mut self, r: usize, v: u64) -> () { self.0[r].reg64 = v; }
+    fn set32(&mut self, r: usize, v: u32) -> () { self.0[r].reg32 = v; }
+    fn set16(&mut self, r: usize, v: u16) -> () { self.0[r].reg16 = v; }
+    fn set8h(&mut self, r: usize, v: u8) -> () { unsafe { self.0[r].reg8[1] = v; } }
+    fn set8l(&mut self, r: usize, v: u8) -> () { unsafe { self.0[r].reg8[0] = v; } }
 
-    fn update64(&mut self, r: usize, v: i64) -> () { unsafe { self.regs[r].reg64 = (self.regs[r].reg64 as i64 + v) as u64; } }
-    fn update32(&mut self, r: usize, v: i32) -> () { unsafe { self.regs[r].reg32 = (self.regs[r].reg32 as i32 + v) as u32; } }
-    fn update16(&mut self, r: usize, v: i16) -> () { unsafe { self.regs[r].reg16 = (self.regs[r].reg16 as i16 + v) as u16; } }
-    fn update8h(&mut self, r: usize, v: i8) -> () { unsafe { self.regs[r].reg8[1] = (self.regs[r].reg8[1] as i8 + v) as u8; } }
-    fn update8l(&mut self, r: usize, v: i8) -> () { unsafe { self.regs[r].reg8[0] = (self.regs[r].reg8[0] as i8 + v) as u8; } }
+    fn update64(&mut self, r: usize, v: i64) -> () { unsafe { self.0[r].reg64 = (self.0[r].reg64 as i64 + v) as u64; } }
+    fn update32(&mut self, r: usize, v: i32) -> () { unsafe { self.0[r].reg32 = (self.0[r].reg32 as i32 + v) as u32; } }
+    fn update16(&mut self, r: usize, v: i16) -> () { unsafe { self.0[r].reg16 = (self.0[r].reg16 as i16 + v) as u16; } }
+    fn update8h(&mut self, r: usize, v: i8) -> () { unsafe { self.0[r].reg8[1] = (self.0[r].reg8[1] as i8 + v) as u8; } }
+    fn update8l(&mut self, r: usize, v: i8) -> () { unsafe { self.0[r].reg8[0] = (self.0[r].reg8[0] as i8 + v) as u8; } }
 }
 
 pub trait RegAccess<T, U, V> {

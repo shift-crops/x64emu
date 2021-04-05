@@ -2,8 +2,6 @@ pub mod processor;
 pub mod memory;
 pub mod device;
 
-use processor::general::*;
-
 pub struct Hardware {
     pub core: processor::Processor,
     pub mem: memory::Memory,
@@ -21,6 +19,7 @@ impl Hardware {
         self.mem.set_size(size);
     }
 
+    #[cfg(test)]
     pub fn test(&mut self) -> () {
         self.core.test();
         self.core.dump();
