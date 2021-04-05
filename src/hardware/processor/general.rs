@@ -1,17 +1,17 @@
 use num_enum::FromPrimitive;
 
 #[derive(FromPrimitive)] #[repr(usize)]
-pub enum GpReg64 { #[num_enum(default)] RAX, RCX, RDX, RBX, RSP, RBP, RSI, RDI }
+pub enum GpReg64 { #[num_enum(default)] RAX, RCX, RDX, RBX, RSP, RBP, RSI, RDI, R8, R9, R10, R11, R12, R13, R14, R15, END }
 #[derive(FromPrimitive)] #[repr(usize)]
-pub enum GpReg32 { #[num_enum(default)] EAX, ECX, EDX, EBX, ESP, EBP, ESI, EDI }
+pub enum GpReg32 { #[num_enum(default)] EAX, ECX, EDX, EBX, ESP, EBP, ESI, EDI, R8D, R9D, R10D, R11D, R12D, R13D, R14D, R15D }
 #[derive(FromPrimitive)] #[repr(usize)]
-pub enum GpReg16 { #[num_enum(default)] AX, CX, DX, BX, SP, BP, SI, DI }
+pub enum GpReg16 { #[num_enum(default)] AX, CX, DX, BX, SP, BP, SI, DI, R8W, R9W, R10W, R11W, R12W, R13W, R14W, R15W }
 #[derive(FromPrimitive)] #[repr(usize)]
 pub enum GpReg8h { #[num_enum(default)] AH, CH, DH, BH }
 #[derive(FromPrimitive)] #[repr(usize)]
-pub enum GpReg8l { #[num_enum(default)] AL, CL, DL, BL, SPL, BPL, SIL, DIL }
+pub enum GpReg8l { #[num_enum(default)] AL, CL, DL, BL, SPL, BPL, SIL, DIL, R8B, R9B, R10B, R11B, R12B, R13B, R14B, R15B }
 
-const GPREGS_COUNT: usize = 8;
+const GPREGS_COUNT: usize = GpReg64::END as usize;
 
 #[repr(C)]
 #[derive(Clone, Copy)]

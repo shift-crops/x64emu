@@ -1,5 +1,6 @@
 use packed_struct::prelude::*;
 use crate::emulator::access;
+use crate::emulator::instruction::opcode;
 
 #[derive(Debug, Default)]
 pub struct InstrData {
@@ -50,46 +51,46 @@ impl InstrData {
         Default::default()
     }
 
-    pub fn parse(&mut self, ac: &mut access::Access) -> () {
+    pub fn parse(&mut self, ac: &mut access::Access, op: &opcode::Opcode) -> () {
+        let flag = op.get().flag(self.opcode);
+
         self.parse_legacy_prefix(ac);
         // self.parse_rex_prefix(ac); 64 bit mode
 
         self.parse_opcode(ac);
 
-        /*
-        if  {
+        if flag.contains(opcode::OpFlags::MODRM) {
             self.parse_modrm(ac);
         }
 
-        if  {
+        if flag.contains(opcode::OpFlags::IMM32) {
             self.imm = ac.get_code32(0) as i64;
             ac.update_rip(4);
         }
-        else if  {
+        else if flag.contains(opcode::OpFlags::IMM16) {
             self.imm = ac.get_code16(0) as i64;
             ac.update_rip(2);
         } 
-        else if  {
+        else if flag.contains(opcode::OpFlags::IMM8) {
             self.imm = ac.get_code8(0) as i64;
             ac.update_rip(1);
         } 
 
-        if {
+        if flag.contains(opcode::OpFlags::PTR16) {
             self.ptr16 = ac.get_code16(0) as i16;
             ac.update_rip(2);
         }
 
-        if {
+        if flag.contains(opcode::OpFlags::MOFFS32) {
             if 32 == 32 {
                 self.moffs = ac.get_code32(0);
                 ac.update_rip(4);
             }
             else {
-                self.moffs = ac.get_code16(0);
+                self.moffs = ac.get_code16(0) as u32;
                 ac.update_rip(2);
             }
         }
-        */
     }
 
     fn parse_legacy_prefix(&self, ac: &mut access::Access) -> () {

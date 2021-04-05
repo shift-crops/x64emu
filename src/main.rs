@@ -1,3 +1,5 @@
+#[macro_use]
+extern crate bitflags;
 mod emulator;
 mod hardware;
 mod interface;

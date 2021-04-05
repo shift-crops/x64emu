@@ -36,7 +36,7 @@ impl Processor {
     pub fn rflags_mut(&mut self) -> &mut rflags::RFlags { &mut self.rflags }
 
     pub fn dump(&self) -> () {
-        let gpreg_name = ["RAX", "RCX", "RDX", "RBX", "RSP", "RBP", "RSI", "RDI"];
+        let gpreg_name = ["RAX", "RCX", "RDX", "RBX", "RSP", "RBP", "RSI", "RDI", "R8 ", "R9 ", "R10", "R11", "R12", "R13", "R14", "R15"];
         let sgreg_name = ["ES", "CS", "SS", "DS", "FS", "GS"];
         let dtreg_name = ["GDTR", "IDTR", "LDTR", " TR "];
 
