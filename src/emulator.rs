@@ -2,6 +2,7 @@ mod access;
 mod instruction;
 
 use crate::hardware::Hardware;
+use crate::hardware::processor::segment::SgReg;
 use crate::emulator::access::Access;
 use crate::emulator::instruction::Instruction;
 
@@ -18,7 +19,7 @@ impl Emulator {
 
     pub fn load_binary(&mut self) -> () {
         for i in 0..2 {
-            self.ac.set_data64(0xfff0+i*8, 0x9090909090909090);
+            self.ac.set_data64(SgReg::DS, 0xfff0+i*8, 0x9090909090909090);
         }
     }
 

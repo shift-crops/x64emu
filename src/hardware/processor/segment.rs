@@ -10,23 +10,23 @@ const SGREGS_COUNT: usize = 6;
 #[derive(Debug, Default, Clone, Copy, PackedStruct)]
 #[packed_struct(bit_numbering="lsb0", size_bytes="2", endian="msb")]
 pub struct SgDescSelector {
-    #[packed_field(bits="0:1")]  RPL: u8,
-    #[packed_field(bits="2")]    TI:  u8,
-    #[packed_field(bits="3:15")] IDX: u16,
+    #[packed_field(bits="0:1")]  pub RPL: u8,
+    #[packed_field(bits="2")]    pub TI:  u8,
+    #[packed_field(bits="3:15")] pub IDX: u16,
 }
 
 #[derive(Debug, Default, Clone, Copy, PackedStruct)]
 #[packed_struct(bit_numbering="lsb0", size_bytes="8", endian="msb")]
 pub struct SgDescCache {
-    #[packed_field(bits="0:31")]  Base:  u32,
-    #[packed_field(bits="32:51")] Limit: u32,
-    #[packed_field(bits="52:55")] Type:  u8,
-    #[packed_field(bits="56")]    S:     u8,
-    #[packed_field(bits="57:58")] DPL:   u8,
-    #[packed_field(bits="59")]    P:     u8,
-    #[packed_field(bits="60")]    AVL:   u8,
-    #[packed_field(bits="62")]    DB:    u8,
-    #[packed_field(bits="63")]    G:     u8,
+    #[packed_field(bits="0:31")]  pub Base:  u32,
+    #[packed_field(bits="32:51")] pub Limit: u32,
+    #[packed_field(bits="52:55")] pub Type:  u8,
+    #[packed_field(bits="56")]    pub S:     u8,
+    #[packed_field(bits="57:58")] pub DPL:   u8,
+    #[packed_field(bits="59")]    pub P:     u8,
+    #[packed_field(bits="60")]    pub AVL:   u8,
+    #[packed_field(bits="62")]    pub DB:    u8,
+    #[packed_field(bits="63")]    pub G:     u8,
 }
 
 impl SgDescSelector {
@@ -52,17 +52,16 @@ impl SgRegUnit {
 }
 
 #[derive(Clone, Copy)]
-pub struct SgRegisters {
-    regs: [SgRegUnit; SGREGS_COUNT],
-}
+pub struct SgRegisters ([SgRegUnit; SGREGS_COUNT]);
 
 impl SgRegisters {
     pub fn new() -> Self {
-        SgRegisters {regs: [SgRegUnit::new(); SGREGS_COUNT]}
+        SgRegisters ([SgRegUnit::new(); SGREGS_COUNT])
     }
 
-    pub fn get_sel(&self, r: SgReg) -> u16 { self.regs[r as usize].selector.to_u16() }
-    pub fn set_sel(&mut self, r: SgReg, v: u16) -> () { self.regs[r as usize].selector.from_u16(v); }
+    pub fn selector(&self, r: SgReg) -> &SgDescSelector { &self.0[r as usize].selector }
+    pub fn cache(&self, r: SgReg) -> &SgDescCache { &self.0[r as usize].cache }
 
-    pub fn get(&self, r: SgReg) -> SgRegUnit { self.regs[r as usize] }
+    pub fn selector_mut(&mut self, r: SgReg) -> &mut SgDescSelector { &mut self.0[r as usize].selector }
+    pub fn cache_mut(&mut self, r: SgReg) -> &mut SgDescCache { &mut self.0[r as usize].cache }
 }

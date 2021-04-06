@@ -10,7 +10,7 @@ pub struct InstrData {
 
     //prefix: u16,
     pub rex: Rex,
-    pub opcode: u16,
+    pub opcd: u16,
     pub modrm: ModRM,
     pub sib: Sib,
     pub disp: i32,
@@ -33,17 +33,17 @@ pub struct Rex {
 #[derive(Debug, Default, Clone, Copy, PackedStruct)]
 #[packed_struct(bit_numbering="lsb0", size_bytes="1")]
 pub struct ModRM {
-    #[packed_field(bits="0..2")] rm:  u8,
-    #[packed_field(bits="3..5")] reg:  u8,
-    #[packed_field(bits="6..7")] mod_:  u8,
+    #[packed_field(bits="0..2")] pub rm:  u8,
+    #[packed_field(bits="3..5")] pub reg:  u8,
+    #[packed_field(bits="6..7")] pub mod_:  u8,
 }
 
 #[derive(Debug, Default, Clone, Copy, PackedStruct)]
 #[packed_struct(bit_numbering="lsb0", size_bytes="1")]
 pub struct Sib {  
-    #[packed_field(bits="0..2")] base:  u8,
-    #[packed_field(bits="3..5")] index:  u8,
-    #[packed_field(bits="6..7")] scale:  u8,
+    #[packed_field(bits="0..2")] pub base:  u8,
+    #[packed_field(bits="3..5")] pub index:  u8,
+    #[packed_field(bits="6..7")] pub scale:  u8,
 }
 
 impl InstrData {
@@ -52,13 +52,12 @@ impl InstrData {
     }
 
     pub fn parse(&mut self, ac: &mut access::Access, op: &opcode::Opcode) -> () {
-        let flag = op.get().flag(self.opcode);
-
         self.parse_legacy_prefix(ac);
         // self.parse_rex_prefix(ac); 64 bit mode
 
         self.parse_opcode(ac);
 
+        let flag = op.get().flag(self.opcd);
         if flag.contains(opcode::OpFlags::MODRM) {
             self.parse_modrm(ac);
         }
@@ -81,8 +80,8 @@ impl InstrData {
             ac.update_rip(2);
         }
 
-        if flag.contains(opcode::OpFlags::MOFFS32) {
-            if 32 == 32 {
+        if flag.contains(opcode::OpFlags::MOFFSX) {
+            if 16 == 32 {
                 self.moffs = ac.get_code32(0);
                 ac.update_rip(4);
             }
@@ -92,7 +91,9 @@ impl InstrData {
             }
         }
     }
+}
 
+impl InstrData {
     fn parse_legacy_prefix(&self, ac: &mut access::Access) -> () {
         for _ in 0..4 {
             match ac.get_code8(0) {
@@ -118,27 +119,30 @@ impl InstrData {
 
         self.rex = Rex::unpack(&code.to_be_bytes()).unwrap();
         ac.update_rip(1);
+        debug!("{:} ", self.rex);
     }
 
     fn parse_opcode(&mut self, ac: &mut access::Access) -> () {
-        self.opcode = ac.get_code8(0) as u16;
+        self.opcd = ac.get_code8(0) as u16;
         ac.update_rip(1);
 
-        if self.opcode == 0x0f {
-            self.opcode = (1<<8) + ac.get_code8(0) as u16;
+        if self.opcd == 0x0f {
+            self.opcd = (1<<8) + ac.get_code8(0) as u16;
         }
     }
 
     fn parse_modrm(&mut self, ac: &mut access::Access) -> () {
         let code = ac.get_code8(0);
         self.modrm = ModRM::unpack(&code.to_be_bytes()).unwrap();
+        debug!("{:} ", self.modrm);
         ac.update_rip(1);
 
         let (mod_, rm) = (self.modrm.mod_, self.modrm.rm);
-        if 32 == 32 {
+        if 16 == 32 {
             if mod_ != 3 && rm == 4 {
                 self.sib = Sib::unpack(&ac.get_code8(0).to_be_bytes()).unwrap();
                 ac.update_rip(1);
+                debug!("{:} ", self.sib);
             }
 
             if mod_ == 2 || (mod_ == 0 && rm == 5) || (mod_ == 0 && self.sib.base == 5) {
@@ -149,6 +153,7 @@ impl InstrData {
                 self.disp = ac.get_code8(0) as i32;
                 ac.update_rip(1);
             }
+            debug!("{:} ", self.disp);
         }
         else {
             if mod_ == 2 || (mod_ == 0 && rm == 6) {
@@ -159,6 +164,7 @@ impl InstrData {
                 self.disp = ac.get_code8(0) as i32;
                 ac.update_rip(1);
             }
+            debug!("{:} ", self.disp);
         }
     }
 }

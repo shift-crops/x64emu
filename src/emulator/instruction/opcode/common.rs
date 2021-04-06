@@ -1,5 +1,4 @@
-use crate::emulator::access;
-use crate::emulator::instruction::parse;
+use crate::emulator::instruction;
 use crate::emulator::instruction::opcode::*;
 
 pub fn init_cmn_opcode(op: &mut super::OpcodeArr){
@@ -10,4 +9,4 @@ pub fn init_cmn_opcode(op: &mut super::OpcodeArr){
     setop!(0x90, nop, OpFlags::NONE);
 }
 
-fn nop (_ac: &mut access::Access, _idata: &parse::InstrData){}
+fn nop (_arg: &mut instruction::InstrArg){}

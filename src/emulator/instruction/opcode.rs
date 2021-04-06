@@ -3,9 +3,6 @@ mod opcode16;
 mod opcode32;
 mod opcode64;
 
-use crate::emulator::access;
-use crate::emulator::instruction::parse;
-
 bitflags! {
     pub struct OpFlags: u8 {
         const NONE  = 0b00000000;
@@ -21,13 +18,14 @@ bitflags! {
         const IMM16     = Self::IMM.bits | Self::SZ16.bits;
         const IMM8      = Self::IMM.bits | Self::SZ8.bits;
         const PTR16     = Self::PTR.bits | Self::SZ16.bits;
-        const MOFFS32   = Self::MOFFS.bits | Self::SZ32.bits;
+        const MOFFSX   = Self::MOFFS.bits | Self::SZ32.bits | Self::SZ16.bits;
+        const MOFFS8   = Self::MOFFS.bits | Self::SZ8.bits;
     }
 }
 
 #[derive(Clone, Copy)]
 pub struct OpcodeType {
-    pub func: fn(&mut access::Access, &parse::InstrData),
+    func: fn(&mut super::InstrArg),
     flag: OpFlags,
 }
 impl Default for OpcodeType {
@@ -68,11 +66,11 @@ impl Opcode {
 
 pub trait OpcodeTrait {
     fn init_opcode(&mut self) -> ();
-    fn exec(&self, ac: &mut access::Access, idata: &parse::InstrData) -> ();
+    fn exec(&self, arg: &mut super::InstrArg) -> ();
     fn flag(&self, opcode: u16) -> OpFlags;
 }
 
-fn undefined(ac: &mut access::Access, _idata: &parse::InstrData) -> () {
-    ac.dump();
+fn undefined(arg: &mut super::InstrArg) -> () {
+    arg.ac.dump();
     panic!("Undefined Opcode");
 }

@@ -48,7 +48,7 @@ impl Processor {
         println!("{:?}", self.rflags);
 
         for i in 0..sgreg_name.len() {
-            println!("{} : {:?}", sgreg_name[i], self.sgregs.get(SgReg::from(i)));
+            println!("{} : {:?},  {:?}", sgreg_name[i], self.sgregs.selector(SgReg::from(i)), self.sgregs.cache(SgReg::from(i)));
         }
 
         println!("");
@@ -66,6 +66,6 @@ impl Processor {
         assert_eq!(self.gpregs.get(GpReg64::RDI), 0xff);
 
         self.rflags.from_u64(0xdeadbeef);
-        self.sgregs.set_sel(SgReg::ES, 0x114);
+        self.sgregs.selector_mut(SgReg::ES).from_u16(0x114);
     }
 }

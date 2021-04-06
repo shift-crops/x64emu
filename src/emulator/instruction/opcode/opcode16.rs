@@ -1,5 +1,4 @@
-use crate::emulator::access;
-use crate::emulator::instruction::parse;
+use crate::emulator::instruction;
 use crate::hardware::processor::general::*;
 use crate::emulator::instruction::opcode::*;
 
@@ -19,17 +18,12 @@ impl super::OpcodeTrait for Opcode16 {
         setop!(0x90, hoge, OpFlags::NONE);
     }
 
-    fn exec(&self, ac: &mut access::Access, idata: &parse::InstrData) -> () {
-        (self.0[idata.opcode as usize].func)(ac, &idata);
-    }
-
-    fn flag(&self, opcode: u16) -> OpFlags {
-        self.0[opcode as usize].flag
-    }
+    fn exec(&self, arg: &mut instruction::InstrArg) -> () { (self.0[arg.idata.opcd as usize].func)(arg); } 
+    fn flag(&self, opcode: u16) -> OpFlags { self.0[opcode as usize].flag }
 }
 
-fn hoge (ac: &mut access::Access, _idata: &parse::InstrData) {
-    ac.core.gpregs_mut().set(GpReg64::RAX, 0xdeadbeef);
-    ac.pop64();
+fn hoge (arg: &mut instruction::InstrArg) {
+    arg.ac.core.gpregs_mut().set(GpReg64::RAX, 0xdeadbeef);
+    arg.ac.pop64();
     println!("hoge!");
 }

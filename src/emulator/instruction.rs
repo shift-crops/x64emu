@@ -1,7 +1,13 @@
 mod parse;
 mod opcode;
+mod exec;
 
 use crate::emulator::access;
+
+pub struct InstrArg<'a> {
+    ac: &'a mut access::Access,
+    idata: &'a parse::InstrData,
+}
 
 pub struct Instruction {
     idata: parse::InstrData,
@@ -20,6 +26,6 @@ impl Instruction {
         self.idata.parse(ac, &self.opcode);
 
         let op = self.opcode.get();
-        op.exec(ac, &self.idata);
+        op.exec(&mut InstrArg{ac, idata: &self.idata});
     }
 }

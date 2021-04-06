@@ -1,5 +1,8 @@
 #[macro_use]
 extern crate bitflags;
+#[macro_use]
+extern crate log;
+extern crate env_logger as logger;
 mod emulator;
 mod hardware;
 mod interface;
@@ -8,6 +11,7 @@ use crate::hardware::Hardware;
 use crate::emulator::Emulator;
 
 fn main() {
+    logger::init();
     let mut hw = Hardware::new();
     hw.init_memory(0x1000*0x1000);
 
