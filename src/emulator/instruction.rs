@@ -17,7 +17,7 @@ pub struct Instruction {
 impl Instruction {
     pub fn new() -> Self {
         Instruction {
-            idata: parse::InstrData::new(),
+            idata: Default::default(),
             opcode: opcode::Opcode::new(),
         }
     }

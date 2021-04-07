@@ -7,9 +7,11 @@ pub enum GpReg32 { #[num_enum(default)] EAX, ECX, EDX, EBX, ESP, EBP, ESI, EDI, 
 #[derive(FromPrimitive)] #[repr(usize)]
 pub enum GpReg16 { #[num_enum(default)] AX, CX, DX, BX, SP, BP, SI, DI, R8W, R9W, R10W, R11W, R12W, R13W, R14W, R15W }
 #[derive(FromPrimitive)] #[repr(usize)]
-pub enum GpReg8h { #[num_enum(default)] AH, CH, DH, BH }
+pub enum GpReg8 { #[num_enum(default)] AL, CL, DL, BL, AH, CH, DH, BH }
 #[derive(FromPrimitive)] #[repr(usize)]
-pub enum GpReg8l { #[num_enum(default)] AL, CL, DL, BL, SPL, BPL, SIL, DIL, R8B, R9B, R10B, R11B, R12B, R13B, R14B, R15B }
+pub enum GpReg8x { #[num_enum(default)] AL, CL, DL, BL, SPL, BPL, SIL, DIL }
+#[derive(FromPrimitive)] #[repr(usize)]
+pub enum GpReg8w { #[num_enum(default)] R8B, R9B, R10B, R11B, R12B, R13B, R14B, R15B }
 
 const GPREGS_COUNT: usize = GpReg64::END as usize;
 
@@ -79,14 +81,8 @@ impl RegAccess<GpReg16, u16, i16> for GpRegisters {
     fn update(&mut self, r: GpReg16, v: i16) -> () { self.update16(r as usize, v); }
 }
 
-impl RegAccess<GpReg8h, u8, i8> for GpRegisters {
-    fn get(&self, r: GpReg8h) -> u8 { self.get8h(r as usize) }
-    fn set(&mut self, r: GpReg8h, v: u8) -> () { self.set8h(r as usize, v); }
-    fn update(&mut self, r: GpReg8h, v: i8) -> () { self.update8h(r as usize, v); }
-}
-
-impl RegAccess<GpReg8l, u8, i8> for GpRegisters {
-    fn get(&self, r: GpReg8l) -> u8 { self.get8l(r as usize) }
-    fn set(&mut self, r: GpReg8l, v: u8) -> () { self.set8l(r as usize, v); }
-    fn update(&mut self, r: GpReg8l, v: i8) -> () { self.update8l(r as usize, v); }
+impl RegAccess<GpReg8, u8, i8> for GpRegisters {
+    fn get(&self, r: GpReg8) -> u8 { let r = r as usize; if r < 4 { self.get8l(r) } else { self.get8h(r%4) } }
+    fn set(&mut self, r: GpReg8, v: u8) -> () { let r = r as usize; if r < 4 { self.set8l(r, v) } else { self.set8h(r%4, v) }; }
+    fn update(&mut self, r: GpReg8, v: i8) -> () { let r = r as usize; if r < 4 { self.update8l(r, v) } else { self.update8h(r%4, v) }; }
 }

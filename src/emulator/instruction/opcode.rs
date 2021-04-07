@@ -18,8 +18,8 @@ bitflags! {
         const IMM16     = Self::IMM.bits | Self::SZ16.bits;
         const IMM8      = Self::IMM.bits | Self::SZ8.bits;
         const PTR16     = Self::PTR.bits | Self::SZ16.bits;
-        const MOFFSX   = Self::MOFFS.bits | Self::SZ32.bits | Self::SZ16.bits;
-        const MOFFS8   = Self::MOFFS.bits | Self::SZ8.bits;
+        const MOFFSX    = Self::MOFFS.bits | Self::SZ32.bits | Self::SZ16.bits;
+        const MOFFS8    = Self::MOFFS.bits | Self::SZ8.bits;
     }
 }
 

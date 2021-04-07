@@ -2,7 +2,6 @@ mod access;
 mod instruction;
 
 use crate::hardware::Hardware;
-use crate::hardware::processor::segment::SgReg;
 use crate::emulator::access::Access;
 use crate::emulator::instruction::Instruction;
 
@@ -17,10 +16,17 @@ impl Emulator {
         }
     }
 
-    pub fn load_binary(&mut self) -> () {
-        for i in 0..2 {
-            self.ac.set_data64(SgReg::DS, 0xfff0+i*8, 0x9090909090909090);
-        }
+    pub fn load_binary(&mut self, path: String, addr: usize) -> Result<(), Box<dyn std::error::Error>> {
+        use std::io::Read;
+        use std::fs::File;
+        use libc::c_void;
+
+        let mut file = File::open(path)?;
+        let mut buf = Vec::new();
+        let len = file.read_to_end(&mut buf)?;
+        self.ac.mem.write_data(addr, buf.as_ptr() as *const c_void, len)?;
+
+        Ok(())
     }
 
     pub fn run(&mut self) -> () {
