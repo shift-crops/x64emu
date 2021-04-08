@@ -1,0 +1,1 @@
+enum DtReg { GDTR, IDTR, LDTR, TR }
