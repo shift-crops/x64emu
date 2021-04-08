@@ -6,13 +6,23 @@ use crate::emulator::access::Access;
 use crate::emulator::instruction::Instruction;
 
 pub struct Emulator {
-    ac: Access,
+    pub ac: Access,
+    inst: Instruction,
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum Event {
+    Halted,
+    Break,
+    WatchWrite(u32),
+    WatchRead(u32),
 }
 
 impl Emulator {
     pub fn new(hw: Hardware) -> Self {
         Emulator {
             ac: Access::new(hw),
+            inst: Instruction::new(),
         }
     }
 
@@ -29,11 +39,14 @@ impl Emulator {
         Ok(())
     }
 
-    pub fn run(&mut self) -> () {
-        let mut inst = Instruction::new();
+    pub fn step(&mut self) -> Option<Event> {
+        self.inst.fetch_exec(&mut self.ac);
+        None
+    }
 
+    pub fn run(&mut self) -> () {
         loop {
-            inst.fetch_exec(&mut self.ac);
+            self.inst.fetch_exec(&mut self.ac);
         }
     }
 
