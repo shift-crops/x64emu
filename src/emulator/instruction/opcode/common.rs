@@ -142,7 +142,7 @@ macro_rules! adc_dst_src {
             fn [<adc_ $dst _ $src>](arg: &mut instruction::InstrArg) {
                 let dst: u8 = [<get_ $dst>](arg);
                 let src: u8 = [<get_ $src>](arg);
-                let cf:  u8 = arg.ac.core.rflags().is_carry() as u8;
+                let cf:  u8 = arg.ac.core.rflags.is_carry() as u8;
 
                 debug!("adc: {:02x}, {:02x}", dst, src);
                 [<set_ $dst>](arg, dst.wrapping_add(src).wrapping_add(cf));
@@ -158,7 +158,7 @@ macro_rules! sbb_dst_src {
             fn [<sbb_ $dst _ $src>](arg: &mut instruction::InstrArg) {
                 let dst: u8 = [<get_ $dst>](arg);
                 let src: u8 = [<get_ $src>](arg);
-                let cf:  u8 = arg.ac.core.rflags().is_carry() as u8;
+                let cf:  u8 = arg.ac.core.rflags.is_carry() as u8;
 
                 debug!("sbb: {:02x}, {:02x}", dst, src);
                 [<set_ $dst>](arg, dst.wrapping_sub(src).wrapping_sub(cf));
@@ -353,7 +353,7 @@ test_dst_src!(al, imm8);
 fn mov_r8_imm8(arg: &mut instruction::InstrArg) {
     let imm8: u8 = arg.idata.imm as u8;
     debug!("mov_r8_imm8: imm8 = 0x{:02x}", imm8);
-    arg.ac.core.gpregs_mut().set(GpReg8::from((arg.idata.opcd&0x7) as usize), imm8);
+    arg.ac.core.gpregs.set(GpReg8::from((arg.idata.opcd&0x7) as usize), imm8);
 }
 
 mov_dst_src!(rm8, imm8);

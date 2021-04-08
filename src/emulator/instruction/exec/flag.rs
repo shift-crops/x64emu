@@ -6,7 +6,7 @@ pub fn update_rflags_add<T: Into<u64> + num::traits::ops::overflowing::Overflowi
     let sz = std::mem::size_of::<T>()*8 - 1;
     let (s1, s2, sr) = ((v1.into() >> sz) != 0, (v2.into() >> sz) != 0, (result >> sz) != 0);
 
-    let rf = arg.ac.core.rflags_mut();
+    let rf = &mut arg.ac.core.rflags;
     rf.set_carry(cf);
     rf.set_parity(check_parity(result as u8));
     rf.set_zero(result == 0);
@@ -21,7 +21,7 @@ pub fn update_rflags_adc<T: Into<u64> + num::traits::ops::overflowing::Overflowi
     let sz = std::mem::size_of::<T>()*8 - 1;
     let (s1, s2, sr) = ((v1.into() >> sz) != 0, (v2.into() >> sz) != 0, (result >> sz) != 0);
 
-    let rf = arg.ac.core.rflags_mut();
+    let rf = &mut arg.ac.core.rflags;
     rf.set_carry(cf1 || cf2);
     rf.set_parity(check_parity(result as u8));
     rf.set_zero(result == 0);
@@ -35,7 +35,7 @@ pub fn update_rflags_sub<T: Into<u64> + num::traits::ops::overflowing::Overflowi
     let sz = std::mem::size_of::<T>()*8 - 1;
     let (s1, s2, sr) = ((v1.into() >> sz) != 0, (v2.into() >> sz) != 0, (result >> sz) != 0);
 
-    let rf = arg.ac.core.rflags_mut();
+    let rf = &mut arg.ac.core.rflags;
     rf.set_carry(cf);
     rf.set_parity(check_parity(result as u8));
     rf.set_zero(result == 0);
@@ -50,7 +50,7 @@ pub fn update_rflags_sbb<T: Into<u64> + num::traits::ops::overflowing::Overflowi
     let sz = std::mem::size_of::<T>()*8 - 1;
     let (s1, s2, sr) = ((v1.into() >> sz) != 0, (v2.into() >> sz) != 0, (result >> sz) != 0);
 
-    let rf = arg.ac.core.rflags_mut();
+    let rf = &mut arg.ac.core.rflags;
     rf.set_carry(cf1 || cf2);
     rf.set_parity(check_parity(result as u8));
     rf.set_zero(result == 0);
@@ -63,7 +63,7 @@ pub fn update_rflags_mul<T: Into<u64> + num::traits::WrappingMul + Sized + Copy>
     let sz = std::mem::size_of::<T>()*8 - 1;
     let of = (ur.into() >> sz) != 0;
 
-    let rf = arg.ac.core.rflags_mut();
+    let rf = &mut arg.ac.core.rflags;
     rf.set_carry(of);
     rf.set_overflow(of);
 }
@@ -72,7 +72,7 @@ pub fn update_rflags_or<T: Into<u64> + std::ops::BitOr<Output = T> + Sized + Cop
     let ur = (v1 | v2).into();
     let sz = std::mem::size_of::<T>()*8 - 1;
 
-    let rf = arg.ac.core.rflags_mut();
+    let rf = &mut arg.ac.core.rflags;
     rf.set_carry(false);
     rf.set_parity(check_parity(ur as u8));
     rf.set_zero(ur == 0);
@@ -84,7 +84,7 @@ pub fn update_rflags_and<T: Into<u64> + std::ops::BitAnd<Output = T> + Sized + C
     let ur = (v1 & v2).into();
     let sz = std::mem::size_of::<T>()*8 - 1;
 
-    let rf = arg.ac.core.rflags_mut();
+    let rf = &mut arg.ac.core.rflags;
     rf.set_carry(false);
     rf.set_parity(check_parity(ur as u8));
     rf.set_zero(ur == 0);
@@ -96,7 +96,7 @@ pub fn update_rflags_xor<T: Into<u64> + std::ops::BitXor<Output = T> + Sized + C
     let ur = (v1 ^ v2).into();
     let sz = std::mem::size_of::<T>()*8 - 1;
 
-    let rf = arg.ac.core.rflags_mut();
+    let rf = &mut arg.ac.core.rflags;
     rf.set_carry(false);
     rf.set_parity(check_parity(ur as u8));
     rf.set_zero(ur == 0);
@@ -105,42 +105,42 @@ pub fn update_rflags_xor<T: Into<u64> + std::ops::BitXor<Output = T> + Sized + C
 }
 
 pub fn check_rflags_o(arg: &InstrArg) -> bool {
-    let rf = arg.ac.core.rflags();
+    let rf = arg.ac.core.rflags;
     rf.is_overflow()
 }
 
 pub fn check_rflags_b(arg: &InstrArg) -> bool {
-    let rf = arg.ac.core.rflags();
+    let rf = arg.ac.core.rflags;
     rf.is_carry()
 }
 
 pub fn check_rflags_z(arg: &InstrArg) -> bool {
-    let rf = arg.ac.core.rflags();
+    let rf = arg.ac.core.rflags;
     rf.is_zero()
 }
 
 pub fn check_rflags_be(arg: &InstrArg) -> bool {
-    let rf = arg.ac.core.rflags();
+    let rf = arg.ac.core.rflags;
     rf.is_carry() || rf.is_zero()
 }
 
 pub fn check_rflags_s(arg: &InstrArg) -> bool {
-    let rf = arg.ac.core.rflags();
+    let rf = arg.ac.core.rflags;
     rf.is_sign()
 }
 
 pub fn check_rflags_p(arg: &InstrArg) -> bool {
-    let rf = arg.ac.core.rflags();
+    let rf = arg.ac.core.rflags;
     rf.is_parity()
 }
 
 pub fn check_rflags_l(arg: &InstrArg) -> bool {
-    let rf = arg.ac.core.rflags();
+    let rf = arg.ac.core.rflags;
     rf.is_sign() ^ rf.is_overflow()
 }
 
 pub fn check_rflags_le(arg: &InstrArg) -> bool {
-    let rf = arg.ac.core.rflags();
+    let rf = arg.ac.core.rflags;
     rf.is_zero() || (rf.is_sign() ^ rf.is_overflow())
 }
 

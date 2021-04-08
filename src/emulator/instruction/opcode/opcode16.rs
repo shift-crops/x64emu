@@ -23,7 +23,7 @@ impl super::OpcodeTrait for Opcode16 {
 }
 
 fn hoge (arg: &mut instruction::InstrArg) {
-    arg.ac.core.gpregs_mut().set(GpReg64::RAX, 0xdeadbeef);
+    arg.ac.core.gpregs.set(GpReg64::RAX, 0xdeadbeef);
     arg.ac.pop64();
     println!("hoge!");
 }

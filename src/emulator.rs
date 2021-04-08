@@ -41,7 +41,7 @@ impl Emulator {
     pub fn test(&mut self) -> () {
         use crate::hardware::processor::general::*;
 
-        self.ac.core.gpregs_mut().set(GpReg64::RSP, 0xf20);
+        self.ac.core.gpregs.set(GpReg64::RSP, 0xf20);
         self.ac.push64(0xdeadbeef);
         self.ac.push64(0xcafebabe);
         assert_eq!(self.ac.pop64(), 0xcafebabe);
@@ -57,6 +57,6 @@ impl Emulator {
         assert_eq!(self.ac.pop64(), 0x55667788);
 
         self.ac.core.dump();
-        self.ac.mem.dump(self.ac.core.gpregs().get(GpReg64::RSP) as usize, 0x40);
+        self.ac.mem.dump(self.ac.core.gpregs.get(GpReg64::RSP) as usize, 0x40);
     }
 }

@@ -31,11 +31,11 @@ pub struct SgDescCache {
 
 impl SgDescSelector {
     pub fn to_u16(&self) -> u16 {
-        u16::from_le_bytes(self.pack().unwrap())
+        u16::from_be_bytes(self.pack().unwrap())
     }
 
     pub fn from_u16(&mut self, v: u16) -> () {
-        *self = SgDescSelector::unpack(&v.to_le_bytes()).unwrap();
+        *self = SgDescSelector::unpack(&v.to_be_bytes()).unwrap();
     }
 }
 

@@ -2,15 +2,15 @@ use crate::hardware::processor::general::*;
 use crate::hardware::processor::segment::*;
 use crate::emulator::instruction::InstrArg;
 
-macro_rules! get_gpreg { ($arg:expr, $type:ty, $reg:expr) => { $arg.ac.core.gpregs().get(<$type>::from($reg as usize)) } }
-macro_rules! set_gpreg { ($arg:expr, $type:ty, $reg:expr, $val:expr) => { $arg.ac.core.gpregs_mut().set(<$type>::from($reg as usize), $val); } }
+macro_rules! get_gpreg { ($arg:expr, $type:ty, $reg:expr) => { $arg.ac.core.gpregs.get(<$type>::from($reg as usize)) } }
+macro_rules! set_gpreg { ($arg:expr, $type:ty, $reg:expr, $val:expr) => { $arg.ac.core.gpregs.set(<$type>::from($reg as usize), $val); } }
 
 pub fn get_al(arg: &InstrArg) -> u8 {
-    arg.ac.core.gpregs().get(GpReg8::AL)
+    arg.ac.core.gpregs.get(GpReg8::AL)
 }
 
 pub fn set_al(arg: &mut InstrArg, v: u8) -> () {
-    arg.ac.core.gpregs_mut().set(GpReg8::AL, v);
+    arg.ac.core.gpregs.set(GpReg8::AL, v);
 }
 
 pub fn get_imm8(arg: &InstrArg) -> u8 {
@@ -126,7 +126,7 @@ fn addr_modrm(arg: &InstrArg) -> (SgReg, u64) {
             addr += arg.idata.disp as u64;
         } else {
             segment = if modrm.rm == 5 { SgReg::SS } else { SgReg::DS };
-            addr += arg.ac.core.gpregs().get(GpReg32::from(modrm.rm as usize)) as u64;
+            addr += arg.ac.core.gpregs.get(GpReg32::from(modrm.rm as usize)) as u64;
         }
     } else {
         match modrm.mod_ {
@@ -135,12 +135,12 @@ fn addr_modrm(arg: &InstrArg) -> (SgReg, u64) {
         }
 
         match modrm.rm {
-            0|1|7 => addr += arg.ac.core.gpregs().get(GpReg16::BX) as u64,
+            0|1|7 => addr += arg.ac.core.gpregs.get(GpReg16::BX) as u64,
             2|3|6 => {
                 if modrm.mod_ == 0 && modrm.rm == 6 {
                     addr += arg.idata.disp as u64;
                 } else {
-                    addr += arg.ac.core.gpregs().get(GpReg16::BP) as u64;
+                    addr += arg.ac.core.gpregs.get(GpReg16::BP) as u64;
                     segment = SgReg::SS;
                 }
             },
@@ -148,7 +148,7 @@ fn addr_modrm(arg: &InstrArg) -> (SgReg, u64) {
         }
 
         if modrm.rm < 6 {
-            addr += arg.ac.core.gpregs().get( if modrm.rm%2 == 1 {GpReg16::DI} else {GpReg16::SI} ) as u64;
+            addr += arg.ac.core.gpregs.get( if modrm.rm%2 == 1 {GpReg16::DI} else {GpReg16::SI} ) as u64;
         }
     }
 
@@ -169,8 +169,8 @@ fn addr_sib(arg: &InstrArg) -> (Option<SgReg>, u64) {
         bs = 0;
     } else {
         segment = Some(if modrm.rm == 5 { SgReg::SS } else { SgReg::DS });
-        bs = arg.ac.core.gpregs().get(GpReg32::from(sib.base as usize)) as u64;
+        bs = arg.ac.core.gpregs.get(GpReg32::from(sib.base as usize)) as u64;
     }
 
-    (segment, bs + arg.ac.core.gpregs().get(GpReg32::from(sib.index as usize)) as u64 * (1<<sib.scale))
+    (segment, bs + arg.ac.core.gpregs.get(GpReg32::from(sib.index as usize)) as u64 * (1<<sib.scale))
 }

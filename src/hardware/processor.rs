@@ -9,10 +9,10 @@ use segment::*;
 
 #[derive(Clone)]
 pub struct Processor {
-    rip: ip::InstructionPointer,
-    gpregs: general::GpRegisters,
-    sgregs: segment::SgRegisters,
-    rflags: rflags::RFlags,
+    pub rip: ip::InstructionPointer,
+    pub gpregs: general::GpRegisters,
+    pub sgregs: segment::SgRegisters,
+    pub rflags: rflags::RFlags,
 }
 
 impl Processor {
@@ -24,16 +24,6 @@ impl Processor {
             rflags: Default::default(),
         }
     }
-
-    pub fn rip(&self) -> &ip::InstructionPointer { &self.rip }
-    pub fn gpregs(&self) -> &general::GpRegisters { &self.gpregs }
-    pub fn sgregs(&self) -> &segment::SgRegisters { &self.sgregs }
-    pub fn rflags(&self) -> &rflags::RFlags { &self.rflags }
-
-    pub fn rip_mut(&mut self) -> &mut ip::InstructionPointer { &mut self.rip }
-    pub fn gpregs_mut(&mut self) -> &mut general::GpRegisters { &mut self.gpregs }
-    pub fn sgregs_mut(&mut self) -> &mut segment::SgRegisters { &mut self.sgregs }
-    pub fn rflags_mut(&mut self) -> &mut rflags::RFlags { &mut self.rflags }
 
     pub fn dump(&self) -> () {
         let gpreg_name = ["RAX", "RCX", "RDX", "RBX", "RSP", "RBP", "RSI", "RDI", "R8 ", "R9 ", "R10", "R11", "R12", "R13", "R14", "R15"];

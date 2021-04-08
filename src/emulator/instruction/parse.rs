@@ -111,7 +111,7 @@ impl InstrData {
         let code = ac.get_code8(0);
         if code < 0x40 || code > 0x4f { return; }
 
-        self.rex = Rex::unpack(&code.to_le_bytes()).unwrap();
+        self.rex = Rex::unpack(&code.to_be_bytes()).unwrap();
         ac.update_rip(1);
         debug!("{:} ", self.rex);
     }
@@ -128,14 +128,14 @@ impl InstrData {
 
     fn parse_modrm(&mut self, ac: &mut access::Access) -> () {
         let code = ac.get_code8(0);
-        self.modrm = ModRM::unpack(&code.to_le_bytes()).unwrap();
+        self.modrm = ModRM::unpack(&code.to_be_bytes()).unwrap();
         debug!("{:?} ", self.modrm);
         ac.update_rip(1);
 
         let (mod_, rm) = (self.modrm.mod_, self.modrm.rm);
         if 32 == 32 {
             if mod_ != 3 && rm == 4 {
-                self.sib = Sib::unpack(&ac.get_code8(0).to_le_bytes()).unwrap();
+                self.sib = Sib::unpack(&ac.get_code8(0).to_be_bytes()).unwrap();
                 ac.update_rip(1);
                 debug!("{:?} ", self.sib);
             }

@@ -5,7 +5,7 @@ use packed_struct::prelude::*;
 #[packed_struct(bit_numbering="lsb0", size_bytes="8")]
 pub struct RFlags {
     #[packed_field(bits="0")]  CF:  u8,
-    //#[packed_field(bits="1")] _r01: ReservedOnes<packed_bits::Bits1>,
+    #[packed_field(bits="1")] _r01: ReservedOnes<packed_bits::Bits1>,
     #[packed_field(bits="2")]  PF:  u8,
     //#[packed_field(bits="3")] _r03: ReservedZero<packed_bits::Bits1>,
     #[packed_field(bits="4")]  AF:  u8,
@@ -28,8 +28,8 @@ pub struct RFlags {
 }
 
 impl RFlags {
-    pub fn to_u64(&self) -> u64 { u64::from_le_bytes(self.pack().unwrap()) }
-    pub fn from_u64(&mut self, v: u64) -> () { *self = RFlags::unpack(&v.to_le_bytes()).unwrap(); }
+    pub fn to_u64(&self) -> u64 { u64::from_be_bytes(self.pack().unwrap()) }
+    pub fn from_u64(&mut self, v: u64) -> () { *self = RFlags::unpack(&v.to_be_bytes()).unwrap(); }
 
     pub fn is_carry(&self) -> bool { self.CF != 0 }
     pub fn is_parity(&self) -> bool { self.PF != 0 }
