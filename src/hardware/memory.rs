@@ -29,8 +29,7 @@ impl Memory {
             if let Some(slice) = self.mem.get(src_addr..src_addr+len) {
                     libc::memcpy(dst, slice.as_ptr() as *const c_void, len);
                     Ok(len)
-            }
-            else {
+            } else {
                     libc::memset(dst, 0, len);
                     Err("src: Out of range")
             }
@@ -41,22 +40,19 @@ impl Memory {
         if let Some(slice) = self.mem.get_mut(dst_addr..dst_addr+len) {
             unsafe{ libc::memcpy(slice.as_mut_ptr() as *mut c_void, src, len); }
             Ok(len)
-        }
-        else { Err("dst: Out of range") }
+        } else { Err("dst: Out of range") }
     }
 
     pub fn as_ptr(&self, addr: usize) -> Result<*const u8, &'static str> {
         if let Some(slice) = self.mem.get(addr..) {
             Ok(slice.as_ptr())
-        }
-        else { Err("as_ptr: Out of range") }
+        } else { Err("as_ptr: Out of range") }
     }
 
     pub fn as_mut_ptr(&mut self, addr: usize) -> Result<*mut u8, &'static str> {
         if let Some(slice) = self.mem.get_mut(addr..) {
             Ok(slice.as_mut_ptr())
-        }
-        else { Err("as_mut_ptr: Out of range") }
+        } else { Err("as_mut_ptr: Out of range") }
     }
 
     pub fn dump(&self, addr: usize, len: usize) -> () {

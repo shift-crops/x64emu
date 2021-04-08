@@ -4,8 +4,8 @@ use crate::emulator::instruction::exec::regmem::*;
 use crate::emulator::instruction::exec::flag::*;
 use crate::hardware::processor::general::*;
 
-macro_rules! get_al { ($arg:expr) => { $arg.ac.core.gpregs().get(GpReg8::AL) } }
-macro_rules! set_al { ($arg:expr, $val:expr) => { $arg.ac.core.gpregs_mut().set(GpReg8::AL, $val) } }
+// macro_rules! get_al { ($arg:expr) => { $arg.ac.core.gpregs().get(GpReg8::AL) } }
+// macro_rules! set_al { ($arg:expr, $val:expr) => { $arg.ac.core.gpregs_mut().set(GpReg8::AL, $val) } }
 
 pub fn init_cmn_opcode(op: &mut super::OpcodeArr){
     macro_rules! setop {
@@ -18,6 +18,12 @@ pub fn init_cmn_opcode(op: &mut super::OpcodeArr){
     setop!(0x08, or_rm8_r8,     OpFlags::MODRM);
     setop!(0x0a, or_r8_rm8,     OpFlags::MODRM);
     setop!(0x0c, or_al_imm8,    OpFlags::IMM8);
+    setop!(0x10, adc_rm8_r8,    OpFlags::MODRM);
+    setop!(0x12, adc_r8_rm8,    OpFlags::MODRM);
+    setop!(0x14, adc_al_imm8,   OpFlags::IMM8);
+    setop!(0x18, sbb_rm8_r8,    OpFlags::MODRM);
+    setop!(0x1a, sbb_r8_rm8,    OpFlags::MODRM);
+    setop!(0x1c, sbb_al_imm8,   OpFlags::IMM8);
     setop!(0x20, and_rm8_r8,    OpFlags::MODRM);
     setop!(0x22, and_r8_rm8,    OpFlags::MODRM);
     setop!(0x24, and_al_imm8,   OpFlags::IMM8);
@@ -30,26 +36,24 @@ pub fn init_cmn_opcode(op: &mut super::OpcodeArr){
     setop!(0x38, cmp_rm8_r8,    OpFlags::MODRM);
     setop!(0x3a, cmp_r8_rm8,    OpFlags::MODRM);
     setop!(0x3c, cmp_al_imm8,   OpFlags::IMM8);
-    /*
-    setop!(0x70, jo_rel8,       OpFlags::IMM8);
-    setop!(0x71, jno_rel8,      OpFlags::IMM8);
-    setop!(0x72, jb_rel8,       OpFlags::IMM8);
-    setop!(0x73, jnb_rel8,      OpFlags::IMM8);
-    setop!(0x74, jz_rel8,       OpFlags::IMM8);
-    setop!(0x75, jnz_rel8,      OpFlags::IMM8);
-    setop!(0x76, jbe_rel8,      OpFlags::IMM8);
-    setop!(0x77, ja_rel8,       OpFlags::IMM8);
-    setop!(0x78, js_rel8,       OpFlags::IMM8);
-    setop!(0x79, jns_rel8,      OpFlags::IMM8);
-    setop!(0x7a, jp_rel8,       OpFlags::IMM8);
-    setop!(0x7b, jnp_rel8,      OpFlags::IMM8);
-    setop!(0x7c, jl_rel8,       OpFlags::IMM8);
-    setop!(0x7d, jnl_rel8,      OpFlags::IMM8);
-    setop!(0x7e, jle_rel8,      OpFlags::IMM8);
-    setop!(0x7f, jnle_rel8,     OpFlags::IMM8);
+    setop!(0x70, jo_imm8,       OpFlags::IMM8);
+    setop!(0x71, jno_imm8,      OpFlags::IMM8);
+    setop!(0x72, jb_imm8,       OpFlags::IMM8);
+    setop!(0x73, jnb_imm8,      OpFlags::IMM8);
+    setop!(0x74, jz_imm8,       OpFlags::IMM8);
+    setop!(0x75, jnz_imm8,      OpFlags::IMM8);
+    setop!(0x76, jbe_imm8,      OpFlags::IMM8);
+    setop!(0x77, jnbe_imm8,     OpFlags::IMM8);
+    setop!(0x78, js_imm8,       OpFlags::IMM8);
+    setop!(0x79, jns_imm8,      OpFlags::IMM8);
+    setop!(0x7a, jp_imm8,       OpFlags::IMM8);
+    setop!(0x7b, jnp_imm8,      OpFlags::IMM8);
+    setop!(0x7c, jl_imm8,       OpFlags::IMM8);
+    setop!(0x7d, jnl_imm8,      OpFlags::IMM8);
+    setop!(0x7e, jle_imm8,      OpFlags::IMM8);
+    setop!(0x7f, jnle_imm8,     OpFlags::IMM8);
     setop!(0x84, test_rm8_r8,   OpFlags::MODRM);
     setop!(0x86, xchg_r8_rm8,   OpFlags::MODRM);
-    */
     setop!(0x88, mov_rm8_r8,    OpFlags::MODRM);
     setop!(0x8a, mov_r8_rm8,    OpFlags::MODRM);
     //setop!(0x8e, mov_sreg_rm16, OpFlags::MODRM);
@@ -60,8 +64,8 @@ pub fn init_cmn_opcode(op: &mut super::OpcodeArr){
     for i in 0..8 {
         setop!(0xb0+i, mov_r8_imm8, OpFlags::IMM8);
     }
-    /*
     setop!(0xc6, mov_rm8_imm8,  OpFlags::MODRM | OpFlags::IMM8);
+    /*
     setop!(0xcb, retf,          OpFlags::NONE);
     setop!(0xcc, int3,          OpFlags::NONE);
     setop!(0xcd, int_imm8,      OpFlags::IMM8);
@@ -79,6 +83,7 @@ pub fn init_cmn_opcode(op: &mut super::OpcodeArr){
 
     setop!(0x0f20, mov_r32_crn, OpFlags::MODRM);
     setop!(0x0f22, mov_crn_r32, OpFlags::MODRM);
+    */
     setop!(0x0f90, seto_rm8,    OpFlags::MODRM);
     setop!(0x0f91, setno_rm8,   OpFlags::MODRM);
     setop!(0x0f92, setb_rm8,    OpFlags::MODRM);
@@ -86,7 +91,7 @@ pub fn init_cmn_opcode(op: &mut super::OpcodeArr){
     setop!(0x0f94, setz_rm8,    OpFlags::MODRM);
     setop!(0x0f95, setnz_rm8,   OpFlags::MODRM);
     setop!(0x0f96, setbe_rm8,   OpFlags::MODRM);
-    setop!(0x0f97, seta_rm8,    OpFlags::MODRM);
+    setop!(0x0f97, setnbe_rm8,  OpFlags::MODRM);
     setop!(0x0f98, sets_rm8,    OpFlags::MODRM);
     setop!(0x0f99, setns_rm8,   OpFlags::MODRM);
     setop!(0x0f9a, setp_rm8,    OpFlags::MODRM);
@@ -97,188 +102,290 @@ pub fn init_cmn_opcode(op: &mut super::OpcodeArr){
     setop!(0x0f9f, setnle_rm8,  OpFlags::MODRM);
 
     setop!(0x80, code_80,       OpFlags::MODRM | OpFlags::IMM8);
-    setop!(0x82, code_82,       OpFlags::MODRM | OpFlags::IMM8);
-    setop!(0xc0, code_c0,       OpFlags::MODRM | OpFlags::IMM8);
-    setop!(0xf6, code_f6,       OpFlags::MODRM);
-    */
+    //setop!(0xc0, code_c0,       OpFlags::MODRM | OpFlags::IMM8);
+    //setop!(0xf6, code_f6,       OpFlags::MODRM);
 }
 
-fn add_rm8_r8 (arg: &mut instruction::InstrArg){
-    let rm8: u8 = get_rm8(arg);
-    let r8:  u8 = get_r8(arg);
-    debug!("add_rm8_r8: rm8 = 0x{:02x}, r8 = 0x{:02x}", rm8, r8);
-    set_rm8(arg, rm8.wrapping_add(r8));
-    update_rflags_add(arg, rm8, r8);
+macro_rules! add_dst_src {
+    ( $dst:ident, $src:ident ) => {
+        paste::item! {
+            fn [<add_ $dst _ $src>](arg: &mut instruction::InstrArg) {
+                let dst: u8 = [<get_ $dst>](arg);
+                let src: u8 = [<get_ $src>](arg);
+
+                debug!("add: {:02x}, {:02x}", dst, src);
+                [<set_ $dst>](arg, dst.wrapping_add(src));
+                update_rflags_add(arg, dst, src);
+            }
+        }
+    };
 }
 
-fn add_r8_rm8 (arg: &mut instruction::InstrArg){
-    let r8:  u8 = get_r8(arg);
-    let rm8: u8 = get_rm8(arg);
-    debug!("add_r8_rm8: r8 = 0x{:02x}, rm8 = 0x{:02x}", r8, rm8);
-    set_r8(arg, r8.wrapping_add(rm8));
-    update_rflags_add(arg, r8, rm8);
+macro_rules! or_dst_src {
+    ( $dst:ident, $src:ident ) => {
+        paste::item! {
+            fn [<or_ $dst _ $src>](arg: &mut instruction::InstrArg) {
+                let dst: u8 = [<get_ $dst>](arg);
+                let src: u8 = [<get_ $src>](arg);
+
+                debug!("or: {:02x}, {:02x}", dst, src);
+                [<set_ $dst>](arg, dst | src);
+                update_rflags_or(arg, dst, src);
+            }
+        }
+    };
 }
 
-fn add_al_imm8 (arg: &mut instruction::InstrArg){
-    let al:   u8 = get_al!(arg);
-    let imm8: u8 = arg.idata.imm as u8;
-    debug!("add_al_imm8: al = 0x{:02x}, imm8 = 0x{:02x}", al, imm8);
-    set_al!(arg, al.wrapping_add(imm8));
-    update_rflags_add(arg, al, imm8);
+macro_rules! adc_dst_src {
+    ( $dst:ident, $src:ident ) => {
+        paste::item! {
+            fn [<adc_ $dst _ $src>](arg: &mut instruction::InstrArg) {
+                let dst: u8 = [<get_ $dst>](arg);
+                let src: u8 = [<get_ $src>](arg);
+                let cf:  u8 = arg.ac.core.rflags().is_carry() as u8;
+
+                debug!("adc: {:02x}, {:02x}", dst, src);
+                [<set_ $dst>](arg, dst.wrapping_add(src).wrapping_add(cf));
+                update_rflags_adc(arg, dst, src, cf);
+            }
+        }
+    };
+}
+
+macro_rules! sbb_dst_src {
+    ( $dst:ident, $src:ident ) => {
+        paste::item! {
+            fn [<sbb_ $dst _ $src>](arg: &mut instruction::InstrArg) {
+                let dst: u8 = [<get_ $dst>](arg);
+                let src: u8 = [<get_ $src>](arg);
+                let cf:  u8 = arg.ac.core.rflags().is_carry() as u8;
+
+                debug!("sbb: {:02x}, {:02x}", dst, src);
+                [<set_ $dst>](arg, dst.wrapping_sub(src).wrapping_sub(cf));
+                update_rflags_sbb(arg, dst, src, cf);
+            }
+        }
+    };
+}
+
+macro_rules! and_dst_src {
+    ( $dst:ident, $src:ident ) => {
+        paste::item! {
+            fn [<and_ $dst _ $src>](arg: &mut instruction::InstrArg) {
+                let dst: u8 = [<get_ $dst>](arg);
+                let src: u8 = [<get_ $src>](arg);
+
+                debug!("and: {:02x}, {:02x}", dst, src);
+                [<set_ $dst>](arg, dst & src);
+                update_rflags_and(arg, dst, src);
+            }
+        }
+    };
+}
+
+macro_rules! sub_dst_src {
+    ( $dst:ident, $src:ident ) => {
+        paste::item! {
+            fn [<sub_ $dst _ $src>](arg: &mut instruction::InstrArg) {
+                let dst: u8 = [<get_ $dst>](arg);
+                let src: u8 = [<get_ $src>](arg);
+
+                debug!("sub: {:02x}, {:02x}", dst, src);
+                [<set_ $dst>](arg, dst.wrapping_sub(src));
+                update_rflags_sub(arg, dst, src);
+            }
+        }
+    };
+}
+
+macro_rules! xor_dst_src {
+    ( $dst:ident, $src:ident ) => {
+        paste::item! {
+            fn [<xor_ $dst _ $src>](arg: &mut instruction::InstrArg) {
+                let dst: u8 = [<get_ $dst>](arg);
+                let src: u8 = [<get_ $src>](arg);
+
+                debug!("xor: {:02x}, {:02x}", dst, src);
+                [<set_ $dst>](arg, dst ^ src);
+                update_rflags_xor(arg, dst, src);
+            }
+        }
+    };
+}
+
+macro_rules! cmp_dst_src {
+    ( $dst:ident, $src:ident ) => {
+        paste::item! {
+            fn [<cmp_ $dst _ $src>](arg: &mut instruction::InstrArg) {
+                let dst: u8 = [<get_ $dst>](arg);
+                let src: u8 = [<get_ $src>](arg);
+                debug!("cmp: {:02x}, {:02x}", dst, src);
+                update_rflags_sub(arg, dst, src);
+            }
+        }
+    };
+}
+
+macro_rules! jcc_imm8 {
+    ( $cc:ident ) => {
+        paste::item! {
+            fn [<j $cc _imm8>](arg: &mut instruction::InstrArg) {
+                if([<check_rflags_ $cc>](arg)){
+                    let imm8: i8 = get_imm8(arg) as i8;
+                    debug!("jmp: {}", imm8);
+                    arg.ac.update_rip(imm8 as i64);
+                }
+            }
+
+            fn [<jn $cc _imm8>](arg: &mut instruction::InstrArg) {
+                if(![<check_rflags_ $cc>](arg)){
+                    let imm8: i8 = get_imm8(arg) as i8;
+                    debug!("jmp: {}", imm8);
+                    arg.ac.update_rip(imm8 as i64);
+                }
+            }
+        }
+    };
 }
  
-fn or_rm8_r8 (arg: &mut instruction::InstrArg){
-    let rm8: u8 = get_rm8(arg);
-    let r8:  u8 = get_r8(arg);
-    debug!("or_rm8_r8: rm8 = 0x{:02x}, r8 = 0x{:02x}", rm8, r8);
-    set_rm8(arg, rm8 | r8);
-    update_rflags_or(arg, rm8, r8);
+macro_rules! test_dst_src {
+    ( $dst:ident, $src:ident ) => {
+        paste::item! {
+            fn [<test_ $dst _ $src>](arg: &mut instruction::InstrArg) {
+                let dst: u8 = [<get_ $dst>](arg);
+                let src: u8 = [<get_ $src>](arg);
+                debug!("test: {:02x}, {:02x}", dst, src);
+                update_rflags_and(arg, dst, src);
+            }
+        }
+    };
 }
 
-fn or_r8_rm8 (arg: &mut instruction::InstrArg){
-    let r8:  u8 = get_r8(arg);
-    let rm8: u8 = get_rm8(arg);
-    debug!("or_r8_rm8: r8 = 0x{:02x}, rm8 = 0x{:02x}", r8, rm8);
-    set_r8(arg, r8 | rm8);
-    update_rflags_or(arg, r8, rm8);
+macro_rules! mov_dst_src {
+    ( $dst:ident, $src:ident ) => {
+        paste::item! {
+            fn [<mov_ $dst _ $src>](arg: &mut instruction::InstrArg) {
+                let src: u8 = [<get_ $src>](arg);
+                debug!("mov: {:02x}", src);
+                [<set_ $dst>](arg, src);
+            }
+        }
+    };
 }
 
-fn or_al_imm8 (arg: &mut instruction::InstrArg){
-    let al:   u8 = get_al!(arg);
-    let imm8: u8 = arg.idata.imm as u8;
-    debug!("or_al_imm8: al = 0x{:02x}, imm8 = 0x{:02x}", al, imm8);
-    set_al!(arg, al | imm8);
-    update_rflags_or(arg, al, imm8);
-}
- 
-fn and_rm8_r8 (arg: &mut instruction::InstrArg){
-    let rm8: u8 = get_rm8(arg);
-    let r8:  u8 = get_r8(arg);
-    debug!("and_rm8_r8: rm8 = 0x{:02x}, r8 = 0x{:02x}", rm8, r8);
-    set_rm8(arg, rm8 & r8);
-    update_rflags_and(arg, rm8, r8);
+macro_rules! setcc_rm8 {
+    ( $cc:ident ) => {
+        paste::item! {
+            fn [<set $cc _rm8>](arg: &mut instruction::InstrArg) {
+                let flag: bool = [<check_rflags_ $cc>](arg);
+                set_rm8(arg, flag as u8);
+            }
+
+            fn [<setn $cc _rm8>](arg: &mut instruction::InstrArg) {
+                let flag: bool = [<check_rflags_ $cc>](arg);
+                set_rm8(arg, !flag as u8);
+            }
+        }
+    };
 }
 
-fn and_r8_rm8 (arg: &mut instruction::InstrArg){
-    let r8:  u8 = get_r8(arg);
-    let rm8: u8 = get_rm8(arg);
-    debug!("and_r8_rm8: r8 = 0x{:02x}, rm8 = 0x{:02x}", r8, rm8);
-    set_r8(arg, r8 & rm8);
-    update_rflags_and(arg, r8, rm8);
-}
+add_dst_src!(rm8, r8);
+add_dst_src!(r8, rm8);
+add_dst_src!(al, imm8);
 
-fn and_al_imm8 (arg: &mut instruction::InstrArg){
-    let al:   u8 = get_al!(arg);
-    let imm8: u8 = arg.idata.imm as u8;
-    debug!("and_al_imm8: al = 0x{:02x}, imm8 = 0x{:02x}", al, imm8);
-    set_al!(arg, al & imm8);
-    update_rflags_and(arg, al, imm8);
-}
+or_dst_src!(rm8, r8);
+or_dst_src!(r8, rm8);
+or_dst_src!(al, imm8);
 
-fn sub_rm8_r8 (arg: &mut instruction::InstrArg){
-    let rm8: u8 = get_rm8(arg);
-    let r8:  u8 = get_r8(arg);
-    debug!("sub_rm8_r8: rm8 = 0x{:02x}, r8 = 0x{:02x}", rm8, r8);
-    set_rm8(arg, rm8.wrapping_sub(r8));
-    update_rflags_sub(arg, rm8, r8);
-}
+adc_dst_src!(rm8, r8);
+adc_dst_src!(r8, rm8);
+adc_dst_src!(al, imm8);
 
-fn sub_r8_rm8 (arg: &mut instruction::InstrArg){
-    let r8:  u8 = get_r8(arg);
-    let rm8: u8 = get_rm8(arg);
-    debug!("sub_r8_rm8: r8 = 0x{:02x}, rm8 = 0x{:02x}", r8, rm8);
-    set_r8(arg, r8.wrapping_sub(rm8));
-    update_rflags_sub(arg, r8, rm8);
-}
+sbb_dst_src!(rm8, r8);
+sbb_dst_src!(r8, rm8);
+sbb_dst_src!(al, imm8);
 
-fn sub_al_imm8 (arg: &mut instruction::InstrArg){
-    let al:   u8 = get_al!(arg);
-    let imm8: u8 = arg.idata.imm as u8;
-    debug!("sub_al_imm8: al = 0x{:02x}, imm8 = 0x{:02x}", al, imm8);
-    set_al!(arg, al.wrapping_sub(imm8));
-    update_rflags_sub(arg, al, imm8);
-}
- 
-fn xor_rm8_r8 (arg: &mut instruction::InstrArg){
-    let rm8: u8 = get_rm8(arg);
-    let r8:  u8 = get_r8(arg);
-    debug!("xor_rm8_r8: rm8 = 0x{:02x}, r8 = 0x{:02x}", rm8, r8);
-    set_rm8(arg, rm8 ^ r8);
-    update_rflags_xor(arg, rm8, r8);
-}
+and_dst_src!(rm8, r8);
+and_dst_src!(r8, rm8);
+and_dst_src!(al, imm8);
 
-fn xor_r8_rm8 (arg: &mut instruction::InstrArg){
-    let r8:  u8 = get_r8(arg);
-    let rm8: u8 = get_rm8(arg);
-    debug!("xor_r8_rm8: r8 = 0x{:02x}, rm8 = 0x{:02x}", r8, rm8);
-    set_r8(arg, r8 ^ rm8);
-    update_rflags_xor(arg, r8, rm8);
-}
+sub_dst_src!(rm8, r8);
+sub_dst_src!(r8, rm8);
+sub_dst_src!(al, imm8);
 
-fn xor_al_imm8 (arg: &mut instruction::InstrArg){
-    let al:   u8 = get_al!(arg);
-    let imm8: u8 = arg.idata.imm as u8;
-    debug!("xor_al_imm8: al = 0x{:02x}, imm8 = 0x{:02x}", al, imm8);
-    set_al!(arg, al ^ imm8);
-    update_rflags_xor(arg, al, imm8);
-}
+xor_dst_src!(rm8, r8);
+xor_dst_src!(r8, rm8);
+xor_dst_src!(al, imm8);
 
-fn cmp_rm8_r8 (arg: &mut instruction::InstrArg){
-    let rm8: u8 = get_rm8(arg);
-    let r8:  u8 = get_r8(arg);
-    debug!("cmp_rm8_r8: rm8 = 0x{:02x}, r8 = 0x{:02x}", rm8, r8);
-    update_rflags_sub(arg, rm8, r8);
-}
+cmp_dst_src!(rm8, r8);
+cmp_dst_src!(r8, rm8);
+cmp_dst_src!(al, imm8);
 
-fn cmp_r8_rm8 (arg: &mut instruction::InstrArg){
+jcc_imm8!(o);
+jcc_imm8!(b);
+jcc_imm8!(z);
+jcc_imm8!(be);
+jcc_imm8!(s);
+jcc_imm8!(p);
+jcc_imm8!(l);
+jcc_imm8!(le);
+
+test_dst_src!(rm8, r8);
+
+fn xchg_r8_rm8(arg: &mut instruction::InstrArg) {
     let r8:  u8 = get_r8(arg);
     let rm8: u8 = get_rm8(arg);
-    debug!("cmp_r8_rm8: r8 = 0x{:02x}, rm8 = 0x{:02x}", r8, rm8);
-    update_rflags_sub(arg, r8, rm8);
-}
-
-fn cmp_al_imm8 (arg: &mut instruction::InstrArg){
-    let al:   u8 = get_al!(arg);
-    let imm8: u8 = arg.idata.imm as u8;
-    debug!("cmp_al_imm8: al = 0x{:02x}, imm8 = 0x{:02x}", al, imm8);
-    update_rflags_sub(arg, al, imm8);
-}
- 
-fn mov_rm8_r8 (arg: &mut instruction::InstrArg){
-    let r8: u8 = get_r8(arg);
-    debug!("mov_rm8_r8: r8 = 0x{:02x}", r8);
+    debug!("xchg_r8_rm8: r8 = 0x{:02x}, rm8 = 0x{:02x}", r8, rm8);
+    set_r8(arg, rm8);
     set_rm8(arg, r8);
 }
 
-fn mov_r8_rm8 (arg: &mut instruction::InstrArg){
-    let rm8: u8 = get_rm8(arg);
-    debug!("mov_r8_rm8: rm8 = 0x{:02x}", rm8);
-    set_r8(arg, rm8);
-}
+mov_dst_src!(rm8, r8);
+mov_dst_src!(r8, rm8);
 
 fn nop (_arg: &mut instruction::InstrArg){}
 
-fn mov_al_moffs8 (arg: &mut instruction::InstrArg){
-    let moffs8: u8 = arg.idata.moffs as u8;
-    debug!("mov_al_moffs8: imm8 = 0x{:02x}", moffs8);
-    set_al!(arg, moffs8);
-}
+mov_dst_src!(al, moffs8);
+mov_dst_src!(moffs8, al);
 
-fn mov_moffs8_al (arg: &mut instruction::InstrArg){
-    let al: u8 = get_al!(arg);
-    debug!("mov_moffs8_al: al = 0x{:02x}", al);
-    set_moffs8(arg, al);
-}
+test_dst_src!(al, imm8);
 
-fn test_al_imm8 (arg: &mut instruction::InstrArg){
-    let al:   u8 = get_al!(arg);
+fn mov_r8_imm8(arg: &mut instruction::InstrArg) {
     let imm8: u8 = arg.idata.imm as u8;
-    debug!("test_al_imm8: al = 0x{:02x}, imm8 = 0x{:02x}", al, imm8);
-    update_rflags_and(arg, al, imm8);
-}
-
-fn mov_r8_imm8 (arg: &mut instruction::InstrArg){
-    let imm8: u8 = arg.idata.imm as u8;
-    debug!("mov_r8_imm8: rm8 = 0x{:02x}", imm8);
+    debug!("mov_r8_imm8: imm8 = 0x{:02x}", imm8);
     arg.ac.core.gpregs_mut().set(GpReg8::from((arg.idata.opcd&0x7) as usize), imm8);
 }
+
+mov_dst_src!(rm8, imm8);
+
+setcc_rm8!(o);
+setcc_rm8!(b);
+setcc_rm8!(z);
+setcc_rm8!(be);
+setcc_rm8!(s);
+setcc_rm8!(p);
+setcc_rm8!(l);
+setcc_rm8!(le);
+
+fn code_80(arg: &mut instruction::InstrArg) {
+    match arg.idata.modrm.reg as u8 {
+        0 => add_rm8_imm8(arg),
+        1 => or_rm8_imm8(arg),
+        2 => adc_rm8_imm8(arg),
+        3 => sbb_rm8_imm8(arg),
+        4 => and_rm8_imm8(arg),
+        5 => sub_rm8_imm8(arg),
+        6 => xor_rm8_imm8(arg),
+        7 => cmp_rm8_imm8(arg),
+        _ => { panic!("ha??"); },
+    }
+}
+
+add_dst_src!(rm8, imm8);
+or_dst_src!(rm8, imm8);
+adc_dst_src!(rm8, imm8);
+sbb_dst_src!(rm8, imm8);
+and_dst_src!(rm8, imm8);
+sub_dst_src!(rm8, imm8);
+xor_dst_src!(rm8, imm8);
+cmp_dst_src!(rm8, imm8);

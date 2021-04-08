@@ -14,10 +14,10 @@ pub struct InstrData {
     pub opcd: u16,
     pub modrm: ModRM,
     pub sib: Sib,
-    pub disp: i32,
-    pub imm: i64,
-    pub ptr16: i16,
-    pub moffs: u32,
+    pub disp: u32,
+    pub imm: u64,
+    pub ptr16: u16,
+    pub moffs: u64,
 }
 
 enum Rep { NONE, REPZ, REPNZ }
@@ -60,30 +60,27 @@ impl InstrData {
         }
 
         if flag.contains(opcode::OpFlags::IMM32) {
-            self.imm = ac.get_code32(0) as i64;
+            self.imm = ac.get_code32(0) as u64;
             ac.update_rip(4);
-        }
-        else if flag.contains(opcode::OpFlags::IMM16) {
-            self.imm = ac.get_code16(0) as i64;
+        } else if flag.contains(opcode::OpFlags::IMM16) {
+            self.imm = ac.get_code16(0) as u64;
             ac.update_rip(2);
-        } 
-        else if flag.contains(opcode::OpFlags::IMM8) {
-            self.imm = ac.get_code8(0) as i64;
+        } else if flag.contains(opcode::OpFlags::IMM8) {
+            self.imm = ac.get_code8(0) as u64;
             ac.update_rip(1);
         } 
 
         if flag.contains(opcode::OpFlags::PTR16) {
-            self.ptr16 = ac.get_code16(0) as i16;
+            self.ptr16 = ac.get_code16(0) as u16;
             ac.update_rip(2);
         }
 
         if flag.contains(opcode::OpFlags::MOFFSX) {
             if 32 == 32 {
-                self.moffs = ac.get_code32(0);
+                self.moffs = ac.get_code32(0) as u64;
                 ac.update_rip(4);
-            }
-            else {
-                self.moffs = ac.get_code16(0) as u32;
+            } else {
+                self.moffs = ac.get_code16(0) as u64;
                 ac.update_rip(2);
             }
         }
@@ -126,6 +123,7 @@ impl InstrData {
         if self.opcd == 0x0f {
             self.opcd = (1<<8) + ac.get_code8(0) as u16;
         }
+        debug!("opcode: {:02x} ", self.opcd);
     }
 
     fn parse_modrm(&mut self, ac: &mut access::Access) -> () {
@@ -143,25 +141,22 @@ impl InstrData {
             }
 
             if mod_ == 2 || (mod_ == 0 && rm == 5) || (mod_ == 0 && self.sib.base == 5) {
-                self.disp = ac.get_code32(0) as i32;
+                self.disp = ac.get_code32(0) as u32;
                 ac.update_rip(4);
-            }
-            else if mod_ == 1 {
-                self.disp = ac.get_code8(0) as i32;
+            } else if mod_ == 1 {
+                self.disp = ac.get_code8(0) as u32;
                 ac.update_rip(1);
             }
-            debug!("disp: {:?} ", self.disp);
-        }
-        else {
+            debug!("disp: {:02x} ", self.disp);
+        } else {
             if mod_ == 2 || (mod_ == 0 && rm == 6) {
-                self.disp = ac.get_code16(0) as i32;
+                self.disp = ac.get_code16(0) as u32;
                 ac.update_rip(2);
-            }
-            else if mod_ == 1 {
-                self.disp = ac.get_code8(0) as i32;
+            } else if mod_ == 1 {
+                self.disp = ac.get_code8(0) as u32;
                 ac.update_rip(1);
             }
-            debug!("disp: {:?} ", self.disp);
+            debug!("disp: {:02x} ", self.disp);
         }
     }
 }
