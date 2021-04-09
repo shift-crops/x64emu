@@ -3,9 +3,9 @@ use packed_struct::prelude::*;
 use num_enum::FromPrimitive;
 
 #[derive(Clone, Copy, FromPrimitive)] #[repr(usize)]
-pub enum SgReg { #[num_enum(default)] ES, CS, SS, DS, FS, GS } 
+pub enum SgReg { #[num_enum(default)] ES, CS, SS, DS, FS, GS, END }
 
-const SGREGS_COUNT: usize = 6;
+const SGREGS_COUNT: usize = SgReg::END as usize;
 
 #[derive(Debug, Default, Clone, Copy, PackedStruct)]
 #[packed_struct(bit_numbering="lsb0", size_bytes="2", endian="msb")]
@@ -45,18 +45,12 @@ pub struct SgRegUnit {
     cache: SgDescCache,
 }
 
-impl SgRegUnit {
-    pub fn new() -> Self {
-        SgRegUnit::default()
-    }
-}
-
 #[derive(Clone, Copy)]
 pub struct SgRegisters ([SgRegUnit; SGREGS_COUNT]);
 
 impl SgRegisters {
     pub fn new() -> Self {
-        SgRegisters ([SgRegUnit::new(); SGREGS_COUNT])
+        Self ([Default::default(); SGREGS_COUNT])
     }
 
     pub fn selector(&self, r: SgReg) -> &SgDescSelector { &self.0[r as usize].selector }

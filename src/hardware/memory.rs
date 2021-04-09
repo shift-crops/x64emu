@@ -7,7 +7,7 @@ pub struct Memory {
 
 impl Memory {
     pub fn new() -> Self {
-        Memory { mem: Vec::new() }
+        Self { mem: Vec::new() }
     }
 
     pub fn set_size(&mut self, size: usize) -> () {
@@ -65,20 +65,36 @@ impl Memory {
         }
         println!("");
     }
+}
 
-    #[cfg(test)]
-    pub fn test(&mut self) -> () {
-        self.write16(0x100, 0xbabe);
-        self.write16(0x102, 0xcafe);
-        self.write32(0x104, 0xdeadbeef);
-        assert_eq!(self.read64(0x100), 0xdeadbeefcafebabe);
+#[cfg(test)]
+#[test]
+fn mem_test(){
+    let mut mem = Memory::new();
+    mem.set_size(0x1000);
+    mem.write16(0x100, 0xbabe);
+    mem.write16(0x102, 0xcafe);
+    mem.write32(0x104, 0xdeadbeef);
+    assert_eq!(mem.read64(0x100), 0xdeadbeefcafebabe);
 
-        let mut x = self.as_mut_ptr(0x200).unwrap() as *mut u32;
-        unsafe {
-            *x = 0x55667788;
-            x = (x as usize + 4) as *mut u32;
-            *x = 0x11223344;
-        }
-        assert_eq!(self.read64(0x200), 0x1122334455667788);
+    let mut x = mem.as_mut_ptr(0x200).unwrap() as *mut u32;
+    unsafe {
+        *x = 0x55667788;
+        x = (x as usize + 4) as *mut u32;
+        *x = 0x11223344;
     }
+    assert_eq!(mem.read64(0x200), 0x1122334455667788);
+
+    mem.write64(0x1100, 0xdeadbeef);
+    assert_eq!(mem.read64(0x1100), 0x0);
+}
+
+#[cfg(test)]
+#[test]
+#[should_panic]
+fn mem_test_panic(){
+    let mut mem = Memory::new();
+    mem.set_size(0x1000);
+
+    mem.as_ptr(0x1100).unwrap();
 }

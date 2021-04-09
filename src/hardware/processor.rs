@@ -17,7 +17,7 @@ pub struct Processor {
 
 impl Processor {
     pub fn new() -> Self {
-        Processor{
+        Self {
             rip: ip::InstructionPointer::new(0xfff0),
             gpregs: general::GpRegisters::new(),
             sgregs: segment::SgRegisters::new(),
@@ -43,19 +43,32 @@ impl Processor {
 
         println!("");
     }
- 
-    #[cfg(test)]
-    pub fn test(&mut self) -> () {
-        self.gpregs.set(GpReg64::from(0), 0xdeadbeefcafebabe);
-        self.gpregs.set(GpReg32::EAX, 0x11223344);
-        self.gpregs.set(GpReg8::AH, 0x00);
-        self.gpregs.update(GpReg64::RAX, -0x10);
-        assert_eq!(self.gpregs.get(GpReg64::RAX), 0xdeadbeef11220034);
+}
 
-        // self.gpregs.set(GpReg8l::DIL, 0xff);
-        // assert_eq!(self.gpregs.get(GpReg64::RDI), 0xff);
+#[cfg(test)]
+#[test]
+pub fn core_test() {
+    let core = Processor::new();
+    let (gpregs, rflags, sgregs) = &mut (core.gpregs, core.rflags, core.sgregs);
 
-        self.rflags.from_u64(0xdeadbeef);
-        self.sgregs.selector_mut(SgReg::ES).from_u16(0x114);
-    }
+    gpregs.set(GpReg64::from(0), 0xdeadbeefcafebabe);
+    gpregs.set(GpReg32::EAX, 0x11223344);
+    gpregs.set(GpReg8::AH, 0x00);
+    gpregs.update(GpReg64::RAX, -0x10);
+    assert_eq!(gpregs.get(GpReg64::RAX), 0xdeadbeef11220034);
+
+    gpregs.set(GpReg32::EDI, 0xc0bebeef);
+    gpregs.set(GpReg8x::DIL, 0xff);
+    assert_eq!(gpregs.get(GpReg64::RDI), 0xc0bebeff);
+
+    rflags.from_u64(0);
+    assert_eq!(rflags.to_u64(), 2);
+    rflags.set_carry(true);
+    assert_eq!(rflags.to_u64(), 3);
+
+    sgregs.selector_mut(SgReg::ES).from_u16(0x2e);
+    let es = sgregs.selector(SgReg::ES);
+    assert_eq!(es.IDX, 5);
+    assert_eq!(es.TI, 1);
+    assert_eq!(es.RPL, 2);
 }

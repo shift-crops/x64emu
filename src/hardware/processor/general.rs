@@ -1,16 +1,16 @@
 use num_enum::FromPrimitive;
 
-#[derive(FromPrimitive)] #[repr(usize)]
+#[derive(FromPrimitive, Clone, Copy)] #[repr(usize)]
 pub enum GpReg64 { #[num_enum(default)] RAX, RCX, RDX, RBX, RSP, RBP, RSI, RDI, R8, R9, R10, R11, R12, R13, R14, R15, END }
-#[derive(FromPrimitive)] #[repr(usize)]
+#[derive(FromPrimitive, Clone, Copy)] #[repr(usize)]
 pub enum GpReg32 { #[num_enum(default)] EAX, ECX, EDX, EBX, ESP, EBP, ESI, EDI, R8D, R9D, R10D, R11D, R12D, R13D, R14D, R15D }
-#[derive(FromPrimitive)] #[repr(usize)]
+#[derive(FromPrimitive, Clone, Copy)] #[repr(usize)]
 pub enum GpReg16 { #[num_enum(default)] AX, CX, DX, BX, SP, BP, SI, DI, R8W, R9W, R10W, R11W, R12W, R13W, R14W, R15W }
-#[derive(FromPrimitive)] #[repr(usize)]
+#[derive(FromPrimitive, Clone, Copy)] #[repr(usize)]
 pub enum GpReg8 { #[num_enum(default)] AL, CL, DL, BL, AH, CH, DH, BH }
-#[derive(FromPrimitive)] #[repr(usize)]
+#[derive(FromPrimitive, Clone, Copy)] #[repr(usize)]
 pub enum GpReg8x { #[num_enum(default)] AL, CL, DL, BL, SPL, BPL, SIL, DIL }
-#[derive(FromPrimitive)] #[repr(usize)]
+#[derive(FromPrimitive, Clone, Copy)] #[repr(usize)]
 pub enum GpReg8w { #[num_enum(default)] R8B, R9B, R10B, R11B, R12B, R13B, R14B, R15B }
 
 const GPREGS_COUNT: usize = GpReg64::END as usize;
@@ -26,7 +26,7 @@ union GpRegUnit {
 
 impl GpRegUnit {
     fn new() -> Self {
-        GpRegUnit{reg64: 0}
+        Self {reg64: 0}
     }
 }
 
@@ -85,4 +85,10 @@ impl RegAccess<GpReg8, u8, i8> for GpRegisters {
     fn get(&self, r: GpReg8) -> u8 { let r = r as usize; if r < 4 { self.get8l(r) } else { self.get8h(r%4) } }
     fn set(&mut self, r: GpReg8, v: u8) -> () { let r = r as usize; if r < 4 { self.set8l(r, v) } else { self.set8h(r%4, v) }; }
     fn update(&mut self, r: GpReg8, v: i8) -> () { let r = r as usize; if r < 4 { self.update8l(r, v) } else { self.update8h(r%4, v) }; }
+}
+
+impl RegAccess<GpReg8x, u8, i8> for GpRegisters {
+    fn get(&self, r: GpReg8x) -> u8 { self.get8l(r as usize) }
+    fn set(&mut self, r: GpReg8x, v: u8) -> () { self.set8l(r as usize, v); }
+    fn update(&mut self, r: GpReg8x, v: i8) -> () { self.update8l(r as usize, v); }
 }

@@ -1,13 +1,11 @@
 mod access;
 mod instruction;
 
-use crate::hardware::Hardware;
-use crate::emulator::access::Access;
-use crate::emulator::instruction::Instruction;
+use super::hardware;
 
 pub struct Emulator {
-    pub ac: Access,
-    inst: Instruction,
+    pub ac: access::Access,
+    inst: instruction::Instruction,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -19,10 +17,10 @@ pub enum Event {
 }
 
 impl Emulator {
-    pub fn new(hw: Hardware) -> Self {
+    pub fn new(hw: hardware::Hardware) -> Self {
         Emulator {
-            ac: Access::new(hw),
-            inst: Instruction::new(),
+            ac: access::Access::new(hw),
+            inst: instruction::Instruction::new(),
         }
     }
 
@@ -48,28 +46,5 @@ impl Emulator {
         loop {
             self.inst.fetch_exec(&mut self.ac);
         }
-    }
-
-    #[cfg(test)]
-    pub fn test(&mut self) -> () {
-        use crate::hardware::processor::general::*;
-
-        self.ac.core.gpregs.set(GpReg64::RSP, 0xf20);
-        self.ac.push64(0xdeadbeef);
-        self.ac.push64(0xcafebabe);
-        assert_eq!(self.ac.pop64(), 0xcafebabe);
-        assert_eq!(self.ac.pop64(), 0xdeadbeef);
-
-        let mut x = self.ac.mem.as_mut_ptr(0xf20).unwrap() as *mut u64;
-        unsafe {
-            *x = 0x11223344;
-            x = (x as usize + 8) as *mut u64;
-            *x = 0x55667788;
-        }
-        assert_eq!(self.ac.pop64(), 0x11223344);
-        assert_eq!(self.ac.pop64(), 0x55667788);
-
-        self.ac.core.dump();
-        self.ac.mem.dump(self.ac.core.gpregs.get(GpReg64::RSP) as usize, 0x40);
     }
 }
