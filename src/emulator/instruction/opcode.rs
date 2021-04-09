@@ -3,6 +3,8 @@ mod opcode16;
 mod opcode32;
 mod opcode64;
 
+use super::exec;
+
 bitflags! {
     pub struct OpFlags: u8 {
         const NONE  = 0b00000000;
@@ -25,7 +27,7 @@ bitflags! {
 
 #[derive(Clone, Copy)]
 pub struct OpcodeType {
-    func: fn(&mut super::InstrArg),
+    func: fn(&mut exec::Exec),
     flag: OpFlags,
 }
 impl Default for OpcodeType {
@@ -48,7 +50,7 @@ impl Opcode {
         let mut opa: OpcodeArr = [ Default::default(); MAX_OPCODE];
         common::init_cmn_opcode(&mut opa);
 
-        let mut op = Opcode {
+        let mut op = Self {
             op16: opcode16::Opcode16::new(opa),
             op32: opcode32::Opcode32::new(opa),
             op64: opcode64::Opcode64::new(opa),
@@ -66,11 +68,11 @@ impl Opcode {
 
 pub trait OpcodeTrait {
     fn init_opcode(&mut self) -> ();
-    fn exec(&self, arg: &mut super::InstrArg) -> ();
+    fn exec(&self, arg: &mut exec::Exec) -> ();
     fn flag(&self, opcode: u16) -> OpFlags;
 }
 
-fn undefined(arg: &mut super::InstrArg) -> () {
-    arg.ac.dump();
+fn undefined(exec: &mut exec::Exec) -> () {
+    exec.ac.dump();
     panic!("Undefined Opcode");
 }

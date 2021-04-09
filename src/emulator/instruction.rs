@@ -2,12 +2,7 @@ mod parse;
 mod opcode;
 mod exec;
 
-use crate::emulator::access;
-
-pub struct InstrArg<'a> {
-    ac: &'a mut access::Access,
-    idata: &'a parse::InstrData,
-}
+use super::access;
 
 pub struct Instruction {
     idata: parse::InstrData,
@@ -16,7 +11,7 @@ pub struct Instruction {
 
 impl Instruction {
     pub fn new() -> Self {
-        Instruction {
+        Self {
             idata: Default::default(),
             opcode: opcode::Opcode::new(),
         }
@@ -25,7 +20,8 @@ impl Instruction {
     pub fn fetch_exec(&mut self, ac: &mut access::Access) -> () {
         self.idata.parse(ac, &self.opcode);
 
+        let mut exe = exec::Exec::new(ac, &self.idata);
         let op = self.opcode.get();
-        op.exec(&mut InstrArg{ac, idata: &self.idata});
+        op.exec(&mut exe);
     }
 }

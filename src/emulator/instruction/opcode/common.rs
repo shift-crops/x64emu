@@ -1,11 +1,9 @@
-use crate::emulator::instruction;
+use crate::emulator::instruction::exec;
 use crate::emulator::instruction::opcode::*;
-use crate::emulator::instruction::exec::regmem::*;
-use crate::emulator::instruction::exec::flag::*;
 use crate::hardware::processor::general::*;
 
-// macro_rules! get_al { ($arg:expr) => { $arg.ac.core.gpregs().get(GpReg8::AL) } }
-// macro_rules! set_al { ($arg:expr, $val:expr) => { $arg.ac.core.gpregs_mut().set(GpReg8::AL, $val) } }
+// macro_rules! get_al { ($exec:expr) => { $exec.ac.core.gpregs().get(GpReg8::AL) } }
+// macro_rules! set_al { ($exec:expr, $val:expr) => { $exec.ac.core.gpregs_mut().set(GpReg8::AL, $val) } }
 
 pub fn init_cmn_opcode(op: &mut super::OpcodeArr){
     macro_rules! setop {
@@ -109,13 +107,13 @@ pub fn init_cmn_opcode(op: &mut super::OpcodeArr){
 macro_rules! add_dst_src {
     ( $dst:ident, $src:ident ) => {
         paste::item! {
-            fn [<add_ $dst _ $src>](arg: &mut instruction::InstrArg) {
-                let dst: u8 = [<get_ $dst>](arg);
-                let src: u8 = [<get_ $src>](arg);
+            fn [<add_ $dst _ $src>](exec: &mut exec::Exec) {
+                let dst: u8 = exec.[<get_ $dst>]();
+                let src: u8 = exec.[<get_ $src>]();
 
                 debug!("add: {:02x}, {:02x}", dst, src);
-                [<set_ $dst>](arg, dst.wrapping_add(src));
-                update_rflags_add(arg, dst, src);
+                exec.[<set_ $dst>](dst.wrapping_add(src));
+                exec.update_rflags_add(dst, src);
             }
         }
     };
@@ -124,13 +122,13 @@ macro_rules! add_dst_src {
 macro_rules! or_dst_src {
     ( $dst:ident, $src:ident ) => {
         paste::item! {
-            fn [<or_ $dst _ $src>](arg: &mut instruction::InstrArg) {
-                let dst: u8 = [<get_ $dst>](arg);
-                let src: u8 = [<get_ $src>](arg);
+            fn [<or_ $dst _ $src>](exec: &mut exec::Exec) {
+                let dst: u8 = exec.[<get_ $dst>]();
+                let src: u8 = exec.[<get_ $src>]();
 
                 debug!("or: {:02x}, {:02x}", dst, src);
-                [<set_ $dst>](arg, dst | src);
-                update_rflags_or(arg, dst, src);
+                exec.[<set_ $dst>](dst | src);
+                exec.update_rflags_or(dst, src);
             }
         }
     };
@@ -139,14 +137,14 @@ macro_rules! or_dst_src {
 macro_rules! adc_dst_src {
     ( $dst:ident, $src:ident ) => {
         paste::item! {
-            fn [<adc_ $dst _ $src>](arg: &mut instruction::InstrArg) {
-                let dst: u8 = [<get_ $dst>](arg);
-                let src: u8 = [<get_ $src>](arg);
-                let cf:  u8 = arg.ac.core.rflags.is_carry() as u8;
+            fn [<adc_ $dst _ $src>](exec: &mut exec::Exec) {
+                let dst: u8 = exec.[<get_ $dst>]();
+                let src: u8 = exec.[<get_ $src>]();
+                let cf:  u8 = exec.ac.core.rflags.is_carry() as u8;
 
                 debug!("adc: {:02x}, {:02x}", dst, src);
-                [<set_ $dst>](arg, dst.wrapping_add(src).wrapping_add(cf));
-                update_rflags_adc(arg, dst, src, cf);
+                exec.[<set_ $dst>](dst.wrapping_add(src).wrapping_add(cf));
+                exec.update_rflags_adc(dst, src, cf);
             }
         }
     };
@@ -155,14 +153,14 @@ macro_rules! adc_dst_src {
 macro_rules! sbb_dst_src {
     ( $dst:ident, $src:ident ) => {
         paste::item! {
-            fn [<sbb_ $dst _ $src>](arg: &mut instruction::InstrArg) {
-                let dst: u8 = [<get_ $dst>](arg);
-                let src: u8 = [<get_ $src>](arg);
-                let cf:  u8 = arg.ac.core.rflags.is_carry() as u8;
+            fn [<sbb_ $dst _ $src>](exec: &mut exec::Exec) {
+                let dst: u8 = exec.[<get_ $dst>]();
+                let src: u8 = exec.[<get_ $src>]();
+                let cf:  u8 = exec.ac.core.rflags.is_carry() as u8;
 
                 debug!("sbb: {:02x}, {:02x}", dst, src);
-                [<set_ $dst>](arg, dst.wrapping_sub(src).wrapping_sub(cf));
-                update_rflags_sbb(arg, dst, src, cf);
+                exec.[<set_ $dst>](dst.wrapping_sub(src).wrapping_sub(cf));
+                exec.update_rflags_sbb(dst, src, cf);
             }
         }
     };
@@ -171,13 +169,13 @@ macro_rules! sbb_dst_src {
 macro_rules! and_dst_src {
     ( $dst:ident, $src:ident ) => {
         paste::item! {
-            fn [<and_ $dst _ $src>](arg: &mut instruction::InstrArg) {
-                let dst: u8 = [<get_ $dst>](arg);
-                let src: u8 = [<get_ $src>](arg);
+            fn [<and_ $dst _ $src>](exec: &mut exec::Exec) {
+                let dst: u8 = exec.[<get_ $dst>]();
+                let src: u8 = exec.[<get_ $src>]();
 
                 debug!("and: {:02x}, {:02x}", dst, src);
-                [<set_ $dst>](arg, dst & src);
-                update_rflags_and(arg, dst, src);
+                exec.[<set_ $dst>](dst & src);
+                exec.update_rflags_and(dst, src);
             }
         }
     };
@@ -186,13 +184,13 @@ macro_rules! and_dst_src {
 macro_rules! sub_dst_src {
     ( $dst:ident, $src:ident ) => {
         paste::item! {
-            fn [<sub_ $dst _ $src>](arg: &mut instruction::InstrArg) {
-                let dst: u8 = [<get_ $dst>](arg);
-                let src: u8 = [<get_ $src>](arg);
+            fn [<sub_ $dst _ $src>](exec: &mut exec::Exec) {
+                let dst: u8 = exec.[<get_ $dst>]();
+                let src: u8 = exec.[<get_ $src>]();
 
                 debug!("sub: {:02x}, {:02x}", dst, src);
-                [<set_ $dst>](arg, dst.wrapping_sub(src));
-                update_rflags_sub(arg, dst, src);
+                exec.[<set_ $dst>](dst.wrapping_sub(src));
+                exec.update_rflags_sub(dst, src);
             }
         }
     };
@@ -201,13 +199,13 @@ macro_rules! sub_dst_src {
 macro_rules! xor_dst_src {
     ( $dst:ident, $src:ident ) => {
         paste::item! {
-            fn [<xor_ $dst _ $src>](arg: &mut instruction::InstrArg) {
-                let dst: u8 = [<get_ $dst>](arg);
-                let src: u8 = [<get_ $src>](arg);
+            fn [<xor_ $dst _ $src>](exec: &mut exec::Exec) {
+                let dst: u8 = exec.[<get_ $dst>]();
+                let src: u8 = exec.[<get_ $src>]();
 
                 debug!("xor: {:02x}, {:02x}", dst, src);
-                [<set_ $dst>](arg, dst ^ src);
-                update_rflags_xor(arg, dst, src);
+                exec.[<set_ $dst>](dst ^ src);
+                exec.update_rflags_xor(dst, src);
             }
         }
     };
@@ -216,11 +214,11 @@ macro_rules! xor_dst_src {
 macro_rules! cmp_dst_src {
     ( $dst:ident, $src:ident ) => {
         paste::item! {
-            fn [<cmp_ $dst _ $src>](arg: &mut instruction::InstrArg) {
-                let dst: u8 = [<get_ $dst>](arg);
-                let src: u8 = [<get_ $src>](arg);
+            fn [<cmp_ $dst _ $src>](exec: &mut exec::Exec) {
+                let dst: u8 = exec.[<get_ $dst>]();
+                let src: u8 = exec.[<get_ $src>]();
                 debug!("cmp: {:02x}, {:02x}", dst, src);
-                update_rflags_sub(arg, dst, src);
+                exec.update_rflags_sub(dst, src);
             }
         }
     };
@@ -229,33 +227,33 @@ macro_rules! cmp_dst_src {
 macro_rules! jcc_imm8 {
     ( $cc:ident ) => {
         paste::item! {
-            fn [<j $cc _imm8>](arg: &mut instruction::InstrArg) {
-                if([<check_rflags_ $cc>](arg)){
-                    let imm8: i8 = get_imm8(arg) as i8;
+            fn [<j $cc _imm8>](exec: &mut exec::Exec) {
+                if(exec.[<check_rflags_ $cc>]()){
+                    let imm8: i8 = exec.get_imm8() as i8;
                     debug!("jmp: {}", imm8);
-                    arg.ac.update_rip(imm8 as i64);
+                    exec.update_rip(imm8 as i64);
                 }
             }
 
-            fn [<jn $cc _imm8>](arg: &mut instruction::InstrArg) {
-                if(![<check_rflags_ $cc>](arg)){
-                    let imm8: i8 = get_imm8(arg) as i8;
+            fn [<jn $cc _imm8>](exec: &mut exec::Exec) {
+                if(!exec.[<check_rflags_ $cc>]()){
+                    let imm8: i8 = exec.get_imm8() as i8;
                     debug!("jmp: {}", imm8);
-                    arg.ac.update_rip(imm8 as i64);
+                    exec.update_rip(imm8 as i64);
                 }
             }
         }
     };
 }
- 
+
 macro_rules! test_dst_src {
     ( $dst:ident, $src:ident ) => {
         paste::item! {
-            fn [<test_ $dst _ $src>](arg: &mut instruction::InstrArg) {
-                let dst: u8 = [<get_ $dst>](arg);
-                let src: u8 = [<get_ $src>](arg);
+            fn [<test_ $dst _ $src>](exec: &mut exec::Exec) {
+                let dst: u8 = exec.[<get_ $dst>]();
+                let src: u8 = exec.[<get_ $src>]();
                 debug!("test: {:02x}, {:02x}", dst, src);
-                update_rflags_and(arg, dst, src);
+                exec.update_rflags_and(dst, src);
             }
         }
     };
@@ -264,10 +262,10 @@ macro_rules! test_dst_src {
 macro_rules! mov_dst_src {
     ( $dst:ident, $src:ident ) => {
         paste::item! {
-            fn [<mov_ $dst _ $src>](arg: &mut instruction::InstrArg) {
-                let src: u8 = [<get_ $src>](arg);
+            fn [<mov_ $dst _ $src>](exec: &mut exec::Exec) {
+                let src: u8 = exec.[<get_ $src>]();
                 debug!("mov: {:02x}", src);
-                [<set_ $dst>](arg, src);
+                exec.[<set_ $dst>](src);
             }
         }
     };
@@ -276,14 +274,14 @@ macro_rules! mov_dst_src {
 macro_rules! setcc_rm8 {
     ( $cc:ident ) => {
         paste::item! {
-            fn [<set $cc _rm8>](arg: &mut instruction::InstrArg) {
-                let flag: bool = [<check_rflags_ $cc>](arg);
-                set_rm8(arg, flag as u8);
+            fn [<set $cc _rm8>](exec: &mut exec::Exec) {
+                let flag: bool = exec.[<check_rflags_ $cc>]();
+                exec.set_rm8(flag as u8);
             }
 
-            fn [<setn $cc _rm8>](arg: &mut instruction::InstrArg) {
-                let flag: bool = [<check_rflags_ $cc>](arg);
-                set_rm8(arg, !flag as u8);
+            fn [<setn $cc _rm8>](exec: &mut exec::Exec) {
+                let flag: bool = exec.[<check_rflags_ $cc>]();
+                exec.set_rm8(!flag as u8);
             }
         }
     };
@@ -332,28 +330,28 @@ jcc_imm8!(le);
 
 test_dst_src!(rm8, r8);
 
-fn xchg_r8_rm8(arg: &mut instruction::InstrArg) {
-    let r8:  u8 = get_r8(arg);
-    let rm8: u8 = get_rm8(arg);
+fn xchg_r8_rm8(exec: &mut exec::Exec) {
+    let r8:  u8 = exec.get_r8();
+    let rm8: u8 = exec.get_rm8();
     debug!("xchg_r8_rm8: r8 = 0x{:02x}, rm8 = 0x{:02x}", r8, rm8);
-    set_r8(arg, rm8);
-    set_rm8(arg, r8);
+    exec.set_r8(rm8);
+    exec.set_rm8(r8);
 }
 
 mov_dst_src!(rm8, r8);
 mov_dst_src!(r8, rm8);
 
-fn nop (_arg: &mut instruction::InstrArg){}
+fn nop (_exec: &mut exec::Exec){}
 
 mov_dst_src!(al, moffs8);
 mov_dst_src!(moffs8, al);
 
 test_dst_src!(al, imm8);
 
-fn mov_r8_imm8(arg: &mut instruction::InstrArg) {
-    let imm8: u8 = arg.idata.imm as u8;
+fn mov_r8_imm8(exec: &mut exec::Exec) {
+    let imm8: u8 = exec.get_imm8();
     debug!("mov_r8_imm8: imm8 = 0x{:02x}", imm8);
-    arg.ac.core.gpregs.set(GpReg8::from((arg.idata.opcd&0x7) as usize), imm8);
+    exec.ac.core.gpregs.set(GpReg8::from((exec.idata.opcd&0x7) as usize), imm8);
 }
 
 mov_dst_src!(rm8, imm8);
@@ -367,16 +365,16 @@ setcc_rm8!(p);
 setcc_rm8!(l);
 setcc_rm8!(le);
 
-fn code_80(arg: &mut instruction::InstrArg) {
-    match arg.idata.modrm.reg as u8 {
-        0 => add_rm8_imm8(arg),
-        1 => or_rm8_imm8(arg),
-        2 => adc_rm8_imm8(arg),
-        3 => sbb_rm8_imm8(arg),
-        4 => and_rm8_imm8(arg),
-        5 => sub_rm8_imm8(arg),
-        6 => xor_rm8_imm8(arg),
-        7 => cmp_rm8_imm8(arg),
+fn code_80(exec: &mut exec::Exec) {
+    match exec.idata.modrm.reg as u8 {
+        0 => add_rm8_imm8(exec),
+        1 => or_rm8_imm8(exec),
+        2 => adc_rm8_imm8(exec),
+        3 => sbb_rm8_imm8(exec),
+        4 => and_rm8_imm8(exec),
+        5 => sub_rm8_imm8(exec),
+        6 => xor_rm8_imm8(exec),
+        7 => cmp_rm8_imm8(exec),
         _ => { panic!("ha??"); },
     }
 }

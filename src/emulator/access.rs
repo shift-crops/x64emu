@@ -1,20 +1,18 @@
 use crate::hardware;
-use crate::hardware::memory::Memory;
-use crate::hardware::processor::*;
+use crate::hardware::memory;
+use crate::hardware::processor;
 use crate::hardware::processor::general::*;
 use crate::hardware::processor::segment::*;
 
 pub struct Access {
-    pub core: Processor,
-    pub mem: Memory,
+    pub core: processor::Processor,
+    pub mem: memory::Memory,
 }
 
 impl Access {
     pub fn new(hw: hardware::Hardware) -> Self {
-        Access { core: hw.core, mem: hw.mem, }
+        Self { core: hw.core, mem: hw.mem, }
     }
-
-    pub fn update_rip(&mut self, v: i64) -> () { self.core.rip.update(v); }
 
     pub fn get_data64(&self, target: (SgReg, u64)) -> u64 { self.read_seg_mem64(target.0, target.1) }
     pub fn get_data32(&self, target: (SgReg, u64)) -> u32 { self.read_seg_mem32(target.0, target.1) }
@@ -30,18 +28,6 @@ impl Access {
     pub fn get_code32(&self, index: u64) -> u32 { self.fetch_seg_mem32(SgReg::CS, self.core.rip.get() + index) }
     pub fn get_code16(&self, index: u64) -> u16 { self.fetch_seg_mem16(SgReg::CS, self.core.rip.get() + index) }
     pub fn get_code8(&self, index: u64) -> u8 { self.fetch_seg_mem8(SgReg::CS, self.core.rip.get() + index) }
-
-    pub fn push64(&mut self, v: u64) -> () {
-        self.core.gpregs.update(GpReg64::RSP, -8);
-        let rsp = self.core.gpregs.get(GpReg64::RSP);
-        self.write_seg_mem64(SgReg::SS, rsp, v);
-    }
-
-    pub fn pop64(&mut self) -> u64 {
-        let rsp = self.core.gpregs.get(GpReg64::RSP);
-        self.core.gpregs.update(GpReg64::RSP, 8);
-        self.read_seg_mem64(SgReg::SS, rsp)
-    }
 
     pub fn dump(&self) -> () {
         self.core.dump();
@@ -124,4 +110,18 @@ impl Access {
     fn trans_l2p(&self, laddr: u64) -> u64 {
         laddr
     }
+}
+
+#[cfg(test)]
+#[test]
+pub fn access_test() {
+    let mut hw = hardware::Hardware::new();
+    hw.init_memory(0x1000);
+
+    let mut ac = Access::new(hw);
+    ac.set_data32((SgReg::DS, 0x10), 0xdeadbeef);
+    assert_eq!(ac.get_data8((SgReg::DS, 0x10)), 0xef);
+
+    ac.set_data32((SgReg::DS, 0x1010), 0xdeadbeef);
+    assert_eq!(ac.get_data8((SgReg::DS, 0x1010)), 0);
 }
