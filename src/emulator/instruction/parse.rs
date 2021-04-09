@@ -50,7 +50,7 @@ pub struct Sib {
 }
 
 impl InstrData {
-    pub fn parse(&mut self, ac: &mut access::Access, op: &opcode::Opcode) -> () {
+    pub fn parse(&mut self, ac: &mut access::Access, op: &dyn opcode::OpcodeTrait) -> () {
         self.oplen = 0;
 
         self.parse_legacy_prefix(ac);
@@ -58,7 +58,7 @@ impl InstrData {
 
         self.parse_opcode(ac);
 
-        let flag = op.get().flag(self.opcd);
+        let flag = op.flag(self.opcd);
         if flag.contains(opcode::OpFlags::MODRM) {
             self.parse_modrm(ac);
         }

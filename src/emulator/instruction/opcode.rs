@@ -1,3 +1,5 @@
+#[macro_use]
+mod fn_macro;
 mod common;
 mod opcode16;
 mod opcode32;

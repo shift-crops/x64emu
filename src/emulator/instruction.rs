@@ -18,10 +18,9 @@ impl Instruction {
     }
 
     pub fn fetch_exec(&mut self, ac: &mut access::Access) -> () {
-        self.idata.parse(ac, &self.opcode);
-
-        let mut exe = exec::Exec::new(ac, &self.idata);
         let op = self.opcode.get();
-        op.exec(&mut exe);
+
+        self.idata.parse(ac, op);
+        op.exec(&mut exec::Exec::new(ac, &self.idata));
     }
 }

@@ -30,10 +30,10 @@ pub fn exec_test() {
 
     let mut exe = Exec::new(&mut ac, &idata);
     exe.ac.core.gpregs.set(GpReg64::RSP, 0xf20);
-    exe.push64(0xdeadbeef);
-    exe.push64(0xcafebabe);
-    assert_eq!(exe.pop64(), 0xcafebabe);
-    assert_eq!(exe.pop64(), 0xdeadbeef);
+    exe.push_u64(0xdeadbeef);
+    exe.push_u64(0xcafebabe);
+    assert_eq!(exe.pop_u64(), 0xcafebabe);
+    assert_eq!(exe.pop_u64(), 0xdeadbeef);
 
     let mut x = exe.ac.mem.as_mut_ptr(0xf20).unwrap() as *mut u64;
     unsafe {
@@ -41,6 +41,6 @@ pub fn exec_test() {
         x = (x as usize + 8) as *mut u64;
         *x = 0x55667788;
     }
-    assert_eq!(exe.pop64(), 0x11223344);
-    assert_eq!(exe.pop64(), 0x55667788);
+    assert_eq!(exe.pop_u64(), 0x11223344);
+    assert_eq!(exe.pop_u64(), 0x55667788);
 }

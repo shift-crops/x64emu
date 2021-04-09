@@ -22,37 +22,77 @@ impl<'a> super::Exec<'a> {
         self.ac.core.gpregs.set(GpReg16::AX, v);
     }
 
-    pub fn push16(&mut self, v: u16) -> () {
+    pub fn get_opr8(&self) -> u8 {
+        let opr = (self.idata.opcd&0x7) as usize;
+        self.ac.core.gpregs.get(GpReg8::from(opr))
+    }
+
+    pub fn set_opr8(&mut self, v: u8) -> () {
+        let opr = (self.idata.opcd&0x7) as usize;
+        self.ac.core.gpregs.set(GpReg8::from(opr), v);
+    }
+
+    pub fn get_opr16(&self) -> u16 {
+        let opr = (self.idata.opcd&0x7) as usize;
+        self.ac.core.gpregs.get(GpReg16::from(opr))
+    }
+
+    pub fn set_opr16(&mut self, v: u16) -> () {
+        let opr = (self.idata.opcd&0x7) as usize;
+        self.ac.core.gpregs.set(GpReg16::from(opr), v);
+    }
+
+    pub fn get_opr32(&self) -> u32 {
+        let opr = (self.idata.opcd&0x7) as usize;
+        self.ac.core.gpregs.get(GpReg32::from(opr))
+    }
+
+    pub fn set_opr32(&mut self, v: u32) -> () {
+        let opr = (self.idata.opcd&0x7) as usize;
+        self.ac.core.gpregs.set(GpReg32::from(opr), v);
+    }
+
+    pub fn get_opr64(&self) -> u64 {
+        let opr = (self.idata.opcd&0x7) as usize;
+        self.ac.core.gpregs.get(GpReg64::from(opr))
+    }
+
+    pub fn set_opr64(&mut self, v: u64) -> () {
+        let opr = (self.idata.opcd&0x7) as usize;
+        self.ac.core.gpregs.set(GpReg64::from(opr), v);
+    }
+
+    pub fn push_u16(&mut self, v: u16) -> () {
         self.ac.core.gpregs.update(GpReg16::SP, -2);
         let sp = self.ac.core.gpregs.get(GpReg16::SP) as u64;
         self.ac.set_data16((SgReg::SS, sp), v);
     }
 
-    pub fn pop16(&mut self) -> u16 {
+    pub fn pop_u16(&mut self) -> u16 {
         let sp = self.ac.core.gpregs.get(GpReg16::SP) as u64;
         self.ac.core.gpregs.update(GpReg16::SP, 2);
         self.ac.get_data16((SgReg::SS, sp))
     }
 
-    pub fn push32(&mut self, v: u32) -> () {
+    pub fn push_u32(&mut self, v: u32) -> () {
         self.ac.core.gpregs.update(GpReg32::ESP, -4);
         let esp = self.ac.core.gpregs.get(GpReg32::ESP) as u64;
         self.ac.set_data32((SgReg::SS, esp), v);
     }
 
-    pub fn pop32(&mut self) -> u32 {
+    pub fn pop_u32(&mut self) -> u32 {
         let esp = self.ac.core.gpregs.get(GpReg32::ESP) as u64;
         self.ac.core.gpregs.update(GpReg32::ESP, 4);
         self.ac.get_data32((SgReg::SS, esp))
     }
 
-    pub fn push64(&mut self, v: u64) -> () {
+    pub fn push_u64(&mut self, v: u64) -> () {
         self.ac.core.gpregs.update(GpReg64::RSP, -8);
         let rsp = self.ac.core.gpregs.get(GpReg64::RSP);
         self.ac.set_data64((SgReg::SS, rsp), v);
     }
 
-    pub fn pop64(&mut self) -> u64 {
+    pub fn pop_u64(&mut self) -> u64 {
         let rsp = self.ac.core.gpregs.get(GpReg64::RSP);
         self.ac.core.gpregs.update(GpReg64::RSP, 8);
         self.ac.get_data64((SgReg::SS, rsp))
