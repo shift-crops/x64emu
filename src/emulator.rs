@@ -6,6 +6,7 @@ use super::hardware;
 pub struct Emulator {
     pub ac: access::Access,
     inst: instruction::Instruction,
+    pub breakpoints: Vec<u32>,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -21,6 +22,7 @@ impl Emulator {
         Emulator {
             ac: access::Access::new(hw),
             inst: instruction::Instruction::new(),
+            breakpoints: Vec::new(),
         }
     }
 
@@ -39,6 +41,10 @@ impl Emulator {
 
     pub fn step(&mut self) -> Option<Event> {
         self.inst.fetch_exec(&mut self.ac);
+
+        if self.breakpoints.contains(&(self.ac.core.rip.get() as u32)) {
+            return Some(Event::Break);
+        }
         None
     }
 
