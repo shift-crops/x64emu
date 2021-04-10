@@ -1,8 +1,9 @@
+use std::convert::TryFrom;
 use crate::hardware::processor::general::*;
 use crate::hardware::processor::segment::*;
 
-macro_rules! get_gpreg { ($self:expr, $type:ty, $reg:expr) => { $self.ac.core.gpregs.get(<$type>::from($reg as usize)) } }
-macro_rules! set_gpreg { ($self:expr, $type:ty, $reg:expr, $val:expr) => { $self.ac.core.gpregs.set(<$type>::from($reg as usize), $val); } }
+macro_rules! get_gpreg { ($self:expr, $type:ty, $reg:expr) => { $self.ac.core.gpregs.get(<$type>::try_from($reg as usize).unwrap()) } }
+macro_rules! set_gpreg { ($self:expr, $type:ty, $reg:expr, $val:expr) => { $self.ac.core.gpregs.set(<$type>::try_from($reg as usize).unwrap(), $val); } }
 
 impl<'a> super::Exec<'a> {
     pub fn get_imm8(&self) -> u8 {
@@ -122,7 +123,7 @@ impl<'a> super::Exec<'a> {
                 addr += self.idata.disp as u64;
             } else {
                 segment = if modrm.rm == 5 { SgReg::SS } else { SgReg::DS };
-                addr += self.ac.core.gpregs.get(GpReg32::from(modrm.rm as usize)) as u64;
+                addr += self.ac.core.gpregs.get(GpReg32::try_from(modrm.rm as usize).unwrap()) as u64;
             }
         } else {
             match modrm.mod_ {
@@ -165,9 +166,9 @@ impl<'a> super::Exec<'a> {
             bs = 0;
         } else {
             segment = Some(if modrm.rm == 5 { SgReg::SS } else { SgReg::DS });
-            bs = self.ac.core.gpregs.get(GpReg32::from(sib.base as usize)) as u64;
+            bs = self.ac.core.gpregs.get(GpReg32::try_from(sib.base as usize).unwrap()) as u64;
         }
 
-        (segment, bs + self.ac.core.gpregs.get(GpReg32::from(sib.index as usize)) as u64 * (1<<sib.scale))
+        (segment, bs + self.ac.core.gpregs.get(GpReg32::try_from(sib.index as usize).unwrap()) as u64 * (1<<sib.scale))
     }
 }

@@ -115,8 +115,7 @@ impl Access {
 #[cfg(test)]
 #[test]
 pub fn access_test() {
-    let mut hw = hardware::Hardware::new();
-    hw.init_memory(0x1000);
+    let hw = hardware::Hardware::new(0x1000);
 
     let mut ac = Access::new(hw);
     ac.set_data32((SgReg::DS, 0x10), 0xdeadbeef);

@@ -22,8 +22,7 @@ pub fn exec_test() {
     use crate::hardware;
     use crate::hardware::processor::general::*;
 
-    let mut hw = hardware::Hardware::new();
-    hw.init_memory(0x1000);
+    let hw = hardware::Hardware::new(0x1000);
 
     let mut ac = super::access::Access::new(hw);
     let idata: parse::InstrData = Default::default();

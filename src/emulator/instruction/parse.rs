@@ -6,10 +6,9 @@ use crate::hardware::processor::segment;
 #[derive(Default)]
 pub struct InstrData {
     pub pre_segment: Option<segment::SgReg>,
-    //pre_repeat: Option<Rep>,
-    //segment: Option<segment::SgReg>,
+    pub pre_repeat: Option<Rep>,
+    pub pre_size: Option<ChSz>,
 
-    //prefix: u16,
     pub rex: Rex,
     pub opcd: u16,
     pub modrm: ModRM,
@@ -22,7 +21,14 @@ pub struct InstrData {
     pub oplen: u64,
 }
 
-enum Rep { NONE, REPZ, REPNZ }
+pub enum Rep { REPZ, REPNZ }
+
+bitflags! {
+    pub struct ChSz: u8 {
+        const REG  = 0b00000001;
+        const ADDR = 0b00000010;
+    }
+}
 
 #[derive(Debug, Default, Clone, Copy, PackedStruct)]
 #[packed_struct(bit_numbering="lsb0", size_bytes="1")]
@@ -95,16 +101,16 @@ impl InstrData {
     fn parse_legacy_prefix(&mut self, ac: &mut access::Access) -> () {
         for _ in 0..4 {
             match ac.get_code8(self.oplen) {
-                0x26 => {},
-                0x2e => {},
-                0x36 => {},
-                0x3e => {},
-                0x64 => {},
-                0x65 => {},
-                0x66 => {},
-                0x67 => {},
-                0xf2 => {},
-                0xf3 => {},
+                0x26 => { self.pre_segment = Some(segment::SgReg::ES); },
+                0x2e => { self.pre_segment = Some(segment::SgReg::CS); },
+                0x36 => { self.pre_segment = Some(segment::SgReg::SS); },
+                0x3e => { self.pre_segment = Some(segment::SgReg::DS); },
+                0x64 => { self.pre_segment = Some(segment::SgReg::FS); },
+                0x65 => { self.pre_segment = Some(segment::SgReg::GS); },
+                0x66 => { self.pre_size = Some(ChSz::REG); },
+                0x67 => { self.pre_size = Some(ChSz::ADDR); },
+                0xf2 => { self.pre_repeat = Some(Rep::REPNZ) },
+                0xf3 => { self.pre_repeat = Some(Rep::REPZ) },
                 _ => break,
             }
             self.oplen += 1;

@@ -1,3 +1,4 @@
+use std::convert::TryFrom;
 use crate::emulator::instruction::opcode::*;
 use crate::hardware::processor::general::*;
 
@@ -218,12 +219,12 @@ impl Opcode16 {
     cmp_dst_src!(u16, ax, imm16);
 
     fn inc_opr16(exec: &mut exec::Exec) {
-        let opr = GpReg16::from((exec.idata.opcd&0x7) as usize);
+        let opr = GpReg16::try_from((exec.idata.opcd&0x7) as usize).unwrap();
         exec.ac.core.gpregs.update(opr, 1);
     }
 
     fn dec_opr16(exec: &mut exec::Exec) {
-        let opr = GpReg16::from((exec.idata.opcd&0x7) as usize);
+        let opr = GpReg16::try_from((exec.idata.opcd&0x7) as usize).unwrap();
         exec.ac.core.gpregs.update(opr, -1);
     }
 
@@ -234,11 +235,11 @@ impl Opcode16 {
         debug!("pusha");
         let sp = exec.ac.core.gpregs.get(GpReg16::SP);
         for i in 0..4 {
-            exec.push_u16(exec.ac.core.gpregs.get(GpReg16::from(i)));
+            exec.push_u16(exec.ac.core.gpregs.get(GpReg16::try_from(i).unwrap()));
         }
         exec.push_u16(sp);
         for i in 5..8 {
-            exec.push_u16(exec.ac.core.gpregs.get(GpReg16::from(i)));
+            exec.push_u16(exec.ac.core.gpregs.get(GpReg16::try_from(i).unwrap()));
         }
     }
 
@@ -246,12 +247,12 @@ impl Opcode16 {
         debug!("popa");
         for i in (5..8).rev() {
             let v = exec.pop_u16();
-            exec.ac.core.gpregs.set(GpReg16::from(i), v);
+            exec.ac.core.gpregs.set(GpReg16::try_from(i).unwrap(), v);
         }
         let sp = exec.pop_u16();
         for i in (0..4).rev() {
             let v = exec.pop_u16();
-            exec.ac.core.gpregs.set(GpReg16::from(i), v);
+            exec.ac.core.gpregs.set(GpReg16::try_from(i).unwrap(), v);
         }
         exec.ac.core.gpregs.set(GpReg16::SP, sp);
     }

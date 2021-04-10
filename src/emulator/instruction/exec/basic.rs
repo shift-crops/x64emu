@@ -1,3 +1,4 @@
+use std::convert::TryFrom;
 use crate::hardware::processor::general::*;
 use crate::hardware::processor::segment::*;
 
@@ -24,42 +25,42 @@ impl<'a> super::Exec<'a> {
 
     pub fn get_opr8(&self) -> u8 {
         let opr = (self.idata.opcd&0x7) as usize;
-        self.ac.core.gpregs.get(GpReg8::from(opr))
+        self.ac.core.gpregs.get(GpReg8::try_from(opr).unwrap())
     }
 
     pub fn set_opr8(&mut self, v: u8) -> () {
         let opr = (self.idata.opcd&0x7) as usize;
-        self.ac.core.gpregs.set(GpReg8::from(opr), v);
+        self.ac.core.gpregs.set(GpReg8::try_from(opr).unwrap(), v);
     }
 
     pub fn get_opr16(&self) -> u16 {
         let opr = (self.idata.opcd&0x7) as usize;
-        self.ac.core.gpregs.get(GpReg16::from(opr))
+        self.ac.core.gpregs.get(GpReg16::try_from(opr).unwrap())
     }
 
     pub fn set_opr16(&mut self, v: u16) -> () {
         let opr = (self.idata.opcd&0x7) as usize;
-        self.ac.core.gpregs.set(GpReg16::from(opr), v);
+        self.ac.core.gpregs.set(GpReg16::try_from(opr).unwrap(), v);
     }
 
     pub fn get_opr32(&self) -> u32 {
         let opr = (self.idata.opcd&0x7) as usize;
-        self.ac.core.gpregs.get(GpReg32::from(opr))
+        self.ac.core.gpregs.get(GpReg32::try_from(opr).unwrap())
     }
 
     pub fn set_opr32(&mut self, v: u32) -> () {
         let opr = (self.idata.opcd&0x7) as usize;
-        self.ac.core.gpregs.set(GpReg32::from(opr), v);
+        self.ac.core.gpregs.set(GpReg32::try_from(opr).unwrap(), v);
     }
 
     pub fn get_opr64(&self) -> u64 {
         let opr = (self.idata.opcd&0x7) as usize;
-        self.ac.core.gpregs.get(GpReg64::from(opr))
+        self.ac.core.gpregs.get(GpReg64::try_from(opr).unwrap())
     }
 
     pub fn set_opr64(&mut self, v: u64) -> () {
         let opr = (self.idata.opcd&0x7) as usize;
-        self.ac.core.gpregs.set(GpReg64::from(opr), v);
+        self.ac.core.gpregs.set(GpReg64::try_from(opr).unwrap(), v);
     }
 
     pub fn push_u16(&mut self, v: u16) -> () {
