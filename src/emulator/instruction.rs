@@ -2,6 +2,7 @@ mod parse;
 mod opcode;
 mod exec;
 
+use std::error;
 use super::access;
 
 pub struct Instruction {
@@ -17,10 +18,17 @@ impl Instruction {
         }
     }
 
-    pub fn fetch_exec(&mut self, ac: &mut access::Access) -> () {
-        let op = self.opcode.get();
+    pub fn fetch_exec(&mut self, ac: &mut access::Access) -> Result<(), Box<dyn error::Error>> {
+        self.idata.parse1(ac)?;
 
-        self.idata.parse(ac, op);
-        op.exec(&mut exec::Exec::new(ac, &self.idata));
+        let op = self.opcode.get();
+        let flag = op.flag(self.idata.opcd);
+
+        self.idata.parse2(ac, &flag)?;
+        let exec = &mut exec::Exec::new(ac, &self.idata);
+
+        op.exec(exec)?;
+
+        Ok(())
     }
 }

@@ -2,8 +2,17 @@ mod basic;
 mod flag;
 mod reg_mem;
 
+use thiserror::Error;
 use super::parse;
 use crate::emulator::access;
+
+#[derive(Debug, Error)]
+pub enum ExecError {
+    #[error("Register From Primitive Error")]
+    RegFromUndefinedPrimitive(usize),
+    #[error("Unexpected Error")]
+    Unexpected,
+}
 
 pub struct Exec<'a> {
     pub ac: &'a mut access::Access,

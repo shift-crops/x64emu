@@ -1,5 +1,7 @@
+use crate::emulator::instruction::exec::ExecError;
+
 impl<'a> super::Exec<'a> {
-    pub fn update_rflags_add<T: Into<u64> + num::traits::ops::overflowing::OverflowingAdd + Sized + Copy>(&mut self, v1: T, v2: T) -> () {
+    pub fn update_rflags_add<T: Into<u64> + num::traits::ops::overflowing::OverflowingAdd + Sized + Copy>(&mut self, v1: T, v2: T) -> Result<(), ExecError> {
         let (result, cf) = v1.overflowing_add(&v2);
         let result = result.into();
         let sz = std::mem::size_of::<T>()*8 - 1;
@@ -11,9 +13,10 @@ impl<'a> super::Exec<'a> {
         rf.set_zero(result == 0);
         rf.set_sign(sr);
         rf.set_overflow(!(s1^s2) && s1^sr);
+        Ok(())
     }
 
-    pub fn update_rflags_adc<T: Into<u64> + num::traits::ops::overflowing::OverflowingAdd + Sized + Copy>(&mut self, v1: T, v2: T, v3: T) -> () {
+    pub fn update_rflags_adc<T: Into<u64> + num::traits::ops::overflowing::OverflowingAdd + Sized + Copy>(&mut self, v1: T, v2: T, v3: T) -> Result<(), ExecError> {
         let (result, cf1) = v1.overflowing_add(&v2);
         let (result, cf2) = result.overflowing_add(&v3);
         let result = result.into();
@@ -26,9 +29,10 @@ impl<'a> super::Exec<'a> {
         rf.set_zero(result == 0);
         rf.set_sign(sr);
         rf.set_overflow(!(s1^s2) && s1^sr);
+        Ok(())
     }
 
-    pub fn update_rflags_sub<T: Into<u64> + num::traits::ops::overflowing::OverflowingSub + Sized + Copy>(&mut self, v1: T, v2: T) -> () {
+    pub fn update_rflags_sub<T: Into<u64> + num::traits::ops::overflowing::OverflowingSub + Sized + Copy>(&mut self, v1: T, v2: T) -> Result<(), ExecError> {
         let (result, cf) = v1.overflowing_sub(&v2);
         let result = result.into();
         let sz = std::mem::size_of::<T>()*8 - 1;
@@ -40,9 +44,10 @@ impl<'a> super::Exec<'a> {
         rf.set_zero(result == 0);
         rf.set_sign(sr);
         rf.set_overflow(s1^s2 && s1^sr);
+        Ok(())
     }
 
-    pub fn update_rflags_sbb<T: Into<u64> + num::traits::ops::overflowing::OverflowingSub + Sized + Copy>(&mut self, v1: T, v2: T, v3: T) -> () {
+    pub fn update_rflags_sbb<T: Into<u64> + num::traits::ops::overflowing::OverflowingSub + Sized + Copy>(&mut self, v1: T, v2: T, v3: T) -> Result<(), ExecError> {
         let (result, cf1) = v1.overflowing_sub(&v2);
         let (result, cf2) = result.overflowing_sub(&v3);
         let result = result.into();
@@ -55,9 +60,10 @@ impl<'a> super::Exec<'a> {
         rf.set_zero(result == 0);
         rf.set_sign(sr);
         rf.set_overflow(s1^s2 && s1^sr);
+        Ok(())
     }
 
-    pub fn update_rflags_mul<T: Into<u64> + num::traits::WrappingMul + Sized + Copy>(&mut self, v1: T, v2: T) -> () {
+    pub fn update_rflags_mul<T: Into<u64> + num::traits::WrappingMul + Sized + Copy>(&mut self, v1: T, v2: T) -> Result<(), ExecError> {
         let ur = v1.wrapping_mul(&v2);
         let sz = std::mem::size_of::<T>()*8 - 1;
         let of = (ur.into() >> sz) != 0;
@@ -65,9 +71,10 @@ impl<'a> super::Exec<'a> {
         let rf = &mut self.ac.core.rflags;
         rf.set_carry(of);
         rf.set_overflow(of);
+        Ok(())
     }
 
-    pub fn update_rflags_or<T: Into<u64> + std::ops::BitOr<Output = T> + Sized + Copy>(&mut self, v1: T, v2: T) -> () {
+    pub fn update_rflags_or<T: Into<u64> + std::ops::BitOr<Output = T> + Sized + Copy>(&mut self, v1: T, v2: T) -> Result<(), ExecError> {
         let ur = (v1 | v2).into();
         let sz = std::mem::size_of::<T>()*8 - 1;
 
@@ -77,9 +84,10 @@ impl<'a> super::Exec<'a> {
         rf.set_zero(ur == 0);
         rf.set_sign((ur >> sz) != 0);
         rf.set_overflow(false);
+        Ok(())
     }
 
-    pub fn update_rflags_and<T: Into<u64> + std::ops::BitAnd<Output = T> + Sized + Copy>(&mut self, v1: T, v2: T) -> () {
+    pub fn update_rflags_and<T: Into<u64> + std::ops::BitAnd<Output = T> + Sized + Copy>(&mut self, v1: T, v2: T) -> Result<(), ExecError> {
         let ur = (v1 & v2).into();
         let sz = std::mem::size_of::<T>()*8 - 1;
 
@@ -89,9 +97,10 @@ impl<'a> super::Exec<'a> {
         rf.set_zero(ur == 0);
         rf.set_sign((ur >> sz) != 0);
         rf.set_overflow(false);
+        Ok(())
     }
 
-    pub fn update_rflags_xor<T: Into<u64> + std::ops::BitXor<Output = T> + Sized + Copy>(&mut self, v1: T, v2: T) -> () {
+    pub fn update_rflags_xor<T: Into<u64> + std::ops::BitXor<Output = T> + Sized + Copy>(&mut self, v1: T, v2: T) -> Result<(), ExecError> {
         let ur = (v1 ^ v2).into();
         let sz = std::mem::size_of::<T>()*8 - 1;
 
@@ -101,46 +110,47 @@ impl<'a> super::Exec<'a> {
         rf.set_zero(ur == 0);
         rf.set_sign((ur >> sz) != 0);
         rf.set_overflow(false);
+        Ok(())
     }
 
-    pub fn check_rflags_o(&self) -> bool {
+    pub fn check_rflags_o(&self) -> Result<bool, ExecError> {
         let rf = self.ac.core.rflags;
-        rf.is_overflow()
+        Ok(rf.is_overflow())
     }
 
-    pub fn check_rflags_b(&self) -> bool {
+    pub fn check_rflags_b(&self) -> Result<bool, ExecError> {
         let rf = self.ac.core.rflags;
-        rf.is_carry()
+        Ok(rf.is_carry())
     }
 
-    pub fn check_rflags_z(&self) -> bool {
+    pub fn check_rflags_z(&self) -> Result<bool, ExecError> {
         let rf = self.ac.core.rflags;
-        rf.is_zero()
+        Ok(rf.is_zero())
     }
 
-    pub fn check_rflags_be(&self) -> bool {
+    pub fn check_rflags_be(&self) -> Result<bool, ExecError> {
         let rf = self.ac.core.rflags;
-        rf.is_carry() || rf.is_zero()
+        Ok(rf.is_carry() || rf.is_zero())
     }
 
-    pub fn check_rflags_s(&self) -> bool {
+    pub fn check_rflags_s(&self) -> Result<bool, ExecError> {
         let rf = self.ac.core.rflags;
-        rf.is_sign()
+        Ok(rf.is_sign())
     }
 
-    pub fn check_rflags_p(&self) -> bool {
+    pub fn check_rflags_p(&self) -> Result<bool, ExecError> {
         let rf = self.ac.core.rflags;
-        rf.is_parity()
+        Ok(rf.is_parity())
     }
 
-    pub fn check_rflags_l(&self) -> bool {
+    pub fn check_rflags_l(&self) -> Result<bool, ExecError> {
         let rf = self.ac.core.rflags;
-        rf.is_sign() ^ rf.is_overflow()
+        Ok(rf.is_sign() ^ rf.is_overflow())
     }
 
-    pub fn check_rflags_le(&self) -> bool {
+    pub fn check_rflags_le(&self) -> Result<bool, ExecError> {
         let rf = self.ac.core.rflags;
-        rf.is_zero() || (rf.is_sign() ^ rf.is_overflow())
+        Ok(rf.is_zero() || (rf.is_sign() ^ rf.is_overflow()))
     }
 
     fn check_parity(v: u8) -> bool {

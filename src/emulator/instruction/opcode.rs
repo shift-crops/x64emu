@@ -5,7 +5,26 @@ mod opcode16;
 mod opcode32;
 mod opcode64;
 
+use thiserror::Error;
 use super::exec;
+
+#[derive(Debug, Error)]
+pub enum OpError {
+    #[error("Undefined Opecode")]
+    Undefined,
+    #[error("Not Implemented Opecode : {0:x}")]
+    NotImplemented(u8),
+    #[error("Exec Error")]
+    ExecError(exec::ExecError),
+    #[error("Unexpected Error")]
+    Unexpected,
+}
+
+impl From<exec::ExecError> for OpError {
+    fn from(err: exec::ExecError) -> OpError {
+        OpError::ExecError(err)
+    }
+}
 
 bitflags! {
     pub struct OpFlags: u8 {
@@ -29,7 +48,7 @@ bitflags! {
 
 #[derive(Clone, Copy)]
 pub struct OpcodeType {
-    func: fn(&mut exec::Exec),
+    func: fn(&mut exec::Exec) -> Result<(), OpError>,
     flag: OpFlags,
 }
 impl Default for OpcodeType {
@@ -42,9 +61,9 @@ const MAX_OPCODE: usize = 0x200;
 type OpcodeArr = [OpcodeType; MAX_OPCODE];
 
 pub struct Opcode {
-    op16: opcode16::Opcode16,
-    op32: opcode32::Opcode32,
-    op64: opcode64::Opcode64,
+    pub op16: opcode16::Opcode16,
+    pub op32: opcode32::Opcode32,
+    pub op64: opcode64::Opcode64,
 }
 
 impl Opcode {
@@ -62,19 +81,15 @@ impl Opcode {
         op.op64.init_opcode();
         op
     }
-
-    pub fn get(&self) -> &dyn OpcodeTrait {
-        &self.op16
-    }
 }
 
 pub trait OpcodeTrait {
     fn init_opcode(&mut self) -> ();
-    fn exec(&self, arg: &mut exec::Exec) -> ();
+    fn exec(&self, arg: &mut exec::Exec) -> Result<(), OpError>;
     fn flag(&self, opcode: u16) -> OpFlags;
 }
 
-fn undefined(exec: &mut exec::Exec) -> () {
+fn undefined(exec: &mut exec::Exec) -> Result<(), OpError> {
     exec.ac.dump();
-    panic!("Undefined Opcode");
+    Err(OpError::Undefined)
 }

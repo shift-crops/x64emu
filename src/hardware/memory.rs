@@ -1,21 +1,12 @@
 extern crate libc;
 use libc::c_void;
-use std::error;
-use std::fmt;
+use thiserror::Error;
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum MemoryError {
+    #[error("Out of range : {0:x}")]
     OutOfRange(usize),
 }
-
-impl fmt::Display for MemoryError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            MemoryError::OutOfRange(p) => write!(f, "Out of range : {:x}", p),
-        }
-    }
-}
-impl error::Error for MemoryError {}
 
 pub struct Memory(Vec<u8>);
 
@@ -36,10 +27,8 @@ impl Memory {
 
     pub fn read_data(&self, dst: *mut c_void, src_addr: usize, len: usize) -> Result<usize, MemoryError> {
         if let Some(slice) = self.0.get(src_addr..src_addr+len) {
-            unsafe{
-                libc::memcpy(dst, slice.as_ptr() as *const c_void, len);
-            }
-                Ok(len)
+            unsafe{ libc::memcpy(dst, slice.as_ptr() as *const c_void, len); }
+            Ok(len)
         } else {
             Err(MemoryError::OutOfRange(src_addr+len))
         }

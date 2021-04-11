@@ -1,6 +1,7 @@
 mod access;
 mod instruction;
 
+use std::error;
 use super::hardware;
 
 pub struct Emulator {
@@ -9,12 +10,10 @@ pub struct Emulator {
 
 impl Emulator {
     pub fn new(hw: hardware::Hardware) -> Self {
-        Self {
-            ac: access::Access::new(hw),
-        }
+        Self { ac: access::Access::new(hw) }
     }
 
-    pub fn load_binary(&mut self, path: String, addr: usize) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn load_binary(&mut self, path: String, addr: usize) -> Result<(), Box<dyn error::Error>> {
         use std::io::Read;
         use std::fs::File;
         use libc::c_void;
@@ -31,7 +30,7 @@ impl Emulator {
         let mut inst = instruction::Instruction::new();
 
         loop {
-            inst.fetch_exec(&mut self.ac);
+            inst.fetch_exec(&mut self.ac).unwrap();
         }
     }
 }

@@ -10,7 +10,7 @@ impl Opcode16 {
 }
 
 impl super::OpcodeTrait for Opcode16 {
-    fn init_opcode(&mut self) -> (){
+    fn init_opcode(&mut self) -> () {
         macro_rules! setop {
             ($n:expr, $fnc:ident, $flg:expr) => { self.0[$n & 0x1ff] = OpcodeType{func:Self::$fnc, flag:$flg} }
         }
@@ -181,7 +181,11 @@ impl super::OpcodeTrait for Opcode16 {
         */
     }
 
-    fn exec(&self, exec: &mut exec::Exec) -> () { (self.0[exec.idata.opcd as usize].func)(exec); exec.update_rip(exec.idata.oplen as i64); }
+    fn exec(&self, exec: &mut exec::Exec) -> Result<(), OpError> {
+        (self.0[exec.idata.opcd as usize].func)(exec)?;
+        exec.update_rip(exec.idata.oplen as i64)?;
+        Ok(())
+    }
     fn flag(&self, opcode: u16) -> OpFlags { self.0[opcode as usize].flag }
 }
 
@@ -218,43 +222,47 @@ impl Opcode16 {
     cmp_dst_src!(u16, r16, rm16);
     cmp_dst_src!(u16, ax, imm16);
 
-    fn inc_opr16(exec: &mut exec::Exec) {
+    fn inc_opr16(exec: &mut exec::Exec) -> Result<(), OpError> {
         let opr = GpReg16::try_from((exec.idata.opcd&0x7) as usize).unwrap();
         exec.ac.core.gpregs.update(opr, 1);
+        Ok(())
     }
 
-    fn dec_opr16(exec: &mut exec::Exec) {
+    fn dec_opr16(exec: &mut exec::Exec) -> Result<(), OpError> {
         let opr = GpReg16::try_from((exec.idata.opcd&0x7) as usize).unwrap();
         exec.ac.core.gpregs.update(opr, -1);
+        Ok(())
     }
 
     push_src!(u16, opr16);
     pop_dst!(u16, opr16);
 
-    fn pusha(exec: &mut exec::Exec) {
+    fn pusha(exec: &mut exec::Exec) -> Result<(), OpError> {
         debug!("pusha");
         let sp = exec.ac.core.gpregs.get(GpReg16::SP);
         for i in 0..4 {
-            exec.push_u16(exec.ac.core.gpregs.get(GpReg16::try_from(i).unwrap()));
+            exec.push_u16(exec.ac.core.gpregs.get(GpReg16::try_from(i).unwrap()))?;
         }
-        exec.push_u16(sp);
+        exec.push_u16(sp)?;
         for i in 5..8 {
-            exec.push_u16(exec.ac.core.gpregs.get(GpReg16::try_from(i).unwrap()));
+            exec.push_u16(exec.ac.core.gpregs.get(GpReg16::try_from(i).unwrap()))?;
         }
+        Ok(())
     }
 
-    fn popa(exec: &mut exec::Exec) {
+    fn popa(exec: &mut exec::Exec) -> Result<(), OpError> {
         debug!("popa");
         for i in (5..8).rev() {
-            let v = exec.pop_u16();
+            let v = exec.pop_u16()?;
             exec.ac.core.gpregs.set(GpReg16::try_from(i).unwrap(), v);
         }
-        let sp = exec.pop_u16();
+        let sp = exec.pop_u16()?;
         for i in (0..4).rev() {
-            let v = exec.pop_u16();
+            let v = exec.pop_u16()?;
             exec.ac.core.gpregs.set(GpReg16::try_from(i).unwrap(), v);
         }
         exec.ac.core.gpregs.set(GpReg16::SP, sp);
+        Ok(())
     }
 
     push_src!(u16, imm8);
