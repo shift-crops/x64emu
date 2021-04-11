@@ -6,11 +6,15 @@ use super::hardware;
 
 pub struct Emulator {
     ac: access::Access,
+    inst: instruction::Instruction,
 }
 
 impl Emulator {
     pub fn new(hw: hardware::Hardware) -> Self {
-        Self { ac: access::Access::new(hw) }
+        Self {
+            ac: access::Access::new(hw),
+            inst: instruction::Instruction::new(),
+        }
     }
 
     pub fn load_binary(&mut self, path: String, addr: usize) -> Result<(), Box<dyn error::Error>> {
@@ -27,10 +31,8 @@ impl Emulator {
     }
 
     pub fn run(&mut self) -> () {
-        let mut inst = instruction::Instruction::new();
-
         loop {
-            inst.fetch_exec(&mut self.ac).unwrap();
+            self.inst.fetch_exec(&mut self.ac).unwrap();
         }
     }
 }

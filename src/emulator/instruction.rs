@@ -5,28 +5,27 @@ mod exec;
 use std::error;
 use super::access;
 
+pub enum OpAdSize { BIT16, BIT32, BIT64 }
+
 pub struct Instruction {
-    idata: parse::InstrData,
     opcode: opcode::Opcode,
 }
 
 impl Instruction {
     pub fn new() -> Self {
         Self {
-            idata: Default::default(),
             opcode: opcode::Opcode::new(),
         }
     }
 
     pub fn fetch_exec(&mut self, ac: &mut access::Access) -> Result<(), Box<dyn error::Error>> {
-        self.idata.parse1(ac)?;
+        let mut parse: parse::ParseInstr = Default::default();
+        parse.parse_prefix(ac)?;
 
-        let op = self.opcode.get();
-        let flag = op.flag(self.idata.opcd);
+        let op = self.opcode.get(OpAdSize::BIT16);
+        parse.parse_instruction(ac, op)?;
 
-        self.idata.parse2(ac, &flag)?;
-        let exec = &mut exec::Exec::new(ac, &self.idata);
-
+        let exec = &mut exec::Exec::new(ac, &parse.instr, OpAdSize::BIT16, parse.prefix.segment);
         op.exec(exec)?;
 
         Ok(())

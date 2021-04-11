@@ -17,25 +17,17 @@ impl From<packed_struct::PackingError> for InstrError {
 }
 
 #[derive(Default)]
-pub struct InstrData {
-    pub pre_segment: Option<segment::SgReg>,
-    pub pre_repeat: Option<Rep>,
-    pub pre_size: OverrideSize,
-
-    pub rex: Rex,
-    pub opcd: u16,
-    pub modrm: ModRM,
-    pub sib: Sib,
-    pub disp: u32,
-    pub imm: u64,
-    pub ptr16: u16,
-    pub moffs: u64,
-
-    pub oplen: u64,
+pub struct ParseInstr {
+    pub prefix: PrefixData,
+    pub instr: InstrData,
 }
 
+#[derive(Default)]
 pub struct PrefixData {
-
+    pub segment: Option<segment::SgReg>,
+    pub repeat: Option<Rep>,
+    pub size: OverrideSize,
+    pub rex: Rex,
 }
 
 pub enum Rep { REPZ, REPNZ }
@@ -60,6 +52,19 @@ pub struct Rex {
     #[packed_field(bits="3")] w:  u8,
 }
 
+#[derive(Default)]
+pub struct InstrData {
+    pub len: u64,
+
+    pub opcode: u16,
+    pub modrm: ModRM,
+    pub sib: Sib,
+    pub disp: u32,
+    pub imm: u64,
+    pub ptr16: u16,
+    pub moffs: u64,
+}
+
 #[derive(Debug, Default, Clone, Copy, PackedStruct)]
 #[packed_struct(bit_numbering="lsb0", size_bytes="1")]
 pub struct ModRM {
@@ -76,36 +81,36 @@ pub struct Sib {
     #[packed_field(bits="6:7")] pub scale:  u8,
 }
 
-impl InstrData {
-    pub fn parse1(&mut self, ac: &mut access::Access) -> Result<(), InstrError> {
-        self.oplen = 0;
-
+impl ParseInstr {
+    pub fn parse_prefix(&mut self, ac: &mut access::Access) -> Result<(), InstrError> {
         self.get_legacy_prefix(ac)?;
         // self.get_rex_prefix(ac)?; 64 bit mode
-
-        self.get_opcode(ac)?;
         Ok(())
     }
 
-    pub fn parse2(&mut self, ac: &mut access::Access, flag: &opcode::OpFlags) -> Result<(), InstrError> {
+    pub fn parse_instruction(&mut self, ac: &mut access::Access, op: &dyn opcode::OpcodeTrait) -> Result<(), InstrError> {
+        self.get_opcode(ac)?;
+
+        let flag = op.flag(self.instr.opcode);
+
         if flag.contains(opcode::OpFlags::MODRM) {
             self.get_modrm(ac)?;
         }
 
         if flag.contains(opcode::OpFlags::IMM32) {
-            self.imm = ac.get_code32(self.oplen) as u64;
-            self.oplen += 4;
+            self.instr.imm = ac.get_code32(self.instr.len) as u64;
+            self.instr.len += 4;
         } else if flag.contains(opcode::OpFlags::IMM16) {
-            self.imm = ac.get_code16(self.oplen) as u64;
-            self.oplen += 2;
+            self.instr.imm = ac.get_code16(self.instr.len) as u64;
+            self.instr.len += 2;
         } else if flag.contains(opcode::OpFlags::IMM8) {
-            self.imm = ac.get_code8(self.oplen) as u64;
-            self.oplen += 1;
+            self.instr.imm = ac.get_code8(self.instr.len) as u64;
+            self.instr.len += 1;
         }
 
         if flag.contains(opcode::OpFlags::PTR16) {
-            self.ptr16 = ac.get_code16(self.oplen) as u16;
-            self.oplen += 2;
+            self.instr.ptr16 = ac.get_code16(self.instr.len) as u16;
+            self.instr.len += 2;
         }
 
         if flag.contains(opcode::OpFlags::MOFFSX) {
@@ -116,90 +121,93 @@ impl InstrData {
     }
 }
 
-impl InstrData {
+impl ParseInstr {
     fn get_legacy_prefix(&mut self, ac: &mut access::Access) -> Result<(), InstrError> {
+        let prefix = &mut self.prefix;
         for _ in 0..4 {
-            match ac.get_code8(self.oplen) {
-                0x26 => { self.pre_segment = Some(segment::SgReg::ES); },
-                0x2e => { self.pre_segment = Some(segment::SgReg::CS); },
-                0x36 => { self.pre_segment = Some(segment::SgReg::SS); },
-                0x3e => { self.pre_segment = Some(segment::SgReg::DS); },
-                0x64 => { self.pre_segment = Some(segment::SgReg::FS); },
-                0x65 => { self.pre_segment = Some(segment::SgReg::GS); },
-                0x66 => { self.pre_size |= OverrideSize::OP; },
-                0x67 => { self.pre_size |= OverrideSize::AD; },
-                0xf2 => { self.pre_repeat = Some(Rep::REPNZ) },
-                0xf3 => { self.pre_repeat = Some(Rep::REPZ) },
+            match ac.get_code8(self.instr.len) {
+                0x26 => { prefix.segment = Some(segment::SgReg::ES); },
+                0x2e => { prefix.segment = Some(segment::SgReg::CS); },
+                0x36 => { prefix.segment = Some(segment::SgReg::SS); },
+                0x3e => { prefix.segment = Some(segment::SgReg::DS); },
+                0x64 => { prefix.segment = Some(segment::SgReg::FS); },
+                0x65 => { prefix.segment = Some(segment::SgReg::GS); },
+                0x66 => { prefix.size |= OverrideSize::OP; },
+                0x67 => { prefix.size |= OverrideSize::AD; },
+                0xf2 => { prefix.repeat = Some(Rep::REPNZ) },
+                0xf3 => { prefix.repeat = Some(Rep::REPZ) },
                 _ => break,
             }
-            self.oplen += 1;
+            self.instr.len += 1;
         }
         Ok(())
     }
 
     fn get_rex_prefix(&mut self, ac: &mut access::Access) -> Result<(), InstrError> {
-        let code = ac.get_code8(self.oplen);
+        let code = ac.get_code8(self.instr.len);
         if (code >> 4) != 4 { return Ok(()); }
 
-        self.rex = Rex::unpack(&code.to_be_bytes())?;
-        self.oplen += 1;
-        debug!("{:} ", self.rex);
+        self.prefix.rex = Rex::unpack(&code.to_be_bytes())?;
+        self.instr.len += 1;
+        debug!("{:} ", self.prefix.rex);
         Ok(())
     }
 
     fn get_opcode(&mut self, ac: &mut access::Access) -> Result<(), InstrError> {
-        self.opcd = ac.get_code8(self.oplen) as u16;
-        self.oplen += 1;
+        let opcode = &mut self.instr.opcode;
+        *opcode = ac.get_code8(self.instr.len) as u16;
+        self.instr.len += 1;
 
-        if self.opcd == 0x0f {
-            self.opcd = (1<<8) + ac.get_code8(self.oplen) as u16;
+        if *opcode == 0x0f {
+            *opcode = (1<<8) + ac.get_code8(self.instr.len) as u16;
         }
-        debug!("opcode: {:02x} ", self.opcd);
+        debug!("opcode: {:02x} ", *opcode);
         Ok(())
     }
 
     fn get_modrm(&mut self, ac: &mut access::Access) -> Result<(), InstrError> {
-        let code = ac.get_code8(self.oplen);
-        self.modrm = ModRM::unpack(&code.to_be_bytes())?;
-        debug!("{:?} ", self.modrm);
-        self.oplen += 1;
+        let code = ac.get_code8(self.instr.len);
+        self.instr.modrm = ModRM::unpack(&code.to_be_bytes())?;
+        debug!("{:?} ", self.instr.modrm);
+        self.instr.len += 1;
 
-        let (mod_, rm) = (self.modrm.mod_, self.modrm.rm);
+        let (mod_, rm) = (self.instr.modrm.mod_, self.instr.modrm.rm);
         if 16 == 32 {
             if mod_ != 3 && rm == 4 {
-                self.sib = Sib::unpack(&ac.get_code8(self.oplen).to_be_bytes())?;
-                self.oplen += 1;
-                debug!("{:?} ", self.sib);
+                self.instr.sib = Sib::unpack(&ac.get_code8(self.instr.len).to_be_bytes())?;
+                self.instr.len += 1;
+                debug!("{:?} ", self.instr.sib);
             }
 
-            if mod_ == 2 || (mod_ == 0 && rm == 5) || (mod_ == 0 && self.sib.base == 5) {
-                self.disp = ac.get_code32(self.oplen) as u32;
-                self.oplen += 4;
+            if mod_ == 2 || (mod_ == 0 && rm == 5) || (mod_ == 0 && self.instr.sib.base == 5) {
+                self.instr.disp = ac.get_code32(self.instr.len) as u32;
+                self.instr.len += 4;
             } else if mod_ == 1 {
-                self.disp = ac.get_code8(self.oplen) as u32;
-                self.oplen += 1;
+                self.instr.disp = ac.get_code8(self.instr.len) as u32;
+                self.instr.len += 1;
             }
-            debug!("disp: {:02x} ", self.disp);
+            debug!("disp: {:02x} ", self.instr.disp);
         } else {
             if mod_ == 2 || (mod_ == 0 && rm == 6) {
-                self.disp = ac.get_code16(self.oplen) as u32;
-                self.oplen += 2;
+                self.instr.disp = ac.get_code16(self.instr.len) as u32;
+                self.instr.len += 2;
             } else if mod_ == 1 {
-                self.disp = ac.get_code8(self.oplen) as u32;
-                self.oplen += 1;
+                self.instr.disp = ac.get_code8(self.instr.len) as u32;
+                self.instr.len += 1;
             }
-            debug!("disp: {:02x} ", self.disp);
+            debug!("disp: {:02x} ", self.instr.disp);
         }
         Ok(())
     }
 
     fn get_moffs(&mut self, ac: &mut access::Access) -> Result<(), InstrError> {
+        let moffs = &mut self.instr.moffs;
         if 16 == 32 {
-            self.moffs = ac.get_code32(self.oplen) as u64;
-            self.oplen += 4;
+            *moffs = ac.get_code32(self.instr.len) as u64;
+            self.instr.len += 4;
         } else {
-            self.moffs = ac.get_code16(self.oplen) as u64;
-            self.oplen += 2;
+            *moffs = ac.get_code16(self.instr.len) as u64;
+            self.instr.len += 2;
         }
         Ok(())
     }

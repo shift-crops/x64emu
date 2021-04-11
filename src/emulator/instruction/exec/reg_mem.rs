@@ -1,4 +1,5 @@
 use std::convert::TryFrom;
+use crate::emulator::instruction::OpAdSize;
 use crate::emulator::instruction::exec::ExecError;
 use crate::hardware::processor::general::*;
 use crate::hardware::processor::segment::*;
@@ -140,47 +141,51 @@ impl<'a> super::Exec<'a> {
         let mut addr: u64 = 0;
         let mut segment = SgReg::DS;
 
-        if 16 == 32 {
-            match modrm.mod_ {
-                1|2 => addr += self.idata.disp as u64,
-                _ => {},
-            }
+        match self.ad_size {
+            OpAdSize::BIT16 => {
+                match modrm.mod_ {
+                    1|2 => addr += self.idata.disp as u64,
+                    _ => {},
+                }
 
-            if modrm.rm == 4 {
-                let (sg, ad) = Self::addr_sib(self);
-                if let Some(x) = sg { segment = x; }
-                addr += ad as u64;
-            } else if modrm.rm == 5 && modrm.mod_ == 0 {
-                addr += self.idata.disp as u64;
-            } else {
-                segment = if modrm.rm == 5 { SgReg::SS } else { SgReg::DS };
-                addr += self.ac.core.gpregs.get(GpReg32::try_from(modrm.rm as usize).unwrap()) as u64;
-            }
-        } else {
-            match modrm.mod_ {
-                1|2 => addr += self.idata.disp as u64,
-                _ => {},
-            }
+                match modrm.rm {
+                    0|1|7 => addr += self.ac.core.gpregs.get(GpReg16::BX) as u64,
+                    2|3|6 => {
+                        if modrm.mod_ == 0 && modrm.rm == 6 {
+                            addr += self.idata.disp as u64;
+                        } else {
+                            addr += self.ac.core.gpregs.get(GpReg16::BP) as u64;
+                            segment = SgReg::SS;
+                        }
+                    },
+                    _ => { panic!("ha??"); },
+                }
 
-            match modrm.rm {
-                0|1|7 => addr += self.ac.core.gpregs.get(GpReg16::BX) as u64,
-                2|3|6 => {
-                    if modrm.mod_ == 0 && modrm.rm == 6 {
-                        addr += self.idata.disp as u64;
-                    } else {
-                        addr += self.ac.core.gpregs.get(GpReg16::BP) as u64;
-                        segment = SgReg::SS;
-                    }
-                },
-                _ => { panic!("ha??"); },
-            }
+                if modrm.rm < 6 {
+                    addr += self.ac.core.gpregs.get( if modrm.rm%2 == 1 {GpReg16::DI} else {GpReg16::SI} ) as u64;
+                }
+            },
+            OpAdSize::BIT32 => {
+                match modrm.mod_ {
+                    1|2 => addr += self.idata.disp as u64,
+                    _ => {},
+                }
 
-            if modrm.rm < 6 {
-                addr += self.ac.core.gpregs.get( if modrm.rm%2 == 1 {GpReg16::DI} else {GpReg16::SI} ) as u64;
-            }
+                if modrm.rm == 4 {
+                    let (sg, ad) = Self::addr_sib(self);
+                    if let Some(x) = sg { segment = x; }
+                    addr += ad as u64;
+                } else if modrm.rm == 5 && modrm.mod_ == 0 {
+                    addr += self.idata.disp as u64;
+                } else {
+                    segment = if modrm.rm == 5 { SgReg::SS } else { SgReg::DS };
+                    addr += self.ac.core.gpregs.get(GpReg32::try_from(modrm.rm as usize).unwrap()) as u64;
+                }
+            },
+            OpAdSize::BIT64 => {},
         }
 
-        if let Some(x) = self.idata.pre_segment { segment = x };
+        if let Some(x) = self.segment { segment = x };
         (segment, addr)
     }
 

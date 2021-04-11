@@ -28,52 +28,52 @@ impl<'a> super::Exec<'a> {
     }
 
     pub fn get_opr8(&self) -> Result<u8, ExecError> {
-        let opr = (self.idata.opcd&0x7) as usize;
+        let opr = (self.idata.opcode&0x7) as usize;
         let r = match GpReg8::try_from(opr) { Ok(v) => v, Err(_) => { return Err(ExecError::RegFromUndefinedPrimitive(opr)); } };
         Ok(self.ac.core.gpregs.get(r))
     }
 
     pub fn set_opr8(&mut self, v: u8) -> Result<(), ExecError> {
-        let opr = (self.idata.opcd&0x7) as usize;
+        let opr = (self.idata.opcode&0x7) as usize;
         let r = match GpReg8::try_from(opr) { Ok(v) => v, Err(_) => { return Err(ExecError::RegFromUndefinedPrimitive(opr)); } };
         self.ac.core.gpregs.set(r, v);
         Ok(())
     }
 
     pub fn get_opr16(&self) -> Result<u16, ExecError> {
-        let opr = (self.idata.opcd&0x7) as usize;
+        let opr = (self.idata.opcode&0x7) as usize;
         let r = match GpReg16::try_from(opr) { Ok(v) => v, Err(_) => { return Err(ExecError::RegFromUndefinedPrimitive(opr)); } };
         Ok(self.ac.core.gpregs.get(r))
     }
 
     pub fn set_opr16(&mut self, v: u16) -> Result<(), ExecError> {
-        let opr = (self.idata.opcd&0x7) as usize;
+        let opr = (self.idata.opcode&0x7) as usize;
         let r = match GpReg16::try_from(opr) { Ok(v) => v, Err(_) => { return Err(ExecError::RegFromUndefinedPrimitive(opr)); } };
         self.ac.core.gpregs.set(r, v);
         Ok(())
     }
 
     pub fn get_opr32(&self) -> Result<u32, ExecError> {
-        let opr = (self.idata.opcd&0x7) as usize;
+        let opr = (self.idata.opcode&0x7) as usize;
         let r = match GpReg32::try_from(opr) { Ok(v) => v, Err(_) => { return Err(ExecError::RegFromUndefinedPrimitive(opr)); } };
         Ok(self.ac.core.gpregs.get(r))
     }
 
     pub fn set_opr32(&mut self, v: u32) -> Result<(), ExecError> {
-        let opr = (self.idata.opcd&0x7) as usize;
+        let opr = (self.idata.opcode&0x7) as usize;
         let r = match GpReg32::try_from(opr) { Ok(v) => v, Err(_) => { return Err(ExecError::RegFromUndefinedPrimitive(opr)); } };
         self.ac.core.gpregs.set(r, v);
         Ok(())
     }
 
     pub fn get_opr64(&self) -> Result<u64, ExecError> {
-        let opr = (self.idata.opcd&0x7) as usize;
+        let opr = (self.idata.opcode&0x7) as usize;
         let r = match GpReg64::try_from(opr) { Ok(v) => v, Err(_) => { return Err(ExecError::RegFromUndefinedPrimitive(opr)); } };
         Ok(self.ac.core.gpregs.get(r))
     }
 
     pub fn set_opr64(&mut self, v: u64) -> Result<(), ExecError> {
-        let opr = (self.idata.opcd&0x7) as usize;
+        let opr = (self.idata.opcode&0x7) as usize;
         let r = match GpReg64::try_from(opr) { Ok(v) => v, Err(_) => { return Err(ExecError::RegFromUndefinedPrimitive(opr)); } };
         self.ac.core.gpregs.set(r, v);
         Ok(())

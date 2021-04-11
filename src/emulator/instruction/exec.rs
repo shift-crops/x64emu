@@ -5,6 +5,7 @@ mod reg_mem;
 use thiserror::Error;
 use super::parse;
 use crate::emulator::access;
+use crate::hardware::processor::segment;
 
 #[derive(Debug, Error)]
 pub enum ExecError {
@@ -17,11 +18,13 @@ pub enum ExecError {
 pub struct Exec<'a> {
     pub ac: &'a mut access::Access,
     pub idata: &'a parse::InstrData,
+    pub segment: Option<segment::SgReg>,
+    pub ad_size: super::OpAdSize,
 }
 
 impl<'a> Exec<'a> {
-    pub fn new(ac: &'a mut access::Access, idata: &'a parse::InstrData) -> Self {
-        Self {ac, idata, }
+    pub fn new(ac: &'a mut access::Access, idata: &'a parse::InstrData, ad_size: super::OpAdSize, segment: Option<segment::SgReg>) -> Self {
+        Self {ac, idata, segment, ad_size, }
     }
 }
 
@@ -36,7 +39,7 @@ pub fn exec_test() {
     let mut ac = super::access::Access::new(hw);
     let idata: parse::InstrData = Default::default();
 
-    let mut exe = Exec::new(&mut ac, &idata);
+    let mut exe = Exec::new(&mut ac, &idata, super::OpAdSize::BIT64, None);
     exe.ac.core.gpregs.set(GpReg64::RSP, 0xf20);
     exe.push_u64(0xdeadbeef);
     exe.push_u64(0xcafebabe);

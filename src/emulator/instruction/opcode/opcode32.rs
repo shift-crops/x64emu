@@ -13,8 +13,8 @@ impl super::OpcodeTrait for Opcode32 {
     }
 
     fn exec(&self, exec: &mut exec::Exec) -> Result<(), OpError> {
-        (self.0[exec.idata.opcd as usize].func)(exec)?;
-        exec.update_rip(exec.idata.oplen as i64)?;
+        (self.0[exec.idata.opcode as usize].func)(exec)?;
+        exec.update_rip(exec.idata.len as i64)?;
         Ok(())
     }
     fn flag(&self, opcode: u16) -> OpFlags { self.0[opcode as usize].flag }

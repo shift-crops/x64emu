@@ -182,8 +182,8 @@ impl super::OpcodeTrait for Opcode16 {
     }
 
     fn exec(&self, exec: &mut exec::Exec) -> Result<(), OpError> {
-        (self.0[exec.idata.opcd as usize].func)(exec)?;
-        exec.update_rip(exec.idata.oplen as i64)?;
+        (self.0[exec.idata.opcode as usize].func)(exec)?;
+        exec.update_rip(exec.idata.len as i64)?;
         Ok(())
     }
     fn flag(&self, opcode: u16) -> OpFlags { self.0[opcode as usize].flag }
@@ -223,13 +223,13 @@ impl Opcode16 {
     cmp_dst_src!(u16, ax, imm16);
 
     fn inc_opr16(exec: &mut exec::Exec) -> Result<(), OpError> {
-        let opr = GpReg16::try_from((exec.idata.opcd&0x7) as usize).unwrap();
+        let opr = GpReg16::try_from((exec.idata.opcode&0x7) as usize).unwrap();
         exec.ac.core.gpregs.update(opr, 1);
         Ok(())
     }
 
     fn dec_opr16(exec: &mut exec::Exec) -> Result<(), OpError> {
-        let opr = GpReg16::try_from((exec.idata.opcd&0x7) as usize).unwrap();
+        let opr = GpReg16::try_from((exec.idata.opcode&0x7) as usize).unwrap();
         exec.ac.core.gpregs.update(opr, -1);
         Ok(())
     }

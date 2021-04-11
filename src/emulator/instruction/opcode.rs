@@ -61,9 +61,9 @@ const MAX_OPCODE: usize = 0x200;
 type OpcodeArr = [OpcodeType; MAX_OPCODE];
 
 pub struct Opcode {
-    pub op16: opcode16::Opcode16,
-    pub op32: opcode32::Opcode32,
-    pub op64: opcode64::Opcode64,
+    op16: opcode16::Opcode16,
+    op32: opcode32::Opcode32,
+    op64: opcode64::Opcode64,
 }
 
 impl Opcode {
@@ -80,6 +80,14 @@ impl Opcode {
         op.op32.init_opcode();
         op.op64.init_opcode();
         op
+    }
+
+    pub fn get(&self, op_size: super::OpAdSize) -> &dyn OpcodeTrait {
+        match op_size {
+            super::OpAdSize::BIT16 => &self.op16, 
+            super::OpAdSize::BIT32 => &self.op32, 
+            super::OpAdSize::BIT64 => &self.op64, 
+        }
     }
 }
 
