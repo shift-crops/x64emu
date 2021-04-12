@@ -181,7 +181,7 @@ impl super::OpcodeTrait for Opcode16 {
         */
     }
 
-    fn exec(&self, exec: &mut exec::Exec) -> Result<(), OpError> {
+    fn exec(&self, exec: &mut exec::Exec) -> Result<(), OpException> {
         (self.0[exec.idata.opcode as usize].func)(exec)?;
         exec.update_rip(exec.idata.len as i64)?;
         Ok(())
@@ -222,13 +222,13 @@ impl Opcode16 {
     cmp_dst_src!(u16, r16, rm16);
     cmp_dst_src!(u16, ax, imm16);
 
-    fn inc_opr16(exec: &mut exec::Exec) -> Result<(), OpError> {
+    fn inc_opr16(exec: &mut exec::Exec) -> Result<(), OpException> {
         let opr = GpReg16::try_from((exec.idata.opcode&0x7) as usize).unwrap();
         exec.ac.core.gpregs.update(opr, 1);
         Ok(())
     }
 
-    fn dec_opr16(exec: &mut exec::Exec) -> Result<(), OpError> {
+    fn dec_opr16(exec: &mut exec::Exec) -> Result<(), OpException> {
         let opr = GpReg16::try_from((exec.idata.opcode&0x7) as usize).unwrap();
         exec.ac.core.gpregs.update(opr, -1);
         Ok(())
@@ -237,7 +237,7 @@ impl Opcode16 {
     push_src!(u16, opr16);
     pop_dst!(u16, opr16);
 
-    fn pusha(exec: &mut exec::Exec) -> Result<(), OpError> {
+    fn pusha(exec: &mut exec::Exec) -> Result<(), OpException> {
         debug!("pusha");
         let sp = exec.ac.core.gpregs.get(GpReg16::SP);
         for i in 0..4 {
@@ -250,7 +250,7 @@ impl Opcode16 {
         Ok(())
     }
 
-    fn popa(exec: &mut exec::Exec) -> Result<(), OpError> {
+    fn popa(exec: &mut exec::Exec) -> Result<(), OpException> {
         debug!("popa");
         for i in (5..8).rev() {
             let v = exec.pop_u16()?;

@@ -5,29 +5,58 @@ mod exec;
 use std::error;
 use super::access;
 
+#[derive(Clone, Copy)]
 pub enum OpAdSize { BIT16, BIT32, BIT64 }
 
-pub struct Instruction {
-    opcode: opcode::Opcode,
-}
+pub struct Instruction(opcode::Opcode);
 
 impl Instruction {
     pub fn new() -> Self {
-        Self {
-            opcode: opcode::Opcode::new(),
-        }
+        Self (opcode::Opcode::new())
     }
 
-    pub fn fetch_exec(&mut self, ac: &mut access::Access) -> Result<(), Box<dyn error::Error>> {
+    pub fn fetch_exec(&mut self, ac: &mut access::Access, mode: super::CpuMode) -> Result<(), Box<dyn error::Error>> {
         let mut parse: parse::ParseInstr = Default::default();
-        parse.parse_prefix(ac)?;
 
-        let op = self.opcode.get(OpAdSize::BIT16);
-        parse.parse_instruction(ac, op)?;
+        parse.parse_prefix(ac, mode)?;
+        let (opsize, adsize) = Instruction::opad_size(mode, &parse.prefix);
 
-        let exec = &mut exec::Exec::new(ac, &parse.instr, OpAdSize::BIT16, parse.prefix.segment);
-        op.exec(exec)?;
+        let op = self.0.get(opsize);
+        parse.parse_instruction(ac, op, adsize)?;
+
+        op.exec(&mut exec::Exec::new(ac, &parse.instr, adsize, parse.prefix.segment))?;
 
         Ok(())
+    }
+
+    pub fn opad_size(mode: super::CpuMode, pdata: &parse::PrefixData) -> (OpAdSize, OpAdSize) {
+        let (mut ops, mut ads) = match mode {
+            super::CpuMode::Real => {
+                (OpAdSize::BIT16, OpAdSize::BIT16)
+            },
+            super::CpuMode::Protected => {
+                (OpAdSize::BIT32, OpAdSize::BIT32)
+            },
+            super::CpuMode::Long => {
+                (if pdata.rex.w == 1 { OpAdSize::BIT64 } else { OpAdSize::BIT32 }, OpAdSize::BIT64)
+            },
+        };
+
+        if pdata.size.contains(parse::OverrideSize::OP) {
+            ops = match ops {
+                OpAdSize::BIT16 => OpAdSize::BIT32,
+                OpAdSize::BIT32 => OpAdSize::BIT16,
+                OpAdSize::BIT64 => OpAdSize::BIT64,
+            };
+        }
+        if pdata.size.contains(parse::OverrideSize::AD) {
+            ads = match ads {
+                OpAdSize::BIT16 => OpAdSize::BIT32,
+                OpAdSize::BIT32 => OpAdSize::BIT16,
+                OpAdSize::BIT64 => OpAdSize::BIT32,
+            };
+        }
+
+        (ops, ads)
     }
 }

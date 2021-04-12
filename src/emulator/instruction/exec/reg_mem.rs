@@ -1,6 +1,6 @@
 use std::convert::TryFrom;
 use crate::emulator::instruction::OpAdSize;
-use crate::emulator::instruction::exec::ExecError;
+use crate::emulator::instruction::exec::ExecException;
 use crate::hardware::processor::general::*;
 use crate::hardware::processor::segment::*;
 
@@ -8,129 +8,129 @@ macro_rules! get_gpreg { ($self:expr, $type:ty, $reg:expr) => { $self.ac.core.gp
 macro_rules! set_gpreg { ($self:expr, $type:ty, $reg:expr, $val:expr) => { $self.ac.core.gpregs.set(<$type>::try_from($reg as usize).unwrap(), $val); } }
 
 impl<'a> super::Exec<'a> {
-    pub fn get_imm8(&self) -> Result<u8, ExecError> {
+    pub fn get_imm8(&self) -> Result<u8, ExecException> {
         Ok(self.idata.imm as u8)
     }
 
-    pub fn get_imm16(&self) -> Result<u16, ExecError> {
+    pub fn get_imm16(&self) -> Result<u16, ExecException> {
         Ok(self.idata.imm as u16)
     }
 
-    pub fn get_rm32(&self) -> Result<u32, ExecError> {
+    pub fn get_rm32(&self) -> Result<u32, ExecException> {
         let modrm = self.idata.modrm;
         let v = if modrm.mod_ == 3 { 
             get_gpreg!(self, GpReg32, modrm.rm)
         } else {
-            self.ac.get_data32(Self::addr_modrm(self))
+            self.ac.get_data32(Self::addr_modrm(self))?
         };
         Ok(v)
     }
 
-    pub fn set_rm32(&mut self, v: u32) -> Result<(), ExecError> {
+    pub fn set_rm32(&mut self, v: u32) -> Result<(), ExecException> {
         let modrm = self.idata.modrm;
         if modrm.mod_ == 3 {
             set_gpreg!(self, GpReg32, modrm.rm, v);
         } else {
-            self.ac.set_data32(Self::addr_modrm(self), v);
+            self.ac.set_data32(Self::addr_modrm(self), v)?;
         }
         Ok(())
     }
 
-    pub fn get_r32(&self) -> Result<u32, ExecError> {
+    pub fn get_r32(&self) -> Result<u32, ExecException> {
         Ok(get_gpreg!(self, GpReg32, self.idata.modrm.reg))
     }
 
-    pub fn set_r32(&mut self, v: u32) -> Result<(), ExecError> {
+    pub fn set_r32(&mut self, v: u32) -> Result<(), ExecException> {
         set_gpreg!(self, GpReg32, self.idata.modrm.reg, v);
         Ok(())
     }
 
-    pub fn get_moffs32(&self) -> Result<u32, ExecError> {
-        Ok(self.ac.get_data32((SgReg::DS, self.idata.moffs)))
+    pub fn get_moffs32(&self) -> Result<u32, ExecException> {
+        Ok(self.ac.get_data32((SgReg::DS, self.idata.moffs))?)
     }
 
-    pub fn set_moffs32(&mut self, v: u32) -> Result<(), ExecError> {
-        self.ac.set_data32((SgReg::DS, self.idata.moffs), v);
+    pub fn set_moffs32(&mut self, v: u32) -> Result<(), ExecException> {
+        self.ac.set_data32((SgReg::DS, self.idata.moffs), v)?;
         Ok(())
     }
 
-    pub fn get_rm16(&self) -> Result<u16, ExecError> {
+    pub fn get_rm16(&self) -> Result<u16, ExecException> {
         let modrm = self.idata.modrm;
         let v = if modrm.mod_ == 3 {
             get_gpreg!(self, GpReg16, modrm.rm)
         } else {
-            self.ac.get_data16(Self::addr_modrm(self))
+            self.ac.get_data16(Self::addr_modrm(self))?
         };
         Ok(v)
     }
 
-    pub fn set_rm16(&mut self, v: u16) -> Result<(), ExecError> {
+    pub fn set_rm16(&mut self, v: u16) -> Result<(), ExecException> {
         let modrm = self.idata.modrm;
         if modrm.mod_ == 3 {
             set_gpreg!(self, GpReg16, modrm.rm, v);
         } else {
-            self.ac.set_data16(Self::addr_modrm(self), v);
+            self.ac.set_data16(Self::addr_modrm(self), v)?;
         }
         Ok(())
     }
 
-    pub fn get_r16(&self) -> Result<u16, ExecError> {
+    pub fn get_r16(&self) -> Result<u16, ExecException> {
         Ok(get_gpreg!(self, GpReg16, self.idata.modrm.reg))
     }
 
-    pub fn set_r16(&mut self, v: u16) -> Result<(), ExecError> {
+    pub fn set_r16(&mut self, v: u16) -> Result<(), ExecException> {
         set_gpreg!(self, GpReg16, self.idata.modrm.reg, v);
         Ok(())
     }
 
-    pub fn get_moffs16(&self) -> Result<u16, ExecError> {
-        Ok(self.ac.get_data16((SgReg::DS, self.idata.moffs)))
+    pub fn get_moffs16(&self) -> Result<u16, ExecException> {
+        Ok(self.ac.get_data16((SgReg::DS, self.idata.moffs))?)
     }
 
-    pub fn set_moffs16(&mut self, v: u16) -> Result<(), ExecError> {
-        self.ac.set_data16((SgReg::DS, self.idata.moffs), v);
+    pub fn set_moffs16(&mut self, v: u16) -> Result<(), ExecException> {
+        self.ac.set_data16((SgReg::DS, self.idata.moffs), v)?;
         Ok(())
     }
 
-    pub fn get_rm8(&self) -> Result<u8, ExecError> {
+    pub fn get_rm8(&self) -> Result<u8, ExecException> {
         let modrm = self.idata.modrm;
         let v = if modrm.mod_ == 3 {
             get_gpreg!(self, GpReg8, modrm.rm)
         } else {
-            self.ac.get_data8(Self::addr_modrm(self))
+            self.ac.get_data8(Self::addr_modrm(self))?
         };
         Ok(v)
     }
 
-    pub fn set_rm8(&mut self, v: u8) -> Result<(), ExecError> {
+    pub fn set_rm8(&mut self, v: u8) -> Result<(), ExecException> {
         let modrm = self.idata.modrm;
         if modrm.mod_ == 3 {
             set_gpreg!(self, GpReg8, modrm.rm, v);
         } else {
-            self.ac.set_data8(Self::addr_modrm(self), v);
+            self.ac.set_data8(Self::addr_modrm(self), v)?;
         }
         Ok(())
     }
 
-    pub fn get_r8(&self) -> Result<u8, ExecError> {
+    pub fn get_r8(&self) -> Result<u8, ExecException> {
         Ok(get_gpreg!(self, GpReg8, self.idata.modrm.reg))
     }
 
-    pub fn set_r8(&mut self, v: u8) -> Result<(), ExecError> {
+    pub fn set_r8(&mut self, v: u8) -> Result<(), ExecException> {
         set_gpreg!(self, GpReg8, self.idata.modrm.reg, v);
         Ok(())
     }
 
-    pub fn get_moffs8(&self) -> Result<u8, ExecError> {
-        Ok(self.ac.get_data8((SgReg::DS, self.idata.moffs)))
+    pub fn get_moffs8(&self) -> Result<u8, ExecException> {
+        Ok(self.ac.get_data8((SgReg::DS, self.idata.moffs))?)
     }
 
-    pub fn set_moffs8(&mut self, v: u8) -> Result<(), ExecError> {
-        self.ac.set_data8((SgReg::DS, self.idata.moffs), v);
+    pub fn set_moffs8(&mut self, v: u8) -> Result<(), ExecException> {
+        self.ac.set_data8((SgReg::DS, self.idata.moffs), v)?;
         Ok(())
     }
 
-    pub fn get_m(&self) -> Result<u64, ExecError> {
+    pub fn get_m(&self) -> Result<u64, ExecException> {
         Ok(Self::addr_modrm(self).1)
     }
 
@@ -141,7 +141,7 @@ impl<'a> super::Exec<'a> {
         let mut addr: u64 = 0;
         let mut segment = SgReg::DS;
 
-        match self.ad_size {
+        match self.adsize {
             OpAdSize::BIT16 => {
                 match modrm.mod_ {
                     1|2 => addr += self.idata.disp as u64,

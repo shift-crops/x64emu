@@ -16,5 +16,7 @@ fn main() {
 
     let mut emu = emulator::Emulator::new(hw);
     emu.load_binary("/tmp/test".to_string(), 0xfff0).expect("Failed to load binary");
-    emu.run();
+    loop {
+        emu.step();
+    }
 }

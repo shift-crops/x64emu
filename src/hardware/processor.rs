@@ -2,6 +2,7 @@ pub mod ip;
 pub mod general;
 pub mod rflags;
 pub mod segment;
+pub mod control;
 pub mod descriptor;
 
 use std::convert::TryFrom;

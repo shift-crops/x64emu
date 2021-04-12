@@ -7,13 +7,18 @@ use super::hardware;
 pub struct Emulator {
     ac: access::Access,
     inst: instruction::Instruction,
+    mode: CpuMode,
 }
+
+#[derive(Clone, Copy)]
+pub enum CpuMode { Real, Protected, Long }
 
 impl Emulator {
     pub fn new(hw: hardware::Hardware) -> Self {
         Self {
             ac: access::Access::new(hw),
             inst: instruction::Instruction::new(),
+            mode: CpuMode::Real,
         }
     }
 
@@ -30,9 +35,7 @@ impl Emulator {
         Ok(())
     }
 
-    pub fn run(&mut self) -> () {
-        loop {
-            self.inst.fetch_exec(&mut self.ac).unwrap();
-        }
+    pub fn step(&mut self) -> () {
+        self.inst.fetch_exec(&mut self.ac, self.mode).unwrap();
     }
 }

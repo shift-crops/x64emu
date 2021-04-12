@@ -8,23 +8,29 @@ use crate::emulator::access;
 use crate::hardware::processor::segment;
 
 #[derive(Debug, Error)]
-pub enum ExecError {
-    #[error("Register From Primitive Error")]
-    RegFromUndefinedPrimitive(usize),
+pub enum ExecException {
+    #[error("Access Exception")]
+    AccessException(access::AccessException),
     #[error("Unexpected Error")]
     Unexpected,
+}
+
+impl From<access::AccessException> for ExecException {
+    fn from(err: access::AccessException) -> ExecException {
+        ExecException::AccessException(err)
+    }
 }
 
 pub struct Exec<'a> {
     pub ac: &'a mut access::Access,
     pub idata: &'a parse::InstrData,
     pub segment: Option<segment::SgReg>,
-    pub ad_size: super::OpAdSize,
+    pub adsize: super::OpAdSize,
 }
 
 impl<'a> Exec<'a> {
-    pub fn new(ac: &'a mut access::Access, idata: &'a parse::InstrData, ad_size: super::OpAdSize, segment: Option<segment::SgReg>) -> Self {
-        Self {ac, idata, segment, ad_size, }
+    pub fn new(ac: &'a mut access::Access, idata: &'a parse::InstrData, adsize: super::OpAdSize, segment: Option<segment::SgReg>) -> Self {
+        Self {ac, idata, segment, adsize, }
     }
 }
 

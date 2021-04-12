@@ -151,7 +151,7 @@ xchg_dst_src!(u8, r8, rm8);
 mov_dst_src!(u8, rm8, r8);
 mov_dst_src!(u8, r8, rm8);
 
-fn nop (_exec: &mut exec::Exec) -> Result<(), OpError> { Ok(()) }
+fn nop (_exec: &mut exec::Exec) -> Result<(), OpException> { Ok(()) }
 
 mov_dst_src!(u8, al, moffs8);
 mov_dst_src!(u8, moffs8, al);
@@ -171,7 +171,7 @@ setcc_dst!(u8, p, rm8);
 setcc_dst!(u8, l, rm8);
 setcc_dst!(u8, le, rm8);
 
-fn code_80(exec: &mut exec::Exec) -> Result<(), OpError> {
+fn code_80(exec: &mut exec::Exec) -> Result<(), OpException> {
     match exec.idata.modrm.reg as u8 {
         0 => add_rm8_imm8(exec)?,
         1 => or_rm8_imm8(exec)?,
@@ -181,7 +181,7 @@ fn code_80(exec: &mut exec::Exec) -> Result<(), OpError> {
         5 => sub_rm8_imm8(exec)?,
         6 => xor_rm8_imm8(exec)?,
         7 => cmp_rm8_imm8(exec)?,
-        _ => { return Err(OpError::Unexpected); },
+        _ => { return Err(OpException::Unexpected); },
     }
     Ok(())
 }
