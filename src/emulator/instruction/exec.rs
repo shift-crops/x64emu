@@ -2,24 +2,9 @@ mod basic;
 mod flag;
 mod reg_mem;
 
-use thiserror::Error;
 use super::parse;
 use crate::emulator::access;
 use crate::hardware::processor::segment;
-
-#[derive(Debug, Error)]
-pub enum ExecException {
-    #[error("Access Exception")]
-    AccessException(access::AccessException),
-    #[error("Unexpected Error")]
-    Unexpected,
-}
-
-impl From<access::AccessException> for ExecException {
-    fn from(err: access::AccessException) -> ExecException {
-        ExecException::AccessException(err)
-    }
-}
 
 pub struct Exec<'a> {
     pub ac: &'a mut access::Access,

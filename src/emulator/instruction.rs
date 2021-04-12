@@ -2,8 +2,8 @@ mod parse;
 mod opcode;
 mod exec;
 
-use std::error;
 use super::access;
+use crate::emulator::EmuException;
 
 #[derive(Clone, Copy)]
 pub enum OpAdSize { BIT16, BIT32, BIT64 }
@@ -15,7 +15,7 @@ impl Instruction {
         Self (opcode::Opcode::new())
     }
 
-    pub fn fetch_exec(&mut self, ac: &mut access::Access, mode: super::CpuMode) -> Result<(), Box<dyn error::Error>> {
+    pub fn fetch_exec(&mut self, ac: &mut access::Access, mode: super::CpuMode) -> Result<(), EmuException> {
         let mut parse: parse::ParseInstr = Default::default();
 
         parse.parse_prefix(ac, mode)?;

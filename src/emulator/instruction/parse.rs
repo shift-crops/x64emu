@@ -1,8 +1,8 @@
-use std::error;
 use packed_struct::prelude::*;
 use super::opcode;
 use crate::emulator;
 use crate::emulator::access;
+use crate::emulator::EmuException;
 use crate::hardware::processor::segment;
 
 #[derive(Default)]
@@ -71,7 +71,7 @@ pub struct Sib {
 }
 
 impl ParseInstr {
-    pub fn parse_prefix(&mut self, ac: &mut access::Access, mode: emulator::CpuMode) -> Result<(), Box<dyn error::Error>> {
+    pub fn parse_prefix(&mut self, ac: &mut access::Access, mode: emulator::CpuMode) -> Result<(), EmuException> {
         self.get_legacy_prefix(ac)?;
 
         if let emulator::CpuMode::Long = mode {
@@ -80,7 +80,7 @@ impl ParseInstr {
         Ok(())
     }
 
-    pub fn parse_instruction(&mut self, ac: &mut access::Access, op: &dyn opcode::OpcodeTrait, adsize: super::OpAdSize) -> Result<(), Box<dyn error::Error>> {
+    pub fn parse_instruction(&mut self, ac: &mut access::Access, op: &dyn opcode::OpcodeTrait, adsize: super::OpAdSize) -> Result<(), EmuException> {
         self.get_opcode(ac)?;
 
         let flag = op.flag(self.instr.opcode);
@@ -115,7 +115,7 @@ impl ParseInstr {
 }
 
 impl ParseInstr {
-    fn get_legacy_prefix(&mut self, ac: &mut access::Access) -> Result<(), Box<dyn error::Error>> {
+    fn get_legacy_prefix(&mut self, ac: &mut access::Access) -> Result<(), EmuException> {
         let prefix = &mut self.prefix;
         for _ in 0..4 {
             match ac.get_code8(self.instr.len)? {
@@ -136,7 +136,7 @@ impl ParseInstr {
         Ok(())
     }
 
-    fn get_rex_prefix(&mut self, ac: &mut access::Access) -> Result<(), Box<dyn error::Error>> {
+    fn get_rex_prefix(&mut self, ac: &mut access::Access) -> Result<(), EmuException> {
         let code = ac.get_code8(self.instr.len)?;
         if (code >> 4) != 4 { return Ok(()); }
 
@@ -146,7 +146,7 @@ impl ParseInstr {
         Ok(())
     }
 
-    fn get_opcode(&mut self, ac: &mut access::Access) -> Result<(), Box<dyn error::Error>> {
+    fn get_opcode(&mut self, ac: &mut access::Access) -> Result<(), EmuException> {
         let opcode = &mut self.instr.opcode;
         *opcode = ac.get_code8(self.instr.len)? as u16;
         self.instr.len += 1;
@@ -158,7 +158,7 @@ impl ParseInstr {
         Ok(())
     }
 
-    fn get_modrm(&mut self, ac: &mut access::Access) -> Result<(), Box<dyn error::Error>> {
+    fn get_modrm(&mut self, ac: &mut access::Access) -> Result<(), EmuException> {
         let code = ac.get_code8(self.instr.len)?;
         self.instr.modrm = ModRM::unpack(&code.to_be_bytes()).unwrap();
         debug!("{:?} ", self.instr.modrm);
@@ -166,7 +166,7 @@ impl ParseInstr {
         Ok(())
     }
 
-    fn get_sib_disp(&mut self, ac: &mut access::Access, adsize: super::OpAdSize) -> Result<(), Box<dyn error::Error>> {
+    fn get_sib_disp(&mut self, ac: &mut access::Access, adsize: super::OpAdSize) -> Result<(), EmuException> {
         let (mod_, rm) = (self.instr.modrm.mod_, self.instr.modrm.rm);
         match adsize {
             super::OpAdSize::BIT16 => {
@@ -200,7 +200,7 @@ impl ParseInstr {
         Ok(())
     }
 
-    fn get_moffs(&mut self, ac: &mut access::Access, adsize: super::OpAdSize) -> Result<(), Box<dyn error::Error>> {
+    fn get_moffs(&mut self, ac: &mut access::Access, adsize: super::OpAdSize) -> Result<(), EmuException> {
         let moffs = &mut self.instr.moffs;
         match adsize {
             super::OpAdSize::BIT16 => {

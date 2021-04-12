@@ -12,7 +12,7 @@ impl super::OpcodeTrait for Opcode64 {
     fn init_opcode(&mut self) -> () {
     }
 
-    fn exec(&self, exec: &mut exec::Exec) -> Result<(), OpException> {
+    fn exec(&self, exec: &mut exec::Exec) -> Result<(), EmuException> {
         (self.0[exec.idata.opcode as usize].func)(exec)?;
         exec.update_rip(exec.idata.len as i64)?;
         Ok(())

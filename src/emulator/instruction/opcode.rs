@@ -5,32 +5,8 @@ mod opcode16;
 mod opcode32;
 mod opcode64;
 
-use thiserror::Error;
 use super::exec;
-use crate::emulator::access;
-
-#[derive(Debug, Error)]
-pub enum OpException {
-    #[error("Undefined Opecode")]
-    Undefined,
-    #[error("Not Implemented Opecode : {0:x}")]
-    NotImplemented(u8),
-    #[error("Exec Exception")]
-    ExecException(exec::ExecException),
-    #[error("Access Exception")]
-    AccessException(access::AccessException),
-    #[error("Unexpected Error")]
-    Unexpected,
-}
-
-impl From<exec::ExecException> for OpException {
-    fn from(err: exec::ExecException) -> OpException {
-        match err {
-            exec::ExecException::AccessException(e) => OpException::AccessException(e),
-            _ => OpException::ExecException(err),
-        }
-    }
-}
+use crate::emulator::EmuException;
 
 bitflags! {
     pub struct OpFlags: u8 {
@@ -54,7 +30,7 @@ bitflags! {
 
 #[derive(Clone, Copy)]
 pub struct OpcodeType {
-    func: fn(&mut exec::Exec) -> Result<(), OpException>,
+    func: fn(&mut exec::Exec) -> Result<(), EmuException>,
     flag: OpFlags,
 }
 impl Default for OpcodeType {
@@ -99,11 +75,11 @@ impl Opcode {
 
 pub trait OpcodeTrait {
     fn init_opcode(&mut self) -> ();
-    fn exec(&self, arg: &mut exec::Exec) -> Result<(), OpException>;
+    fn exec(&self, arg: &mut exec::Exec) -> Result<(), EmuException>;
     fn flag(&self, opcode: u16) -> OpFlags;
 }
 
-fn undefined(exec: &mut exec::Exec) -> Result<(), OpException> {
+fn undefined(exec: &mut exec::Exec) -> Result<(), EmuException> {
     exec.ac.dump();
-    Err(OpException::Undefined)
+    Err(EmuException::UndefinedOpcode)
 }
