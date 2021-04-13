@@ -4,16 +4,44 @@ mod reg_mem;
 
 use super::parse;
 use crate::emulator::access;
+use crate::hardware::processor::segment;
+use crate::emulator::EmuException;
 
 pub struct Exec<'a> {
     pub ac: &'a mut access::Access,
     pub idata: &'a parse::InstrData,
+    segment: Option<segment::SgReg>,
+    rep: Option<parse::Rep>
 }
 
 impl<'a> Exec<'a> {
-    pub fn new(ac: &'a mut access::Access, idata: &'a parse::InstrData) -> Self {
-        Self {ac, idata, }
+    pub fn new(ac: &'a mut access::Access, idata: &'a parse::InstrData, segment: Option<segment::SgReg>, rep: Option<parse::Rep>) -> Self {
+        Self { ac, idata, segment, rep, }
     }
+}
+
+pub trait IpAccess<T, U> {
+    fn get_ip(&self) -> Result<T, EmuException>;
+    fn set_ip(&mut self, v: T) -> Result<(), EmuException>;
+    fn update_ip(&mut self, v: U) -> Result<(), EmuException>;
+}
+
+impl<'a> IpAccess<u16, i16> for Exec<'a> {
+    fn get_ip(&self) -> Result<u16, EmuException> { Ok(self.ac.core.ip.get_ip()) }
+    fn set_ip(&mut self, v: u16) -> Result<(), EmuException> { self.ac.core.ip.set_ip(v); Ok(()) }
+    fn update_ip(&mut self, v: i16) -> Result<(), EmuException> { self.ac.core.ip.update_ip(v); Ok(()) }
+}
+
+impl<'a> IpAccess<u32, i32> for Exec<'a> {
+    fn get_ip(&self) -> Result<u32, EmuException> { Ok(self.ac.core.ip.get_eip()) }
+    fn set_ip(&mut self, v: u32) -> Result<(), EmuException> { self.ac.core.ip.set_eip(v); Ok(()) }
+    fn update_ip(&mut self, v: i32) -> Result<(), EmuException> { self.ac.core.ip.update_eip(v); Ok(()) }
+}
+
+impl<'a> IpAccess<u64, i64> for Exec<'a> {
+    fn get_ip(&self) -> Result<u64, EmuException> { Ok(self.ac.core.ip.get_rip()) }
+    fn set_ip(&mut self, v: u64) -> Result<(), EmuException> { self.ac.core.ip.set_rip(v); Ok(()) }
+    fn update_ip(&mut self, v: i64) -> Result<(), EmuException> { self.ac.core.ip.update_rip(v); Ok(()) }
 }
 
 #[cfg(test)]
@@ -22,18 +50,17 @@ pub fn exec_test() {
     use crate::hardware;
     use crate::hardware::processor::general::*;
 
-    let mut hw = hardware::Hardware::new();
-    hw.init_memory(0x1000);
+    let hw = hardware::Hardware::new(0, 0x1000);
 
     let mut ac = super::access::Access::new(hw);
     let idata: parse::InstrData = Default::default();
 
-    let mut exe = Exec::new(&mut ac, &idata);
+    let mut exe = Exec::new(&mut ac, &idata, None, None);
     exe.ac.core.gpregs.set(GpReg64::RSP, 0xf20);
-    exe.push_u64(0xdeadbeef);
-    exe.push_u64(0xcafebabe);
-    assert_eq!(exe.pop_u64(), 0xcafebabe);
-    assert_eq!(exe.pop_u64(), 0xdeadbeef);
+    exe.push_u64(0xdeadbeef).unwrap();
+    exe.push_u64(0xcafebabe).unwrap();
+    assert_eq!(exe.pop_u64().unwrap(), 0xcafebabe);
+    assert_eq!(exe.pop_u64().unwrap(), 0xdeadbeef);
 
     let mut x = exe.ac.mem.as_mut_ptr(0xf20).unwrap() as *mut u64;
     unsafe {
@@ -41,6 +68,6 @@ pub fn exec_test() {
         x = (x as usize + 8) as *mut u64;
         *x = 0x55667788;
     }
-    assert_eq!(exe.pop_u64(), 0x11223344);
-    assert_eq!(exe.pop_u64(), 0x55667788);
+    assert_eq!(exe.pop_u64().unwrap(), 0x11223344);
+    assert_eq!(exe.pop_u64().unwrap(), 0x55667788);
 }

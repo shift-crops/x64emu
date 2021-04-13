@@ -6,6 +6,7 @@ mod opcode32;
 mod opcode64;
 
 use super::exec;
+use crate::emulator::EmuException;
 
 bitflags! {
     pub struct OpFlags: u8 {
@@ -29,7 +30,7 @@ bitflags! {
 
 #[derive(Clone, Copy)]
 pub struct OpcodeType {
-    func: fn(&mut exec::Exec),
+    func: fn(&mut exec::Exec) -> Result<(), EmuException>,
     flag: OpFlags,
 }
 impl Default for OpcodeType {
@@ -63,18 +64,21 @@ impl Opcode {
         op
     }
 
-    pub fn get(&self) -> &dyn OpcodeTrait {
-        &self.op16
+    pub fn get(&self, op_size: super::OpAdSize) -> &dyn OpcodeTrait {
+        match op_size {
+            super::OpAdSize::BIT16 => &self.op16, 
+            super::OpAdSize::BIT32 => &self.op32, 
+            super::OpAdSize::BIT64 => &self.op64, 
+        }
     }
 }
 
 pub trait OpcodeTrait {
     fn init_opcode(&mut self) -> ();
-    fn exec(&self, arg: &mut exec::Exec) -> ();
+    fn exec(&self, arg: &mut exec::Exec) -> Result<(), EmuException>;
     fn flag(&self, opcode: u16) -> OpFlags;
 }
 
-fn undefined(exec: &mut exec::Exec) -> () {
-    exec.ac.dump();
-    panic!("Undefined Opcode");
+fn undefined(_exec: &mut exec::Exec) -> Result<(), EmuException> {
+    Err(EmuException::UndefinedOpcode)
 }

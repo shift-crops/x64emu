@@ -1,9 +1,9 @@
 #![allow(non_snake_case)]
 use packed_struct::prelude::*;
-use num_enum::FromPrimitive;
+use num_enum::TryFromPrimitive;
 
-#[derive(Clone, Copy, FromPrimitive)] #[repr(usize)]
-pub enum SgReg { #[num_enum(default)] ES, CS, SS, DS, FS, GS, END }
+#[derive(Clone, Copy, TryFromPrimitive)] #[repr(usize)]
+pub enum SgReg { ES, CS, SS, DS, FS, GS, END }
 
 const SGREGS_COUNT: usize = SgReg::END as usize;
 
@@ -58,4 +58,26 @@ impl SgRegisters {
 
     pub fn selector_mut(&mut self, r: SgReg) -> &mut SgDescSelector { &mut self.0[r as usize].selector }
     pub fn cache_mut(&mut self, r: SgReg) -> &mut SgDescCache { &mut self.0[r as usize].cache }
+}
+
+#[cfg(test)]
+#[test]
+pub fn sgreg_test() {
+    let mut reg = SgRegisters::new();
+
+    reg.selector_mut(SgReg::ES).from_u16(0x2e);
+    let es = reg.selector(SgReg::ES);
+    assert_eq!(es.IDX, 5);
+    assert_eq!(es.TI, 1);
+    assert_eq!(es.RPL, 2);
+}
+
+#[cfg(test)]
+#[test]
+#[should_panic]
+pub fn sgreg_test_panic() {
+    use std::convert::TryFrom;
+
+    let reg = SgRegisters::new();
+    reg.selector(SgReg::try_from(10).unwrap());
 }
