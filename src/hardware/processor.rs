@@ -11,16 +11,16 @@ use segment::*;
 
 #[derive(Clone)]
 pub struct Processor {
-    pub rip: ip::InstructionPointer,
+    pub ip: ip::InstructionPointer,
     pub gpregs: general::GpRegisters,
     pub sgregs: segment::SgRegisters,
     pub rflags: rflags::RFlags,
 }
 
 impl Processor {
-    pub fn new() -> Self {
+    pub fn new(rst_vct: u64) -> Self {
         Self {
-            rip: ip::InstructionPointer::new(0xfff0),
+            ip: ip::InstructionPointer::new(rst_vct),
             gpregs: general::GpRegisters::new(),
             sgregs: segment::SgRegisters::new(),
             rflags: Default::default(),
@@ -33,7 +33,7 @@ impl Processor {
         let dtreg_name = ["GDTR", "IDTR", "LDTR", " TR "];
 
         println!("Registers Dump");
-        println!("RIP : 0x{:016x}", self.rip.get());
+        println!("RIP : 0x{:016x}", self.ip.get_rip());
         for i in 0..gpreg_name.len() {
             println!("{} : 0x{:016x}", gpreg_name[i], self.gpregs.get(GpReg64::try_from(i).unwrap()));
         }

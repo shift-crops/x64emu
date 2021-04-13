@@ -7,6 +7,11 @@ use crate::emulator::EmuException;
 
 #[derive(Clone, Copy)]
 pub enum OpAdSize { BIT16, BIT32, BIT64 }
+impl Default for OpAdSize {
+    fn default() -> Self {
+        OpAdSize::BIT16
+    }
+}
 
 pub struct Instruction(opcode::Opcode);
 
@@ -15,29 +20,30 @@ impl Instruction {
         Self (opcode::Opcode::new())
     }
 
-    pub fn fetch_exec(&mut self, ac: &mut access::Access, mode: super::CpuMode) -> Result<(), EmuException> {
+    pub fn fetch_exec(&mut self, ac: &mut access::Access) -> Result<(), EmuException> {
         let mut parse: parse::ParseInstr = Default::default();
 
-        parse.parse_prefix(ac, mode)?;
-        let (opsize, adsize) = Instruction::opad_size(mode, &parse.prefix);
+        parse.parse_prefix(ac)?;
+        let (opsize, adsize) = Instruction::opad_size(ac.mode, &parse.prefix);
 
         let op = self.0.get(opsize);
-        parse.parse_instruction(ac, op, adsize)?;
+        parse.parse_opcode(ac)?;
+        parse.parse_oprand(ac, op.flag(parse.instr.opcode), adsize)?;
 
-        op.exec(&mut exec::Exec::new(ac, &parse.instr, adsize, parse.prefix.segment))?;
+        op.exec(&mut exec::Exec::new(ac, &parse.instr, parse.prefix.segment, parse.prefix.repeat))?;
 
         Ok(())
     }
 
-    pub fn opad_size(mode: super::CpuMode, pdata: &parse::PrefixData) -> (OpAdSize, OpAdSize) {
+    pub fn opad_size(mode: access::CpuMode, pdata: &parse::PrefixData) -> (OpAdSize, OpAdSize) {
         let (mut ops, mut ads) = match mode {
-            super::CpuMode::Real => {
+            access::CpuMode::Real => {
                 (OpAdSize::BIT16, OpAdSize::BIT16)
             },
-            super::CpuMode::Protected => {
+            access::CpuMode::Protected => {
                 (OpAdSize::BIT32, OpAdSize::BIT32)
             },
-            super::CpuMode::Long => {
+            access::CpuMode::Long => {
                 (if pdata.rex.w == 1 { OpAdSize::BIT64 } else { OpAdSize::BIT32 }, OpAdSize::BIT64)
             },
         };

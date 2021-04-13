@@ -5,14 +5,22 @@ use crate::hardware::processor::general::*;
 use crate::hardware::processor::segment::*;
 use crate::emulator::EmuException;
 
+#[derive(Clone, Copy)]
+pub enum CpuMode { Real, Protected, Long }
+
 pub struct Access {
+    pub mode: CpuMode,
     pub core: processor::Processor,
     pub mem: memory::Memory,
 }
 
 impl Access {
     pub fn new(hw: hardware::Hardware) -> Self {
-        Self { core: hw.core, mem: hw.mem, }
+        Self {
+            mode: CpuMode::Real,
+            core: hw.core,
+            mem: hw.mem,
+        }
     }
 
     pub fn get_data64(&self, target: (SgReg, u64)) -> Result<u64, EmuException> { self.read_seg_mem64(target.0, target.1) }
@@ -25,14 +33,14 @@ impl Access {
     pub fn set_data16(&mut self, target: (SgReg, u64), v: u16) -> Result<(), EmuException> { self.write_seg_mem16(target.0, target.1, v)?; Ok(()) }
     pub fn set_data8(&mut self, target: (SgReg, u64), v: u8) -> Result<(), EmuException> { self.write_seg_mem8(target.0, target.1, v)?; Ok(()) }
 
-    pub fn get_code64(&self, index: u64) -> Result<u64, EmuException> { self.fetch_seg_mem64(SgReg::CS, self.core.rip.get() + index) }
-    pub fn get_code32(&self, index: u64) -> Result<u32, EmuException> { self.fetch_seg_mem32(SgReg::CS, self.core.rip.get() + index) }
-    pub fn get_code16(&self, index: u64) -> Result<u16, EmuException> { self.fetch_seg_mem16(SgReg::CS, self.core.rip.get() + index) }
-    pub fn get_code8(&self, index: u64) -> Result<u8, EmuException> { self.fetch_seg_mem8(SgReg::CS, self.core.rip.get() + index) }
+    pub fn get_code64(&self, index: u64) -> Result<u64, EmuException> { self.fetch_seg_mem64(SgReg::CS, self.core.ip.get_rip() + index) }
+    pub fn get_code32(&self, index: u64) -> Result<u32, EmuException> { self.fetch_seg_mem32(SgReg::CS, self.core.ip.get_rip() + index) }
+    pub fn get_code16(&self, index: u64) -> Result<u16, EmuException> { self.fetch_seg_mem16(SgReg::CS, self.core.ip.get_rip() + index) }
+    pub fn get_code8(&self, index: u64) -> Result<u8, EmuException> { self.fetch_seg_mem8(SgReg::CS, self.core.ip.get_rip() + index) }
 
     pub fn dump(&self) -> () {
         self.core.dump();
-        self.mem.dump(self.core.rip.get() as usize -0x10 , 0x20);
+        self.mem.dump(self.core.ip.get_rip() as usize -0x10 , 0x20);
         self.mem.dump(self.core.gpregs.get(GpReg64::RSP) as usize, 0x40);
     }
 }
@@ -120,12 +128,12 @@ impl Access {
 #[cfg(test)]
 #[test]
 pub fn access_test() {
-    let hw = hardware::Hardware::new(0x1000);
+    let hw = hardware::Hardware::new(0, 0x1000);
 
     let mut ac = Access::new(hw);
-    ac.set_data32((SgReg::DS, 0x10), 0xdeadbeef);
-    assert_eq!(ac.get_data8((SgReg::DS, 0x10)), 0xef);
+    ac.set_data32((SgReg::DS, 0x10), 0xdeadbeef).unwrap();
+    assert_eq!(ac.get_data8((SgReg::DS, 0x10)).unwrap(), 0xef);
 
-    ac.set_data32((SgReg::DS, 0x1010), 0xdeadbeef);
-    assert_eq!(ac.get_data8((SgReg::DS, 0x1010)), 0);
+    ac.set_data32((SgReg::DS, 0x1010), 0xdeadbeef).unwrap();
+    assert_eq!(ac.get_data8((SgReg::DS, 0x1010)).unwrap(), 0);
 }

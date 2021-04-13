@@ -1,5 +1,6 @@
 use crate::emulator::instruction::exec;
 use crate::emulator::instruction::opcode::*;
+use crate::emulator::instruction::exec::IpAccess;
 
 // macro_rules! get_al { ($exec:expr) => { $exec.ac.core.gpregs().get(GpReg8::AL) } }
 // macro_rules! set_al { ($exec:expr, $val:expr) => { $exec.ac.core.gpregs_mut().set(GpReg8::AL, $val) } }
@@ -69,7 +70,9 @@ pub fn init_cmn_opcode(op: &mut super::OpcodeArr){
     setcmnop!(0xcf, iret,          OpFlags::NONE);
     setcmnop!(0xe4, in_al_imm8,    OpFlags::IMM8);
     setcmnop!(0xe6, out_imm8_al,   OpFlags::IMM8);
+    */
     setcmnop!(0xeb, jmp_imm8,      OpFlags::IMM8);
+    /*
     setcmnop!(0xec, in_al_dx,      OpFlags::NONE);
     setcmnop!(0xee, out_dx_al,     OpFlags::NONE);
     setcmnop!(0xfa, cli,           OpFlags::NONE);
@@ -99,6 +102,7 @@ pub fn init_cmn_opcode(op: &mut super::OpcodeArr){
     setcmnop!(0x0f9f, setnle_rm8,  OpFlags::MODRM);
 
     setcmnop!(0x80, code_80,       OpFlags::MODRM | OpFlags::IMM8);
+    //setcmnop!(0x82, code_82,       OpFlags::MODRM | OpFlags::IMM8);
     //setcmnop!(0xc0, code_c0,       OpFlags::MODRM | OpFlags::IMM8);
     //setcmnop!(0xf6, code_f6,       OpFlags::MODRM);
 }
@@ -161,6 +165,8 @@ test_dst_src!(u8, al, imm8);
 mov_dst_src!(u8, opr8, imm8);
 
 mov_dst_src!(u8, rm8, imm8);
+
+jmp_rel!(i8, imm8);
 
 setcc_dst!(u8, o, rm8);
 setcc_dst!(u8, b, rm8);

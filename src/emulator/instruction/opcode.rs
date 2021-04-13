@@ -79,7 +79,6 @@ pub trait OpcodeTrait {
     fn flag(&self, opcode: u16) -> OpFlags;
 }
 
-fn undefined(exec: &mut exec::Exec) -> Result<(), EmuException> {
-    exec.ac.dump();
+fn undefined(_exec: &mut exec::Exec) -> Result<(), EmuException> {
     Err(EmuException::UndefinedOpcode)
 }

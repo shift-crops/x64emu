@@ -4,11 +4,6 @@ use crate::hardware::processor::segment::*;
 use crate::emulator::EmuException;
 
 impl<'a> super::Exec<'a> {
-    pub fn update_rip(&mut self, v: i64) -> Result<(), EmuException> {
-        self.ac.core.rip.update(v);
-        Ok(())
-    }
-
     pub fn get_al(&self) -> Result<u8, EmuException> {
         Ok(self.ac.core.gpregs.get(GpReg8::AL))
     }

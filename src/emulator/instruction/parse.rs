@@ -1,6 +1,5 @@
 use packed_struct::prelude::*;
 use super::opcode;
-use crate::emulator;
 use crate::emulator::access;
 use crate::emulator::EmuException;
 use crate::hardware::processor::segment;
@@ -44,6 +43,7 @@ pub struct Rex {
 #[derive(Default)]
 pub struct InstrData {
     pub len: u64,
+    pub adsize: super::OpAdSize,
 
     pub opcode: u16,
     pub modrm: ModRM,
@@ -71,23 +71,26 @@ pub struct Sib {
 }
 
 impl ParseInstr {
-    pub fn parse_prefix(&mut self, ac: &mut access::Access, mode: emulator::CpuMode) -> Result<(), EmuException> {
+    pub fn parse_prefix(&mut self, ac: &mut access::Access) -> Result<(), EmuException> {
         self.get_legacy_prefix(ac)?;
 
-        if let emulator::CpuMode::Long = mode {
+        if let access::CpuMode::Long = ac.mode {
             self.get_rex_prefix(ac)?;
         }
         Ok(())
     }
 
-    pub fn parse_instruction(&mut self, ac: &mut access::Access, op: &dyn opcode::OpcodeTrait, adsize: super::OpAdSize) -> Result<(), EmuException> {
+    pub fn parse_opcode(&mut self, ac: &mut access::Access) -> Result<(), EmuException> {
         self.get_opcode(ac)?;
+        Ok(())
+    }
 
-        let flag = op.flag(self.instr.opcode);
+    pub fn parse_oprand(&mut self, ac: &mut access::Access, flag: opcode::OpFlags, adsize: super::OpAdSize) -> Result<(), EmuException> {
+        self.instr.adsize = adsize;
 
         if flag.contains(opcode::OpFlags::MODRM) {
             self.get_modrm(ac)?;
-            self.get_sib_disp(ac, adsize)?;
+            self.get_sib_disp(ac)?;
         }
 
         if flag.contains(opcode::OpFlags::IMM32) {
@@ -107,7 +110,7 @@ impl ParseInstr {
         }
 
         if flag.contains(opcode::OpFlags::MOFFSX) {
-            self.get_moffs(ac, adsize)?;
+            self.get_moffs(ac)?;
         }
 
         Ok(())
@@ -166,9 +169,9 @@ impl ParseInstr {
         Ok(())
     }
 
-    fn get_sib_disp(&mut self, ac: &mut access::Access, adsize: super::OpAdSize) -> Result<(), EmuException> {
+    fn get_sib_disp(&mut self, ac: &mut access::Access) -> Result<(), EmuException> {
         let (mod_, rm) = (self.instr.modrm.mod_, self.instr.modrm.rm);
-        match adsize {
+        match self.instr.adsize {
             super::OpAdSize::BIT16 => {
                 if mod_ == 2 || (mod_ == 0 && rm == 6) {
                     self.instr.disp = ac.get_code16(self.instr.len)? as u32;
@@ -200,9 +203,9 @@ impl ParseInstr {
         Ok(())
     }
 
-    fn get_moffs(&mut self, ac: &mut access::Access, adsize: super::OpAdSize) -> Result<(), EmuException> {
+    fn get_moffs(&mut self, ac: &mut access::Access) -> Result<(), EmuException> {
         let moffs = &mut self.instr.moffs;
-        match adsize {
+        match self.instr.adsize {
             super::OpAdSize::BIT16 => {
                 *moffs = ac.get_code16(self.instr.len)? as u64;
                 self.instr.len += 2;

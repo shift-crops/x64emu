@@ -21,7 +21,7 @@ impl<'a> super::Exec<'a> {
         let v = if modrm.mod_ == 3 { 
             get_gpreg!(self, GpReg32, modrm.rm)
         } else {
-            self.ac.get_data32(Self::addr_modrm(self))?
+            self.ac.get_data32(Self::addr_modrm(self)?)?
         };
         Ok(v)
     }
@@ -31,7 +31,7 @@ impl<'a> super::Exec<'a> {
         if modrm.mod_ == 3 {
             set_gpreg!(self, GpReg32, modrm.rm, v);
         } else {
-            self.ac.set_data32(Self::addr_modrm(self), v)?;
+            self.ac.set_data32(Self::addr_modrm(self)?, v)?;
         }
         Ok(())
     }
@@ -59,7 +59,7 @@ impl<'a> super::Exec<'a> {
         let v = if modrm.mod_ == 3 {
             get_gpreg!(self, GpReg16, modrm.rm)
         } else {
-            self.ac.get_data16(Self::addr_modrm(self))?
+            self.ac.get_data16(Self::addr_modrm(self)?)?
         };
         Ok(v)
     }
@@ -69,7 +69,7 @@ impl<'a> super::Exec<'a> {
         if modrm.mod_ == 3 {
             set_gpreg!(self, GpReg16, modrm.rm, v);
         } else {
-            self.ac.set_data16(Self::addr_modrm(self), v)?;
+            self.ac.set_data16(Self::addr_modrm(self)?, v)?;
         }
         Ok(())
     }
@@ -97,7 +97,7 @@ impl<'a> super::Exec<'a> {
         let v = if modrm.mod_ == 3 {
             get_gpreg!(self, GpReg8, modrm.rm)
         } else {
-            self.ac.get_data8(Self::addr_modrm(self))?
+            self.ac.get_data8(Self::addr_modrm(self)?)?
         };
         Ok(v)
     }
@@ -107,7 +107,7 @@ impl<'a> super::Exec<'a> {
         if modrm.mod_ == 3 {
             set_gpreg!(self, GpReg8, modrm.rm, v);
         } else {
-            self.ac.set_data8(Self::addr_modrm(self), v)?;
+            self.ac.set_data8(Self::addr_modrm(self)?, v)?;
         }
         Ok(())
     }
@@ -131,17 +131,17 @@ impl<'a> super::Exec<'a> {
     }
 
     pub fn get_m(&self) -> Result<u64, EmuException> {
-        Ok(Self::addr_modrm(self).1)
+        Ok(Self::addr_modrm(self)?.1)
     }
 
-    fn addr_modrm(&self) -> (SgReg, u64) {
+    fn addr_modrm(&self) -> Result<(SgReg, u64), EmuException> {
         let modrm = self.idata.modrm;
         assert_ne!(modrm.rm, 3);
 
         let mut addr: u64 = 0;
         let mut segment = SgReg::DS;
 
-        match self.adsize {
+        match self.idata.adsize {
             OpAdSize::BIT16 => {
                 match modrm.mod_ {
                     1|2 => addr += self.idata.disp as u64,
@@ -158,7 +158,7 @@ impl<'a> super::Exec<'a> {
                             segment = SgReg::SS;
                         }
                     },
-                    _ => { panic!("ha??"); },
+                    _ => {},
                 }
 
                 if modrm.rm < 6 {
@@ -172,7 +172,7 @@ impl<'a> super::Exec<'a> {
                 }
 
                 if modrm.rm == 4 {
-                    let (sg, ad) = Self::addr_sib(self);
+                    let (sg, ad) = Self::addr_sib(self)?;
                     if let Some(x) = sg { segment = x; }
                     addr += ad as u64;
                 } else if modrm.rm == 5 && modrm.mod_ == 0 {
@@ -186,10 +186,10 @@ impl<'a> super::Exec<'a> {
         }
 
         if let Some(x) = self.segment { segment = x };
-        (segment, addr)
+        Ok((segment, addr))
     }
 
-    fn addr_sib(&self) -> (Option<SgReg>, u64) {
+    fn addr_sib(&self) -> Result<(Option<SgReg>, u64), EmuException> {
         let (modrm,sib) = (self.idata.modrm, self.idata.sib);
 
         let bs: u64;
@@ -205,6 +205,6 @@ impl<'a> super::Exec<'a> {
             bs = self.ac.core.gpregs.get(GpReg32::try_from(sib.base as usize).unwrap()) as u64;
         }
 
-        (segment, bs + self.ac.core.gpregs.get(GpReg32::try_from(sib.index as usize).unwrap()) as u64 * (1<<sib.scale))
+        Ok((segment, bs + self.ac.core.gpregs.get(GpReg32::try_from(sib.index as usize).unwrap()) as u64 * (1<<sib.scale)))
     }
 }

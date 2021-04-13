@@ -8,9 +8,9 @@ pub struct Hardware {
 }
 
 impl Hardware {
-    pub fn new(size: usize) -> Self {
+    pub fn new(rst_vct: u64, size: usize) -> Self {
         Self {
-            core: processor::Processor::new(),
+            core: processor::Processor::new(rst_vct),
             mem: memory::Memory::new(size),
         }
     }

@@ -19,16 +19,14 @@ pub enum EmuException {
 
 #[derive(Debug)]
 pub enum CPUException {
-    DE = 0, DB = 1, BP = 3, OF = 4, BR = 5, UD = 6, NM = 7, DF = 8, TS = 10, NP = 11, SS = 12, GP = 13, PF = 14, MF = 16, AC = 17, MC = 18, XF = 19, VE = 20, SX = 30
+    DE = 0,  DB = 1,           BP = 3,  OF = 4,  BR = 5,  UD = 6,  NM = 7,
+    DF = 8,           TS = 10, NP = 11, SS = 12, GP = 13, PF = 14,
+    MF = 16, AC = 17, MC = 18, XF = 19, VE = 20,          SX = 30
 }
-
-#[derive(Clone, Copy)]
-pub enum CpuMode { Real, Protected, Long }
 
 pub struct Emulator {
     ac: access::Access,
     inst: instruction::Instruction,
-    mode: CpuMode,
 }
 
 impl Emulator {
@@ -36,14 +34,17 @@ impl Emulator {
         Self {
             ac: access::Access::new(hw),
             inst: instruction::Instruction::new(),
-            mode: CpuMode::Real,
         }
     }
 
     pub fn step(&mut self) -> () {
-        if let Err(err) = self.inst.fetch_exec(&mut self.ac, self.mode) {
+        debug!("IP : 0x{:016x}", self.ac.core.ip.get_rip());
+        if let Err(err) = self.inst.fetch_exec(&mut self.ac) {
             match err {
-                _ => { panic!("{}", err); }
+                _ => {
+                    self.ac.dump();
+                    panic!("{}", err);
+                }
             }
         }
     }
