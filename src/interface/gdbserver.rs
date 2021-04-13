@@ -70,7 +70,7 @@ impl SingleThreadOps for emulator::Emulator {
         regs.ebp = core.gpregs.get(GpReg32::EBP);
         regs.esp = core.gpregs.get(GpReg32::ESP);
 
-        regs.eip = core.rip.get() as u32;
+        regs.eip = core.ip.get_eip();
         regs.eflags = core.rflags.to_u64() as u32;
         regs.segments[0] = core.sgregs.selector(SgReg::CS).to_u16() as u32;
         regs.segments[1] = core.sgregs.selector(SgReg::SS).to_u16() as u32;
@@ -93,7 +93,7 @@ impl SingleThreadOps for emulator::Emulator {
         core.gpregs.set(GpReg32::EBP, regs.ebp);
         core.gpregs.set(GpReg32::ESP, regs.esp);
 
-        core.rip.set(regs.eip as u64);
+        core.ip.set_eip(regs.eip);
         core.rflags.from_u64(regs.eflags as u64);
 
         core.sgregs.selector_mut(SgReg::CS).from_u16(regs.segments[0] as u16);
@@ -109,7 +109,7 @@ impl SingleThreadOps for emulator::Emulator {
     fn read_register( &mut self, reg_id: arch::x86::reg::id::X86CoreRegId, dst: &mut [u8],) -> TargetResult<(), Self> {
         let core = &self.ac.core;
         let reg_val = match reg_id {
-            X86CoreRegId::Eip => Some(core.rip.get() as u32),
+            X86CoreRegId::Eip => Some(core.ip.get_eip()),
             X86CoreRegId::Eax => Some(core.gpregs.get(GpReg32::EAX)),
             X86CoreRegId::Ebx => Some(core.gpregs.get(GpReg32::EBX)),
             X86CoreRegId::Ecx => Some(core.gpregs.get(GpReg32::ECX)),
@@ -136,7 +136,7 @@ impl SingleThreadOps for emulator::Emulator {
 
         let core = &mut self.ac.core;
         match reg_id {
-            X86CoreRegId::Eip => core.rip.set(w as u64),
+            X86CoreRegId::Eip => core.ip.set_eip(w),
             X86CoreRegId::Eax => core.gpregs.set(GpReg32::EAX, w),
             X86CoreRegId::Ebx => core.gpregs.set(GpReg32::EBX, w),
             X86CoreRegId::Ecx => core.gpregs.set(GpReg32::ECX, w),
