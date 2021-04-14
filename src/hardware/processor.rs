@@ -4,17 +4,18 @@ pub mod rflags;
 pub mod segment;
 pub mod control;
 pub mod descriptor;
+pub mod model_specific;
 
 use std::convert::TryFrom;
 use general::*;
 use segment::*;
 
-#[derive(Clone)]
 pub struct Processor {
     pub ip: ip::InstructionPointer,
     pub gpregs: general::GpRegisters,
     pub sgregs: segment::SgRegisters,
     pub rflags: rflags::RFlags,
+    pub msr: model_specific::ModelSpecific,
 }
 
 impl Processor {
@@ -24,6 +25,7 @@ impl Processor {
             gpregs: general::GpRegisters::new(),
             sgregs: segment::SgRegisters::new(),
             rflags: Default::default(),
+            msr: Default::default(),
         }
     }
 

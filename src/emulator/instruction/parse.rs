@@ -74,7 +74,7 @@ impl ParseInstr {
     pub fn parse_prefix(&mut self, ac: &mut access::Access) -> Result<(), EmuException> {
         self.get_legacy_prefix(ac)?;
 
-        if let access::CpuMode::Long = ac.mode {
+        if let access::CpuMode::Long64 = ac.mode {
             self.get_rex_prefix(ac)?;
         }
         Ok(())

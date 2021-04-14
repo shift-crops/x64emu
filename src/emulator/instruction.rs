@@ -37,13 +37,13 @@ impl Instruction {
 
     pub fn opad_size(mode: access::CpuMode, pdata: &parse::PrefixData) -> (OpAdSize, OpAdSize) {
         let (mut ops, mut ads) = match mode {
-            access::CpuMode::Real => {
+            access::CpuMode::LongCompat16 | access::CpuMode::Real => {
                 (OpAdSize::BIT16, OpAdSize::BIT16)
             },
-            access::CpuMode::Protected => {
+            access::CpuMode::LongCompat32 | access::CpuMode::Protected => {
                 (OpAdSize::BIT32, OpAdSize::BIT32)
             },
-            access::CpuMode::Long => {
+            access::CpuMode::Long64 => {
                 (if pdata.rex.w == 1 { OpAdSize::BIT64 } else { OpAdSize::BIT32 }, OpAdSize::BIT64)
             },
         };
