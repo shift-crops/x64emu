@@ -3,9 +3,11 @@ mod flag;
 mod reg_mem;
 
 use super::parse;
-use crate::emulator::access;
-use crate::hardware::processor::segment;
+use crate::emulator::*;
 use crate::emulator::EmuException;
+use crate::hardware::processor;
+use crate::hardware::processor::segment;
+use crate::hardware::processor::segment::*;
 
 pub struct Exec<'a> {
     pub ac: &'a mut access::Access,
@@ -17,6 +19,23 @@ pub struct Exec<'a> {
 impl<'a> Exec<'a> {
     pub fn new(ac: &'a mut access::Access, idata: &'a parse::InstrData, segment: Option<segment::SgReg>, rep: Option<parse::Rep>) -> Self {
         Self { ac, idata, segment, rep, }
+    }
+
+    fn update_cpumode(&mut self) -> Result<(), EmuException> {
+        let core = &mut self.ac.core;
+        let efer = &core.msr.efer;
+        let cs = &core.sgregs.cache(SgReg::CS);
+
+        core.mode = match (efer.LMA, cs.L, cs.D) {
+            (0, _, 0) => { processor::CpuMode::Real },
+            (0, _, 1) => { processor::CpuMode::Protected },
+            (1, 0, 0) => { processor::CpuMode::LongCompat16 },
+            (1, 0, 1) => { processor::CpuMode::LongCompat32 },
+            (1, 1, 0) => { processor::CpuMode::Long64 },
+            _ => { return Err(EmuException::CPUException(CPUException::GP)); },
+        };
+
+        Ok(())
     }
 }
 

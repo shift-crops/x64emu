@@ -39,6 +39,11 @@ impl SgDescSelector {
     }
 }
 
+impl super::model_specific::MSRAccess for SgDescCache {
+    fn get(&self) -> u64 { self.Base }
+    fn set(&mut self, v: u64) -> () { self.Base = v; }
+}
+
 #[derive(Debug, Default, Clone, Copy)]
 pub struct SgRegUnit {
     selector: SgDescSelector,

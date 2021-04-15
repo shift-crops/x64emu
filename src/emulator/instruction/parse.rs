@@ -2,6 +2,7 @@ use packed_struct::prelude::*;
 use super::opcode;
 use crate::emulator::access;
 use crate::emulator::EmuException;
+use crate::hardware::processor;
 use crate::hardware::processor::segment;
 
 #[derive(Default)]
@@ -74,7 +75,7 @@ impl ParseInstr {
     pub fn parse_prefix(&mut self, ac: &mut access::Access) -> Result<(), EmuException> {
         self.get_legacy_prefix(ac)?;
 
-        if let access::CpuMode::Long64 = ac.mode {
+        if let processor::CpuMode::Long64 = ac.core.mode {
             self.get_rex_prefix(ac)?;
         }
         Ok(())

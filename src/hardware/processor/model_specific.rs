@@ -13,7 +13,7 @@ pub struct ModelSpecific {
     pub fmask: FMASK,
 }
 
-trait MSRAccess {
+pub trait MSRAccess {
     fn get(&self) -> u64;
     fn set(&mut self, v: u64) -> ();
 }

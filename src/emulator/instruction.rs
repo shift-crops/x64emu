@@ -3,6 +3,7 @@ mod opcode;
 mod exec;
 
 use super::access;
+use crate::hardware::processor;
 use crate::emulator::EmuException;
 
 #[derive(Clone, Copy)]
@@ -24,7 +25,7 @@ impl Instruction {
         let mut parse: parse::ParseInstr = Default::default();
 
         parse.parse_prefix(ac)?;
-        let (opsize, adsize) = Instruction::opad_size(ac.mode, &parse.prefix);
+        let (opsize, adsize) = Instruction::opad_size(ac.core.mode, &parse.prefix);
 
         let op = self.0.get(opsize);
         parse.parse_opcode(ac)?;
@@ -35,15 +36,15 @@ impl Instruction {
         Ok(())
     }
 
-    pub fn opad_size(mode: access::CpuMode, pdata: &parse::PrefixData) -> (OpAdSize, OpAdSize) {
+    pub fn opad_size(mode: processor::CpuMode, pdata: &parse::PrefixData) -> (OpAdSize, OpAdSize) {
         let (mut ops, mut ads) = match mode {
-            access::CpuMode::LongCompat16 | access::CpuMode::Real => {
+            processor::CpuMode::LongCompat16 | processor::CpuMode::Real => {
                 (OpAdSize::BIT16, OpAdSize::BIT16)
             },
-            access::CpuMode::LongCompat32 | access::CpuMode::Protected => {
+            processor::CpuMode::LongCompat32 | processor::CpuMode::Protected => {
                 (OpAdSize::BIT32, OpAdSize::BIT32)
             },
-            access::CpuMode::Long64 => {
+            processor::CpuMode::Long64 => {
                 (if pdata.rex.w == 1 { OpAdSize::BIT64 } else { OpAdSize::BIT32 }, OpAdSize::BIT64)
             },
         };
