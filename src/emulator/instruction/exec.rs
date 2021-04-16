@@ -1,6 +1,7 @@
 mod basic;
 mod flag;
 mod reg_mem;
+mod desc;
 
 use super::parse;
 use crate::emulator::*;
@@ -24,9 +25,9 @@ impl<'a> Exec<'a> {
     fn update_cpumode(&mut self) -> Result<(), EmuException> {
         let core = &mut self.ac.core;
         let efer = &core.msr.efer;
-        let cs = &core.sgregs.cache(SgReg::CS);
+        let cs = &core.sgregs.get(SgReg::CS).cache;
 
-        core.mode = match (efer.LMA, cs.L, cs.D) {
+        core.mode = match (efer.LMA, cs.L, cs.DB) {
             (0, _, 0) => { processor::CpuMode::Real },
             (0, _, 1) => { processor::CpuMode::Protected },
             (1, 0, 0) => { processor::CpuMode::LongCompat16 },

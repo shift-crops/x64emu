@@ -17,6 +17,8 @@ pub struct CR0 {
     #[packed_field(bits="31")] PG: u8,
 }
 
+pub struct CR2 (u64);
+
 #[derive(Debug, Default, Clone, Copy, PackedStruct)]
 #[packed_struct(bit_numbering="lsb0", size_bytes="4", endian="msb")]
 pub struct CR3 {

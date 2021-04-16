@@ -10,7 +10,7 @@ pub fn init_cmn_opcode(op: &mut super::OpcodeArr){
         ($n:expr, $fnc:ident, $flg:expr) => { op[$n & 0x1ff] = OpcodeType{func:$fnc, flag:$flg} }
     }
 
-    setcmnop!(0x00, add_rm8_r8,    OpFlags::MODRM);
+    //setcmnop!(0x00, add_rm8_r8,    OpFlags::MODRM);
     setcmnop!(0x02, add_r8_rm8,    OpFlags::MODRM);
     setcmnop!(0x04, add_al_imm8,   OpFlags::IMM8);
     setcmnop!(0x08, or_rm8_r8,     OpFlags::MODRM);
@@ -54,7 +54,7 @@ pub fn init_cmn_opcode(op: &mut super::OpcodeArr){
     setcmnop!(0x86, xchg_r8_rm8,   OpFlags::MODRM);
     setcmnop!(0x88, mov_rm8_r8,    OpFlags::MODRM);
     setcmnop!(0x8a, mov_r8_rm8,    OpFlags::MODRM);
-    //setcmnop!(0x8e, mov_sreg_rm16, OpFlags::MODRM);
+    setcmnop!(0x8e, mov_sreg_rm16, OpFlags::MODRM);
     setcmnop!(0x90, nop,           OpFlags::NONE);
     setcmnop!(0xa0, mov_al_moffs8, OpFlags::MOFFS);
     setcmnop!(0xa2, mov_moffs8_al, OpFlags::MOFFS);
@@ -154,6 +154,8 @@ xchg_dst_src!(u8, r8, rm8);
 
 mov_dst_src!(u8, rm8, r8);
 mov_dst_src!(u8, r8, rm8);
+
+mov_dst_src!(u16, sreg, rm16);
 
 fn nop (_exec: &mut exec::Exec) -> Result<(), EmuException> { Ok(()) }
 

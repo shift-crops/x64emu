@@ -26,7 +26,8 @@ pub struct IA32_EFER {
     #[packed_field(bits="8")]  pub LME: u8,
     #[packed_field(bits="9")]     _r09: ReservedZero<packed_bits::Bits1>,
     #[packed_field(bits="10")] pub LMA: u8,
-    #[packed_field(bits="11:63")] _r11: ReservedZero<packed_bits::Bits52>,
+    #[packed_field(bits="11")] pub NXE: u8,
+    #[packed_field(bits="12:63")] _r11: ReservedZero<packed_bits::Bits51>,
 }
 impl MSRAccess for IA32_EFER {
     fn get(&self) -> u64 { u64::from_be_bytes(self.pack().unwrap()) }

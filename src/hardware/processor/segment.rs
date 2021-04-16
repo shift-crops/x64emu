@@ -2,7 +2,7 @@
 use packed_struct::prelude::*;
 use num_enum::TryFromPrimitive;
 
-#[derive(Clone, Copy, TryFromPrimitive)] #[repr(usize)]
+#[derive(Clone, Copy, PartialEq, TryFromPrimitive)] #[repr(usize)]
 pub enum SgReg { ES, CS, SS, DS, FS, GS, KernelGS, END }
 
 const SGREGS_COUNT: usize = SgReg::END as usize;
@@ -17,15 +17,15 @@ pub struct SgDescSelector {
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct SgDescCache {
-    pub Base:  u64,
-    pub Limit: u32,
+    pub base:  u64,
+    pub limit: u32,
     pub Type:  u8,
     pub S:     u8,
     pub DPL:   u8,
     pub P:     u8,
     pub AVL:   u8,
     pub L:     u8,
-    pub D:     u8,
+    pub DB:    u8,
     pub G:     u8,
 }
 
@@ -40,14 +40,14 @@ impl SgDescSelector {
 }
 
 impl super::model_specific::MSRAccess for SgDescCache {
-    fn get(&self) -> u64 { self.Base }
-    fn set(&mut self, v: u64) -> () { self.Base = v; }
+    fn get(&self) -> u64 { self.base }
+    fn set(&mut self, v: u64) -> () { self.base = v; }
 }
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct SgRegUnit {
-    selector: SgDescSelector,
-    cache: SgDescCache,
+    pub selector: SgDescSelector,
+    pub cache: SgDescCache,
 }
 
 pub struct SgRegisters ([SgRegUnit; SGREGS_COUNT]);
@@ -57,11 +57,16 @@ impl SgRegisters {
         Self ([Default::default(); SGREGS_COUNT])
     }
 
+    pub fn get(&self, r: SgReg) -> &SgRegUnit { &self.0[r as usize] }
+    pub fn get_mut(&mut self, r: SgReg) -> &mut SgRegUnit { &mut self.0[r as usize] }
+
+    /*
     pub fn selector(&self, r: SgReg) -> &SgDescSelector { &self.0[r as usize].selector }
     pub fn cache(&self, r: SgReg) -> &SgDescCache { &self.0[r as usize].cache }
 
     pub fn selector_mut(&mut self, r: SgReg) -> &mut SgDescSelector { &mut self.0[r as usize].selector }
     pub fn cache_mut(&mut self, r: SgReg) -> &mut SgDescCache { &mut self.0[r as usize].cache }
+    */
 }
 
 #[cfg(test)]
@@ -69,11 +74,11 @@ impl SgRegisters {
 pub fn sgreg_test() {
     let mut reg = SgRegisters::new();
 
-    reg.selector_mut(SgReg::ES).from_u16(0x2e);
-    let es = reg.selector(SgReg::ES);
-    assert_eq!(es.IDX, 5);
-    assert_eq!(es.TI, 1);
-    assert_eq!(es.RPL, 2);
+    let mut sel = reg.get_mut(SgReg::ES).selector;
+    sel.from_u16(0x2e);
+    assert_eq!(sel.IDX, 5);
+    assert_eq!(sel.TI, 1);
+    assert_eq!(sel.RPL, 2);
 }
 
 #[cfg(test)]
@@ -83,5 +88,5 @@ pub fn sgreg_test_panic() {
     use std::convert::TryFrom;
 
     let reg = SgRegisters::new();
-    reg.selector(SgReg::try_from(10).unwrap());
+    reg.get(SgReg::try_from(10).unwrap());
 }

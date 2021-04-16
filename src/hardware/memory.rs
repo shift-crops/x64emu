@@ -100,5 +100,5 @@ fn mem_test_panic(){
     let mem = Memory::new(0x1000);
     let mut v = vec![0; 0x20];
 
-    mem.read_data(v.as_mut_ptr() as *mut c_void, 0xff0, v.len()).unwrap();
+    mem.read_data(v.as_mut_ptr() as *mut _, 0xff0, v.len()).unwrap();
 }

@@ -10,7 +10,7 @@ use std::convert::TryFrom;
 use general::*;
 use segment::*;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 pub enum CpuMode { Real, Protected, LongCompat16, LongCompat32, Long64 }
 
 pub struct Processor {
@@ -19,6 +19,7 @@ pub struct Processor {
     pub gpregs: general::GpRegisters,
     pub sgregs: segment::SgRegisters,
     pub rflags: rflags::RFlags,
+    pub dtregs: descriptor::DTRegisters, 
     pub msr: model_specific::ModelSpecific,
 }
 
@@ -30,6 +31,7 @@ impl Processor {
             gpregs: general::GpRegisters::new(),
             sgregs: segment::SgRegisters::new(),
             rflags: Default::default(),
+            dtregs: Default::default(),
             msr: Default::default(),
         }
     }
@@ -58,14 +60,19 @@ impl Processor {
                 }
             }
         }
-        println!("{:?}", self.rflags);
+        println!("{:?}\n", self.rflags);
 
         let sgreg_name = ["ES", "CS", "SS", "DS", "FS", "GS"];
         for i in 0..sgreg_name.len() {
-            println!("{} : {:?},  {:?}", sgreg_name[i], self.sgregs.selector(SgReg::try_from(i).unwrap()), self.sgregs.cache(SgReg::try_from(i).unwrap()));
+            let sgreg = self.sgregs.get(SgReg::try_from(i).unwrap());
+            println!("{} : {:?},  {:x?}", sgreg_name[i], sgreg.selector, sgreg.cache);
         }
+        println!("");
 
-        //let dtreg_name = ["GDTR", "IDTR", "LDTR", " TR "];
+        println!("GDTR : {:x?}", self.dtregs.gdtr);
+        println!("IDTR : {:x?}", self.dtregs.idtr);
+        println!("LDTR : {:x?}", self.dtregs.ldtr);
+        println!("TR   : {:x?}", self.dtregs.tr);
 
         println!("");
     }

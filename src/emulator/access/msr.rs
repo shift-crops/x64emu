@@ -42,9 +42,9 @@ impl super::Access {
                 MSRAddress::CSTAR        => Box::new(&self.core.msr.cstar),
                 MSRAddress::LSTAR        => Box::new(&self.core.msr.lstar),
                 MSRAddress::FMASK        => Box::new(&self.core.msr.fmask),
-                MSRAddress::FSBase       => Box::new(self.core.sgregs.cache(SgReg::FS)),
-                MSRAddress::GSBase       => Box::new(self.core.sgregs.cache(SgReg::GS)),
-                MSRAddress::KernelGSBase => Box::new(self.core.sgregs.cache(SgReg::KernelGS)),
+                MSRAddress::FSBase       => Box::new(&self.core.sgregs.get(SgReg::FS).cache),
+                MSRAddress::GSBase       => Box::new(&self.core.sgregs.get(SgReg::GS).cache),
+                MSRAddress::KernelGSBase => Box::new(&self.core.sgregs.get(SgReg::KernelGS).cache),
             };
             return Some(v);
         }
@@ -59,9 +59,9 @@ impl super::Access {
                 MSRAddress::CSTAR        => Box::new(&mut self.core.msr.cstar),
                 MSRAddress::LSTAR        => Box::new(&mut self.core.msr.lstar),
                 MSRAddress::FMASK        => Box::new(&mut self.core.msr.fmask),
-                MSRAddress::FSBase       => Box::new(self.core.sgregs.cache_mut(SgReg::FS)),
-                MSRAddress::GSBase       => Box::new(self.core.sgregs.cache_mut(SgReg::GS)),
-                MSRAddress::KernelGSBase => Box::new(self.core.sgregs.cache_mut(SgReg::KernelGS)),
+                MSRAddress::FSBase       => Box::new(&mut self.core.sgregs.get_mut(SgReg::FS).cache),
+                MSRAddress::GSBase       => Box::new(&mut self.core.sgregs.get_mut(SgReg::GS).cache),
+                MSRAddress::KernelGSBase => Box::new(&mut self.core.sgregs.get_mut(SgReg::KernelGS).cache),
             };
             return Some(v);
         }
@@ -79,7 +79,7 @@ pub fn access_msr_test() {
     assert_eq!(ac.read_msr(MSRAddress::IA32_EFER as u32).unwrap(), 0x400);
 
     ac.write_msr(0xc0000100, 0xdeadbeef).unwrap();
-    assert_eq!(ac.core.sgregs.cache(SgReg::FS).Base, 0xdeadbeef);
+    assert_eq!(ac.core.sgregs.get(SgReg::FS).cache.base, 0xdeadbeef);
 }
 
 #[cfg(test)]

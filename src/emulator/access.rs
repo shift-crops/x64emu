@@ -17,10 +17,8 @@ impl Access {
     }
 
     pub fn dump(&self) -> () {
-        use crate::hardware::processor::general::*;
-
         self.core.dump();
-        self.mem.dump(self.core.ip.get_rip() as usize -0x10 , 0x20);
-        self.mem.dump(self.core.gpregs.get(GpReg64::RSP) as usize, 0x40);
+        self.dump_code();
+        self.dump_stack();
     }
 }
