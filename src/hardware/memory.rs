@@ -15,15 +15,15 @@ impl Memory {
         Self( vec![0; (size+0xfff) & !0xfff] )
     }
 
-    pub fn read64(&self, addr: usize) -> u64 { if let Some(slice) = self.0.get(addr..addr+8) { unsafe{ return *(slice.as_ptr() as *const u64); } } 0 }
-    pub fn read32(&self, addr: usize) -> u32 { if let Some(slice) = self.0.get(addr..addr+4) { unsafe{ return *(slice.as_ptr() as *const u32); } } 0 }
-    pub fn read16(&self, addr: usize) -> u16 { if let Some(slice) = self.0.get(addr..addr+2) { unsafe{ return *(slice.as_ptr() as *const u16); } } 0 }
     pub fn read8(&self, addr: usize) -> u8 { if let Some(slice) = self.0.get(addr) { return *slice; } 0 }
+    pub fn read16(&self, addr: usize) -> u16 { if let Some(slice) = self.0.get(addr..addr+2) { unsafe{ return *(slice.as_ptr() as *const u16); } } 0 }
+    pub fn read32(&self, addr: usize) -> u32 { if let Some(slice) = self.0.get(addr..addr+4) { unsafe{ return *(slice.as_ptr() as *const u32); } } 0 }
+    pub fn read64(&self, addr: usize) -> u64 { if let Some(slice) = self.0.get(addr..addr+8) { unsafe{ return *(slice.as_ptr() as *const u64); } } 0 }
 
-    pub fn write64(&mut self, addr: usize, v: u64) -> () { if let Some(slice) = self.0.get_mut(addr..addr+8) { unsafe { *(slice.as_mut_ptr() as *mut u64) = v; } } }
-    pub fn write32(&mut self, addr: usize, v: u32) -> () { if let Some(slice) = self.0.get_mut(addr..addr+4) { unsafe { *(slice.as_mut_ptr() as *mut u32) = v; } } }
-    pub fn write16(&mut self, addr: usize, v: u16) -> () { if let Some(slice) = self.0.get_mut(addr..addr+2) { unsafe { *(slice.as_mut_ptr() as *mut u16) = v; } } }
     pub fn write8(&mut self, addr: usize, v: u8) -> () { if let Some(slice) = self.0.get_mut(addr) { *slice = v; } }
+    pub fn write16(&mut self, addr: usize, v: u16) -> () { if let Some(slice) = self.0.get_mut(addr..addr+2) { unsafe { *(slice.as_mut_ptr() as *mut u16) = v; } } }
+    pub fn write32(&mut self, addr: usize, v: u32) -> () { if let Some(slice) = self.0.get_mut(addr..addr+4) { unsafe { *(slice.as_mut_ptr() as *mut u32) = v; } } }
+    pub fn write64(&mut self, addr: usize, v: u64) -> () { if let Some(slice) = self.0.get_mut(addr..addr+8) { unsafe { *(slice.as_mut_ptr() as *mut u64) = v; } } }
 
     pub fn read_data(&self, dst: *mut c_void, src_addr: usize, len: usize) -> Result<usize, MemoryError> {
         if let Some(slice) = self.0.get(src_addr..src_addr+len) {
@@ -100,5 +100,5 @@ fn mem_test_panic(){
     let mem = Memory::new(0x1000);
     let mut v = vec![0; 0x20];
 
-    mem.read_data(v.as_mut_ptr() as *mut c_void, 0xff0, v.len()).unwrap();
+    mem.read_data(v.as_mut_ptr() as *mut _, 0xff0, v.len()).unwrap();
 }

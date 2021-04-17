@@ -67,12 +67,11 @@ impl Emulator {
     pub fn load_binary(&mut self, path: String, addr: usize) -> Result<(), Box<dyn error::Error>> {
         use std::io::Read;
         use std::fs::File;
-        use libc::c_void;
 
         let mut file = File::open(path)?;
         let mut buf = Vec::new();
         let len = file.read_to_end(&mut buf)?;
-        self.ac.mem.write_data(addr, buf.as_ptr() as *const c_void, len)?;
+        self.ac.mem.write_data(addr, buf.as_ptr() as *const _, len)?;
 
         Ok(())
     }

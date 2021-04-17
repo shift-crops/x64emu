@@ -1,11 +1,13 @@
 mod basic;
 mod flag;
 mod reg_mem;
+mod desc;
 
 use super::parse;
-use crate::emulator::access;
-use crate::hardware::processor::segment;
+use crate::emulator::*;
 use crate::emulator::EmuException;
+use crate::hardware::processor::segment;
+use crate::hardware::processor::segment::*;
 
 pub struct Exec<'a> {
     pub ac: &'a mut access::Access,
@@ -17,6 +19,35 @@ pub struct Exec<'a> {
 impl<'a> Exec<'a> {
     pub fn new(ac: &'a mut access::Access, idata: &'a parse::InstrData, segment: Option<segment::SgReg>, rep: Option<parse::Rep>) -> Self {
         Self { ac, idata, segment, rep, }
+    }
+
+    fn update_cpumode(&mut self) -> Result<(), EmuException> {
+        let ac = &mut self.ac;
+        let efer = &mut ac.core.msr.efer;
+        let cr0 = &ac.core.cregs.0;
+
+        ac.mode = match (efer.LME, cr0.PE, cr0.PG) {
+            (0, 0, _) => { access::CpuMode::Real },
+            (0, 1, _) => { access::CpuMode::Protected },
+            (1, 1, 1) => { access::CpuMode::Long },
+            _ => { return Err(EmuException::CPUException(CPUException::GP)); },
+        };
+        Ok(())
+    }
+
+    fn update_opadsize(&mut self) -> Result<(), EmuException> {
+        let ac = &mut self.ac;
+        let efer = &ac.core.msr.efer;
+        let cs = &ac.core.sgregs.get(SgReg::CS).cache;
+
+        let (op, ad) = match (efer.LMA, cs.L, cs.DB) {
+            (1, 0, 0) | (0, _, 0) => { (access::AcsSize::BIT16, access::AcsSize::BIT16) },
+            (1, 0, 1) | (0, _, 1) => { (access::AcsSize::BIT32, access::AcsSize::BIT32) },
+            (1, 1, 0)             => { (access::AcsSize::BIT32, access::AcsSize::BIT64) },
+            _ => { return Err(EmuException::CPUException(CPUException::GP)); },
+        };
+        ac.size = access::OpAdSize { op, ad };
+        Ok(())
     }
 }
 

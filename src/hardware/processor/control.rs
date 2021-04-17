@@ -1,23 +1,26 @@
 #![allow(non_snake_case)]
 use packed_struct::prelude::*;
 
-#[derive(Debug, Default, Clone, Copy, PackedStruct)]
+#[derive(Debug, Default)]
+pub struct CRegisters (pub CR0, u64, pub u64, pub CR3, pub CR4);
+
+#[derive(Debug, Default, PackedStruct)]
 #[packed_struct(bit_numbering="lsb0", size_bytes="4")]
 pub struct CR0 {
-    #[packed_field(bits="0")]  PE: u8,
-    #[packed_field(bits="1")]  MP: u8,
-    #[packed_field(bits="2")]  EM: u8,
-    #[packed_field(bits="3")]  TS: u8,
-    #[packed_field(bits="4")]  ET: u8,
-    #[packed_field(bits="5")]  NE: u8,
-    #[packed_field(bits="16")] WP: u8,
-    #[packed_field(bits="18")] AM: u8,
-    #[packed_field(bits="29")] NW: u8,
-    #[packed_field(bits="30")] CD: u8,
-    #[packed_field(bits="31")] PG: u8,
+    #[packed_field(bits="0")]  pub PE: u8,
+    #[packed_field(bits="1")]  pub MP: u8,
+    #[packed_field(bits="2")]  pub EM: u8,
+    #[packed_field(bits="3")]  pub TS: u8,
+    #[packed_field(bits="4")]  pub ET: u8,
+    #[packed_field(bits="5")]  pub NE: u8,
+    #[packed_field(bits="16")] pub WP: u8,
+    #[packed_field(bits="18")] pub AM: u8,
+    #[packed_field(bits="29")] pub NW: u8,
+    #[packed_field(bits="30")] pub CD: u8,
+    #[packed_field(bits="31")] pub PG: u8,
 }
 
-#[derive(Debug, Default, Clone, Copy, PackedStruct)]
+#[derive(Debug, Default, PackedStruct)]
 #[packed_struct(bit_numbering="lsb0", size_bytes="4", endian="msb")]
 pub struct CR3 {
     #[packed_field(bits="3")]  PWT: u8,
@@ -25,7 +28,7 @@ pub struct CR3 {
     #[packed_field(bits="12:31")]  PageDirBase: u32,
 }
 
-#[derive(Debug, Default, Clone, Copy, PackedStruct)]
+#[derive(Debug, Default, PackedStruct)]
 #[packed_struct(bit_numbering="lsb0", size_bytes="4")]
 pub struct CR4 {
     #[packed_field(bits="0")]  VME: u8,

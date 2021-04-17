@@ -94,7 +94,7 @@ impl super::OpcodeTrait for Opcode16 {
         setop!(0x89, mov_rm16_r16,      OpFlags::MODRM);
         // 0x8a : mov_r8_rm8
         setop!(0x8b, mov_r16_rm16,      OpFlags::MODRM);
-        //setop!(0x8c, mov_rm16_sreg,     OpFlags::MODRM);
+        setop!(0x8c, mov_rm16_sreg,     OpFlags::MODRM);
         setop!(0x8d, lea_r16_m16,       OpFlags::MODRM);
         // 0x8e : mov_sreg_rm16
 
@@ -291,7 +291,7 @@ impl Opcode16 {
     xchg_dst_src!(u16, r16, rm16);
     mov_dst_src!(u16, rm16, r16);
     mov_dst_src!(u16, r16, rm16);
-
+    mov_dst_src!(u16, rm16, sreg);
     lea_dst_src!(u16, r16, m16);
 
     xchg_dst_src!(u16, ax, opr16);
