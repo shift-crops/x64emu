@@ -10,15 +10,12 @@ use std::convert::TryFrom;
 use general::*;
 use segment::*;
 
-#[derive(Clone, Copy, PartialEq)]
-pub enum CpuMode { Real, Protected, LongCompat16, LongCompat32, Long64 }
-
 pub struct Processor {
-    pub mode: CpuMode,
     pub ip: ip::InstructionPointer,
     pub gpregs: general::GpRegisters,
-    pub sgregs: segment::SgRegisters,
     pub rflags: rflags::RFlags,
+    pub cregs:  control::CRegisters,
+    pub sgregs: segment::SgRegisters,
     pub dtregs: descriptor::DTRegisters, 
     pub msr: model_specific::ModelSpecific,
 }
@@ -26,11 +23,11 @@ pub struct Processor {
 impl Processor {
     pub fn new(rst_vct: u64) -> Self {
         Self {
-            mode: CpuMode::Real,
             ip: ip::InstructionPointer::new(rst_vct),
             gpregs: general::GpRegisters::new(),
-            sgregs: segment::SgRegisters::new(),
             rflags: Default::default(),
+            cregs:  Default::default(),
+            sgregs: segment::SgRegisters::new(),
             dtregs: Default::default(),
             msr: Default::default(),
         }
@@ -38,27 +35,36 @@ impl Processor {
 
     pub fn dump(&self) -> () {
         println!("Registers Dump");
-        println!("IP : {:016x}", self.ip.get_rip());
 
-        match self.mode {
-            CpuMode::LongCompat16 | CpuMode::Real => {
+        let efer = &self.msr.efer;
+        let cs = &self.sgregs.get(SgReg::CS).cache;
+
+        match (efer.LMA, cs.L, cs.DB) {
+            (1, 0, 0) | (0, _, 0) => {  // 16 bit
+                println!("IP : 0x{:04x}", self.ip.get_ip());
+
                 let gpreg_name = ["AX", "CX", "DX", "BX", "SP", "BP", "SI", "DI"];
                 for i in 0..gpreg_name.len() {
                     println!("{} : 0x{:04x}", gpreg_name[i], self.gpregs.get(GpReg16::try_from(i).unwrap()));
                 }
-            }
-            CpuMode::LongCompat32 | CpuMode::Protected => {
+            },
+            (1, 0, 1) | (0, _, 1) => {  // 32 bit
+                println!("EIP : 0x{:08x}", self.ip.get_eip());
+
                 let gpreg_name = ["EAX", "ECX", "EDX", "EBX", "ESP", "EBP", "ESI", "EDI"];
                 for i in 0..gpreg_name.len() {
                     println!("{} : 0x{:08x}", gpreg_name[i], self.gpregs.get(GpReg32::try_from(i).unwrap()));
                 }
-            }
-            CpuMode::Long64 => {
+            },
+            (1, 1, 0) => {              // 64 bit
+                println!("RIP : 0x{:016x}", self.ip.get_rip());
+
                 let gpreg_name = ["RAX", "RCX", "RDX", "RBX", "RSP", "RBP", "RSI", "RDI", "R8 ", "R9 ", "R10", "R11", "R12", "R13", "R14", "R15"];
                 for i in 0..gpreg_name.len() {
                     println!("{} : 0x{:016x}", gpreg_name[i], self.gpregs.get(GpReg64::try_from(i).unwrap()));
                 }
-            }
+            },
+            _ => { },
         }
         println!("{:?}\n", self.rflags);
 

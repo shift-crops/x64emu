@@ -1,5 +1,5 @@
 use std::convert::TryFrom;
-use crate::emulator::instruction::OpAdSize;
+use crate::emulator::access;
 use crate::emulator::EmuException;
 use crate::hardware::processor::general::*;
 use crate::hardware::processor::segment::*;
@@ -142,7 +142,7 @@ impl<'a> super::Exec<'a> {
         let mut segment = SgReg::DS;
 
         match self.idata.adsize {
-            OpAdSize::BIT16 => {
+            access::AcsSize::BIT16 => {
                 match modrm.mod_ {
                     1|2 => addr += self.idata.disp as u64,
                     _ => {},
@@ -165,7 +165,7 @@ impl<'a> super::Exec<'a> {
                     addr += self.ac.core.gpregs.get( if modrm.rm%2 == 1 {GpReg16::DI} else {GpReg16::SI} ) as u64;
                 }
             },
-            OpAdSize::BIT32 => {
+            access::AcsSize::BIT32 => {
                 match modrm.mod_ {
                     1|2 => addr += self.idata.disp as u64,
                     _ => {},
@@ -182,7 +182,7 @@ impl<'a> super::Exec<'a> {
                     addr += self.ac.core.gpregs.get(GpReg32::try_from(modrm.rm as usize).unwrap()) as u64;
                 }
             },
-            OpAdSize::BIT64 => {},
+            access::AcsSize::BIT64 => {},
         }
 
         if let Some(x) = self.segment { segment = x };

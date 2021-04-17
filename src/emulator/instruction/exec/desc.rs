@@ -56,7 +56,9 @@ pub struct SegDesc {
 
 impl<'a> super::Exec<'a> {
     pub fn set_sreg(&mut self, v: u16) -> Result<(), EmuException> {
-        self.set_segment(segment::SgReg::try_from(self.idata.modrm.reg as usize).unwrap(), v)?;
+        let sreg = segment::SgReg::try_from(self.idata.modrm.reg as usize).unwrap();
+        self.set_segment(sreg, v)?;
+        if sreg == segment::SgReg::CS { self.update_opadsize()?; }
         Ok(())
     }
 
@@ -130,11 +132,11 @@ impl<'a> super::Exec<'a> {
 
         sgreg.selector.from_u16(sel);
 
-        match core.mode {
-            CpuMode::LongCompat16 | CpuMode::Real => {
+        match self.ac.mode {
+            access::CpuMode::Real => {
                 sgreg.cache.base = (sel as u64) << 4;
             }
-            CpuMode::Long64 | CpuMode::LongCompat32 | CpuMode::Protected => {
+            access::CpuMode::Long | access::CpuMode::Protected => {
                 let (dt_base, dt_limit) = if sgreg.selector.TI == 1 { &core.dtregs.ldtr.cache } else { &core.dtregs.gdtr }.get();
                 let dt_index = (sgreg.selector.IDX as u32) << 3;
 

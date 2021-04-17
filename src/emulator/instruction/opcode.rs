@@ -6,6 +6,7 @@ mod opcode32;
 mod opcode64;
 
 use super::exec;
+use super::access;
 use crate::emulator::EmuException;
 
 bitflags! {
@@ -64,11 +65,11 @@ impl Opcode {
         op
     }
 
-    pub fn get(&self, op_size: super::OpAdSize) -> &dyn OpcodeTrait {
+    pub fn get(&self, op_size: access::AcsSize) -> &dyn OpcodeTrait {
         match op_size {
-            super::OpAdSize::BIT16 => &self.op16, 
-            super::OpAdSize::BIT32 => &self.op32, 
-            super::OpAdSize::BIT64 => &self.op64, 
+            access::AcsSize::BIT16 => &self.op16, 
+            access::AcsSize::BIT32 => &self.op32, 
+            access::AcsSize::BIT64 => &self.op64, 
         }
     }
 }
