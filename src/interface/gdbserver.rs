@@ -72,12 +72,12 @@ impl SingleThreadOps for emulator::Emulator {
 
         regs.eip = core.ip.get_eip();
         regs.eflags = core.rflags.to_u64() as u32;
-        regs.segments[0] = core.sgregs.selector(SgReg::CS).to_u16() as u32;
-        regs.segments[1] = core.sgregs.selector(SgReg::SS).to_u16() as u32;
-        regs.segments[2] = core.sgregs.selector(SgReg::DS).to_u16() as u32;
-        regs.segments[3] = core.sgregs.selector(SgReg::ES).to_u16() as u32;
-        regs.segments[4] = core.sgregs.selector(SgReg::FS).to_u16() as u32;
-        regs.segments[5] = core.sgregs.selector(SgReg::GS).to_u16() as u32;
+        regs.segments[0] = core.sgregs.get(SgReg::CS).selector.to_u16() as u32;
+        regs.segments[1] = core.sgregs.get(SgReg::SS).selector.to_u16() as u32;
+        regs.segments[2] = core.sgregs.get(SgReg::DS).selector.to_u16() as u32;
+        regs.segments[3] = core.sgregs.get(SgReg::ES).selector.to_u16() as u32;
+        regs.segments[4] = core.sgregs.get(SgReg::FS).selector.to_u16() as u32;
+        regs.segments[5] = core.sgregs.get(SgReg::GS).selector.to_u16() as u32;
 
         Ok(())
     }
@@ -96,12 +96,12 @@ impl SingleThreadOps for emulator::Emulator {
         core.ip.set_eip(regs.eip);
         core.rflags.from_u64(regs.eflags as u64);
 
-        core.sgregs.selector_mut(SgReg::CS).from_u16(regs.segments[0] as u16);
-        core.sgregs.selector_mut(SgReg::SS).from_u16(regs.segments[1] as u16);
-        core.sgregs.selector_mut(SgReg::DS).from_u16(regs.segments[2] as u16);
-        core.sgregs.selector_mut(SgReg::ES).from_u16(regs.segments[3] as u16);
-        core.sgregs.selector_mut(SgReg::FS).from_u16(regs.segments[4] as u16);
-        core.sgregs.selector_mut(SgReg::GS).from_u16(regs.segments[5] as u16);
+        core.sgregs.get_mut(SgReg::CS).selector.from_u16(regs.segments[0] as u16);
+        core.sgregs.get_mut(SgReg::SS).selector.from_u16(regs.segments[1] as u16);
+        core.sgregs.get_mut(SgReg::DS).selector.from_u16(regs.segments[2] as u16);
+        core.sgregs.get_mut(SgReg::ES).selector.from_u16(regs.segments[3] as u16);
+        core.sgregs.get_mut(SgReg::FS).selector.from_u16(regs.segments[4] as u16);
+        core.sgregs.get_mut(SgReg::GS).selector.from_u16(regs.segments[5] as u16);
 
         Ok(())
     }
@@ -151,17 +151,21 @@ impl SingleThreadOps for emulator::Emulator {
     }
 
     fn read_addrs(&mut self, start_addr: u32, data: &mut [u8]) -> TargetResult<(), Self> {
-        match self.ac.mem.read_data(data.as_mut_ptr() as *mut c_void, start_addr as usize, data.len()) {
-            Ok(_) => Ok(()),
-            Err(_) => Err(TargetError::NonFatal),
+        if let Ok(paddr) = self.ac.addr_v2p(SgReg::DS, start_addr as u64) {
+            if let Ok(_) = self.ac.mem.read_data(data.as_mut_ptr() as *mut c_void, paddr as usize, data.len()) {
+                return Ok(());
+            }
         }
+        Err(TargetError::NonFatal)
     }
 
     fn write_addrs(&mut self, start_addr: u32, data: &[u8]) -> TargetResult<(), Self> {
-        match self.ac.mem.write_data(start_addr as usize, data.as_ptr() as *const c_void, data.len()) {
-            Ok(_) => Ok(()),
-            Err(_) => Err(TargetError::NonFatal),
+        if let Ok(paddr) = self.ac.addr_v2p(SgReg::DS, start_addr as u64) {
+            if let Ok(_) = self.ac.mem.write_data(paddr as usize, data.as_ptr() as *const c_void, data.len()) {
+                return Ok(());
+            }
         }
+        Err(TargetError::NonFatal)
     }
 }
 
