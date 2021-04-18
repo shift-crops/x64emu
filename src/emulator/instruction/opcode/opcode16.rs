@@ -1,7 +1,10 @@
 use std::convert::TryFrom;
+use crate::emulator::*;
+use crate::emulator::access::*;
 use crate::emulator::instruction::opcode::*;
-use crate::emulator::instruction::exec::IpAccess;
+use crate::emulator::instruction::exec::*;
 use crate::hardware::processor::general::*;
+use crate::hardware::processor::segment::*;
 
 pub struct Opcode16 (pub super::OpcodeArr);
 impl Opcode16 {
@@ -133,7 +136,7 @@ impl super::OpcodeTrait for Opcode16 {
             
         setop!(0xc9, leave,             OpFlags::NONE);
             
-        // 0xcb : retf
+        setop!(0xcb, retf,              OpFlags::NONE);
         // 0xcc : int3
         // 0xcd : int_imm8
             
@@ -313,6 +316,45 @@ impl Opcode16 {
         let new_bp = exec.pop_u16()?;
         exec.ac.core.gpregs.set(GpReg16::BP, new_bp);
         debug!("leave: sp <- 0x{:04x}, bp <- 0x{:04x}", bp, new_bp);
+        Ok(())
+    }
+
+    fn retf (exec: &mut exec::Exec) -> Result<(), EmuException> {
+        let new_ip = exec.pop_u16()?;
+        let new_cs = exec.pop_u16()?;
+        let cs = exec.ac.core.sgregs.get(SgReg::CS);
+
+        match exec.ac.mode {
+            CpuMode::Real => {
+                if new_ip > cs.cache.limit as u16 {
+                    return Err(EmuException::CPUException(CPUException::GP));
+                }
+            },
+            CpuMode::Protected | CpuMode::Long => {
+                let mut cpl = cs.selector.RPL;
+                let rpl = (new_cs & 3) as u8;
+
+                if new_cs == 0 || !exec.check_codeseg(new_cs)? || rpl < cpl {
+                    return Err(EmuException::CPUException(CPUException::GP));
+                }
+
+                if rpl > cpl {
+                    let new_sp = exec.pop_u16()?;
+                    let new_ss = exec.pop_u16()?;
+                    exec.ac.core.gpregs.set(GpReg16::SP, new_sp);
+                    exec.set_segment(SgReg::SS, new_ss)?;
+                    cpl = rpl;
+                }
+                for r in vec!(SgReg::ES, SgReg::FS, SgReg::GS, SgReg::DS ).iter() {
+                    if cpl > exec.ac.core.sgregs.get(*r).cache.DPL {
+                        exec.set_segment(*r, 0)?;
+                    }
+                }
+            },
+        }
+
+        exec.set_ip(new_ip)?;
+        exec.set_segment(SgReg::CS, new_cs)?;
         Ok(())
     }
 

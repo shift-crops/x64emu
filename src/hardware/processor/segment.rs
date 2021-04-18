@@ -15,7 +15,7 @@ pub struct SgDescSelector {
     #[packed_field(bits="3:15")] pub IDX: u16,
 }
 
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct SgDescCache {
     pub base:  u64,
     pub limit: u32,
@@ -27,6 +27,11 @@ pub struct SgDescCache {
     pub L:     u8,
     pub DB:    u8,
     pub G:     u8,
+}
+impl Default for SgDescCache {
+    fn default() -> Self {
+        Self{ base:0, limit:0xffff, Type:0, S:0, DPL:0, P:0, AVL:0, L:0, DB:0, G:0 }
+    }
 }
 
 impl SgDescSelector {

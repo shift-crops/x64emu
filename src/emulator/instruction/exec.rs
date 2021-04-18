@@ -1,7 +1,7 @@
 mod basic;
 mod flag;
 mod reg_mem;
-mod desc;
+pub mod desc;
 
 use super::parse;
 use crate::emulator::*;

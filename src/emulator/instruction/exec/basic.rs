@@ -112,4 +112,15 @@ impl<'a> super::Exec<'a> {
         self.ac.core.gpregs.update(GpReg64::RSP, 8);
         Ok(self.ac.get_data64((SgReg::SS, rsp))?)
     }
+
+    pub fn set_sreg(&mut self, v: u16) -> Result<(), EmuException> {
+        let sreg = SgReg::try_from(self.idata.modrm.reg as usize).unwrap();
+        self.set_segment(sreg, v)?;
+        if sreg == SgReg::CS { self.update_opadsize()?; }
+        Ok(())
+    }
+
+    pub fn get_sreg(&mut self) -> Result<u16, EmuException> {
+        self.get_segment(SgReg::try_from(self.idata.modrm.reg as usize).unwrap())
+    }
 }

@@ -3,7 +3,7 @@ mod msr;
 
 use crate::hardware;
 
-#[derive(PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum CpuMode { Real, Protected, Long }
 
 #[derive(Clone, Copy, PartialEq)]
@@ -38,6 +38,7 @@ impl Access {
     }
 
     pub fn dump(&self) -> () {
+        println!("CPU Mode: {:?} mode\n", self.mode);
         self.core.dump();
         self.dump_code();
         self.dump_stack();
