@@ -1,8 +1,8 @@
 use packed_struct::prelude::*;
 use super::opcode;
 use crate::emulator::access;
+use crate::emulator::access::register::*;
 use crate::emulator::EmuException;
-use crate::hardware::processor::segment;
 
 #[derive(Default)]
 pub struct ParseInstr {
@@ -12,7 +12,7 @@ pub struct ParseInstr {
 
 #[derive(Default)]
 pub struct PrefixData {
-    pub segment: Option<segment::SgReg>,
+    pub segment: Option<SgReg>,
     pub repeat: Option<Rep>,
     pub size: OverrideSize,
     pub rex: Rex,
@@ -122,12 +122,12 @@ impl ParseInstr {
         let prefix = &mut self.prefix;
         for _ in 0..4 {
             match ac.get_code8(self.instr.len)? {
-                0x26 => { prefix.segment = Some(segment::SgReg::ES); },
-                0x2e => { prefix.segment = Some(segment::SgReg::CS); },
-                0x36 => { prefix.segment = Some(segment::SgReg::SS); },
-                0x3e => { prefix.segment = Some(segment::SgReg::DS); },
-                0x64 => { prefix.segment = Some(segment::SgReg::FS); },
-                0x65 => { prefix.segment = Some(segment::SgReg::GS); },
+                0x26 => { prefix.segment = Some(SgReg::ES); },
+                0x2e => { prefix.segment = Some(SgReg::CS); },
+                0x36 => { prefix.segment = Some(SgReg::SS); },
+                0x3e => { prefix.segment = Some(SgReg::DS); },
+                0x64 => { prefix.segment = Some(SgReg::FS); },
+                0x65 => { prefix.segment = Some(SgReg::GS); },
                 0x66 => { prefix.size |= OverrideSize::OP; },
                 0x67 => { prefix.size |= OverrideSize::AD; },
                 0xf2 => { prefix.repeat = Some(Rep::REPNZ) },

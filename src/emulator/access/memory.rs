@@ -1,6 +1,6 @@
 use libc::c_void;
 use crate::emulator::*;
-use crate::hardware::processor::segment::*;
+use super::register::*;
 
 #[derive(Clone, Copy)]
 enum MemAccessMode { Read, Write, Exec, Monitor }
@@ -53,13 +53,12 @@ impl super::Access {
     }
 
     pub fn dump_code(&self) -> () {
-        let addr = self.trans_v2p(MemAccessMode::Read, SgReg::CS, self.core.ip.get_rip()).unwrap();
+        let addr = self.trans_v2p(MemAccessMode::Read, SgReg::CS, self.get_ip().unwrap()).unwrap();
         self.mem.dump(addr as usize -0x10, 0x20);
     }
 
     pub fn dump_stack(&self) -> () {
-        use crate::hardware::processor::general::*;
-        let addr = self.trans_v2p(MemAccessMode::Read, SgReg::SS, self.core.gpregs.get(GpReg64::RSP)).unwrap();
+        let addr = self.trans_v2p(MemAccessMode::Read, SgReg::SS, self.get_gpreg(GpReg64::RSP).unwrap()).unwrap();
         self.mem.dump(addr as usize, 0x40);
     }
 }
@@ -88,7 +87,8 @@ impl super::Access {
     }
 
     fn fetch_vaddr(&self, index: u64, size: MemAccessSize) -> Result<u64, EmuException> {
-        let paddr = self.trans_v2p(MemAccessMode::Exec, SgReg::CS, self.core.ip.get_rip() + index)? as usize;
+        let ip: u64 = self.get_ip()?;
+        let paddr = self.trans_v2p(MemAccessMode::Exec, SgReg::CS, ip + index)? as usize;
         let v = match size {
             MemAccessSize::Byte  => self.mem.read8(paddr) as u64,
             MemAccessSize::Word  => self.mem.read16(paddr) as u64,
@@ -106,7 +106,7 @@ impl super::Access {
     fn trans_v2l(&self, _acsmode: MemAccessMode, sg: SgReg, vaddr: u64) -> Result<u64, EmuException> {
         let long64 = self.mode == access::CpuMode::Long && self.size.ad == access::AcsSize::BIT64;
 
-        let cache = self.core.sgregs.get(sg).cache;
+        let cache = self.get_sgcache(sg)?;
         let base  = if long64 && !(sg == SgReg::FS || sg == SgReg::GS) { 0 } else { cache.base };
         let limit = (cache.limit as u64) << (if cache.G == 1 { 12 } else { 0 });
 

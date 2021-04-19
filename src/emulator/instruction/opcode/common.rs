@@ -1,6 +1,6 @@
+use crate::emulator::access::register::*;
 use crate::emulator::instruction::exec;
 use crate::emulator::instruction::opcode::*;
-use crate::emulator::instruction::exec::IpAccess;
 
 // macro_rules! get_al { ($exec:expr) => { $exec.ac.core.gpregs().get(GpReg8::AL) } }
 // macro_rules! set_al { ($exec:expr, $val:expr) => { $exec.ac.core.gpregs_mut().set(GpReg8::AL, $val) } }
@@ -54,7 +54,7 @@ pub fn init_cmn_opcode(op: &mut super::OpcodeArr){
     setcmnop!(0x86, xchg_r8_rm8,   OpFlags::MODRM);
     setcmnop!(0x88, mov_rm8_r8,    OpFlags::MODRM);
     setcmnop!(0x8a, mov_r8_rm8,    OpFlags::MODRM);
-    setcmnop!(0x8e, mov_sreg_rm16, OpFlags::MODRM);
+    setcmnop!(0x8e, mov_sgr_rm16, OpFlags::MODRM);
     setcmnop!(0x90, nop,           OpFlags::NONE);
     setcmnop!(0xa0, mov_al_moffs8, OpFlags::MOFFS);
     setcmnop!(0xa2, mov_moffs8_al, OpFlags::MOFFS);
@@ -66,7 +66,6 @@ pub fn init_cmn_opcode(op: &mut super::OpcodeArr){
     /*
     setcmnop!(0xcc, int3,          OpFlags::NONE);
     setcmnop!(0xcd, int_imm8,      OpFlags::IMM8);
-    setcmnop!(0xcf, iret,          OpFlags::NONE);
     setcmnop!(0xe4, in_al_imm8,    OpFlags::IMM8);
     setcmnop!(0xe6, out_imm8_al,   OpFlags::IMM8);
     */
@@ -80,8 +79,8 @@ pub fn init_cmn_opcode(op: &mut super::OpcodeArr){
     setcmnop!(0xfd, std,           OpFlags::NONE);
     setcmnop!(0xf4, hlt,           OpFlags::NONE);
 
-    setcmnop!(0x0f20, mov_r32_crn, OpFlags::MODRM);
-    setcmnop!(0x0f22, mov_crn_r32, OpFlags::MODRM);
+    setcmnop!(0x0f20, mov_r32_cr,  OpFlags::MODRM);
+    setcmnop!(0x0f22, mov_cr_r32,  OpFlags::MODRM);
     */
     setcmnop!(0x0f90, seto_rm8,    OpFlags::MODRM);
     setcmnop!(0x0f91, setno_rm8,   OpFlags::MODRM);
@@ -154,7 +153,7 @@ xchg_dst_src!(u8, r8, rm8);
 mov_dst_src!(u8, rm8, r8);
 mov_dst_src!(u8, r8, rm8);
 
-mov_dst_src!(u16, sreg, rm16);
+mov_dst_src!(u16, sgr, rm16);
 
 fn nop (_exec: &mut exec::Exec) -> Result<(), EmuException> { Ok(()) }
 

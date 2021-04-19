@@ -1,23 +1,22 @@
 mod basic;
 mod flag;
 mod reg_mem;
-pub mod desc;
+mod desc;
 
 use super::parse;
 use crate::emulator::*;
 use crate::emulator::EmuException;
-use crate::hardware::processor::segment;
-use crate::hardware::processor::segment::*;
+use crate::emulator::access::register::*;
 
 pub struct Exec<'a> {
     pub ac: &'a mut access::Access,
     pub idata: &'a parse::InstrData,
-    segment: Option<segment::SgReg>,
+    segment: Option<SgReg>,
     rep: Option<parse::Rep>
 }
 
 impl<'a> Exec<'a> {
-    pub fn new(ac: &'a mut access::Access, idata: &'a parse::InstrData, segment: Option<segment::SgReg>, rep: Option<parse::Rep>) -> Self {
+    pub fn new(ac: &'a mut access::Access, idata: &'a parse::InstrData, segment: Option<SgReg>, rep: Option<parse::Rep>) -> Self {
         Self { ac, idata, segment, rep, }
     }
 
@@ -51,35 +50,10 @@ impl<'a> Exec<'a> {
     }
 }
 
-pub trait IpAccess<T, U> {
-    fn get_ip(&self) -> Result<T, EmuException>;
-    fn set_ip(&mut self, v: T) -> Result<(), EmuException>;
-    fn update_ip(&mut self, v: U) -> Result<(), EmuException>;
-}
-
-impl<'a> IpAccess<u16, i16> for Exec<'a> {
-    fn get_ip(&self) -> Result<u16, EmuException> { Ok(self.ac.core.ip.get_ip()) }
-    fn set_ip(&mut self, v: u16) -> Result<(), EmuException> { self.ac.core.ip.set_ip(v); Ok(()) }
-    fn update_ip(&mut self, v: i16) -> Result<(), EmuException> { self.ac.core.ip.update_ip(v); Ok(()) }
-}
-
-impl<'a> IpAccess<u32, i32> for Exec<'a> {
-    fn get_ip(&self) -> Result<u32, EmuException> { Ok(self.ac.core.ip.get_eip()) }
-    fn set_ip(&mut self, v: u32) -> Result<(), EmuException> { self.ac.core.ip.set_eip(v); Ok(()) }
-    fn update_ip(&mut self, v: i32) -> Result<(), EmuException> { self.ac.core.ip.update_eip(v); Ok(()) }
-}
-
-impl<'a> IpAccess<u64, i64> for Exec<'a> {
-    fn get_ip(&self) -> Result<u64, EmuException> { Ok(self.ac.core.ip.get_rip()) }
-    fn set_ip(&mut self, v: u64) -> Result<(), EmuException> { self.ac.core.ip.set_rip(v); Ok(()) }
-    fn update_ip(&mut self, v: i64) -> Result<(), EmuException> { self.ac.core.ip.update_rip(v); Ok(()) }
-}
-
 #[cfg(test)]
 #[test]
 pub fn exec_test() {
     use crate::hardware;
-    use crate::hardware::processor::general::*;
 
     let hw = hardware::Hardware::new(0, 0x1000);
 
@@ -87,7 +61,7 @@ pub fn exec_test() {
     let idata: parse::InstrData = Default::default();
 
     let mut exe = Exec::new(&mut ac, &idata, None, None);
-    exe.ac.core.gpregs.set(GpReg64::RSP, 0xf20);
+    exe.ac.set_gpreg(GpReg64::RSP, 0xf20).unwrap();
     exe.push_u64(0xdeadbeef).unwrap();
     exe.push_u64(0xcafebabe).unwrap();
     assert_eq!(exe.pop_u64().unwrap(), 0xcafebabe);

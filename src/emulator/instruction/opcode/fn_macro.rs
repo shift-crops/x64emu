@@ -5,9 +5,8 @@ macro_rules! add_dst_src {
             let src: $type = exec.[<get_ $src>]()? as $type;
 
             debug!("add: {:02x}, {:02x}", dst, src);
-            exec.[<set_ $dst>](dst.wrapping_add(src))?;
             exec.update_rflags_add(dst, src)?;
-            Ok(())
+            exec.[<set_ $dst>](dst.wrapping_add(src))
         }
     } };
 }
@@ -19,9 +18,8 @@ macro_rules! or_dst_src {
             let src: $type = exec.[<get_ $src>]()? as $type;
 
             debug!("or: {:02x}, {:02x}", dst, src);
-            exec.[<set_ $dst>](dst | src)?;
             exec.update_rflags_or(dst, src)?;
-            Ok(())
+            exec.[<set_ $dst>](dst | src)
         }
     } };
 }
@@ -34,9 +32,8 @@ macro_rules! adc_dst_src {
             let cf:  $type = exec.check_rflags_b()? as $type;
 
             debug!("adc: {:02x}, {:02x}", dst, src);
-            exec.[<set_ $dst>](dst.wrapping_add(src).wrapping_add(cf))?;
             exec.update_rflags_adc(dst, src, cf)?;
-            Ok(())
+            exec.[<set_ $dst>](dst.wrapping_add(src).wrapping_add(cf))
         }
     } };
 }
@@ -49,9 +46,8 @@ macro_rules! sbb_dst_src {
             let cf:  $type = exec.check_rflags_b()? as $type;
 
             debug!("sbb: {:02x}, {:02x}", dst, src);
-            exec.[<set_ $dst>](dst.wrapping_sub(src).wrapping_sub(cf))?;
             exec.update_rflags_sbb(dst, src, cf)?;
-            Ok(())
+            exec.[<set_ $dst>](dst.wrapping_sub(src).wrapping_sub(cf))
         }
     } };
 }
@@ -63,9 +59,8 @@ macro_rules! and_dst_src {
             let src: $type = exec.[<get_ $src>]()? as $type;
 
             debug!("and: {:02x}, {:02x}", dst, src);
-            exec.[<set_ $dst>](dst & src)?;
             exec.update_rflags_and(dst, src)?;
-            Ok(())
+            exec.[<set_ $dst>](dst & src)
         }
     } };
 }
@@ -77,9 +72,8 @@ macro_rules! sub_dst_src {
             let src: $type = exec.[<get_ $src>]()? as $type;
 
             debug!("sub: {:02x}, {:02x}", dst, src);
-            exec.[<set_ $dst>](dst.wrapping_sub(src))?;
             exec.update_rflags_sub(dst, src)?;
-            Ok(())
+            exec.[<set_ $dst>](dst.wrapping_sub(src))
         }
     } };
 }
@@ -91,9 +85,8 @@ macro_rules! xor_dst_src {
             let src: $type = exec.[<get_ $src>]()? as $type;
 
             debug!("xor: {:02x}, {:02x}", dst, src);
-            exec.[<set_ $dst>](dst ^ src)?;
             exec.update_rflags_xor(dst, src)?;
-            Ok(())
+            exec.[<set_ $dst>](dst ^ src)
         }
     } };
 }
@@ -104,8 +97,7 @@ macro_rules! cmp_dst_src {
             let dst: $type = exec.[<get_ $dst>]()? as $type;
             let src: $type = exec.[<get_ $src>]()? as $type;
             debug!("cmp: {:02x}, {:02x}", dst, src);
-            exec.update_rflags_sub(dst, src)?;
-            Ok(())
+            exec.update_rflags_sub(dst, src)
         }
     } };
 }
@@ -115,8 +107,7 @@ macro_rules! push_src {
         fn [<push_ $src>](exec: &mut exec::Exec) -> Result<(), EmuException> {
             let v: $type = exec.[<get_ $src>]()? as $type;
             debug!("push: {:02x}", v);
-            exec.[<push_ $type>](v)?;
-            Ok(())
+            exec.[<push_ $type>](v)
         }
     } };
 }
@@ -126,8 +117,7 @@ macro_rules! pop_dst {
         fn [<pop_ $dst>](exec: &mut exec::Exec) -> Result<(), EmuException> {
             let v: $type = exec.[<pop_ $type>]()? as $type;
             debug!("pop: {:02x}", v);
-            exec.[<set_ $dst>](v)?;
-            Ok(())
+            exec.[<set_ $dst>](v)
         }
     } };
 }
@@ -137,9 +127,8 @@ macro_rules! imul_dst_src1_src2 {
             let src1: $type = exec.[<get_ $src1>]()? as $type;
             let src2: $type = exec.[<get_ $src2>]()? as $type;
             debug!("imul: {:02x}, {:02x}", src1, src2);
-            exec.[<set_ $dst>](src1.wrapping_mul(src2))?;
             exec.update_rflags_sub(src1, src2)?;
-            Ok(())
+            exec.[<set_ $dst>](src1.wrapping_mul(src2))
         }
     } };
 }
@@ -150,7 +139,7 @@ macro_rules! jcc_rel {
             if(exec.[<check_rflags_ $cc>]()?){
                 let rel: $type = exec.[<get_ $rel>]()? as $type;
                 debug!("jmp: {}", rel);
-                exec.update_ip(rel as i64)?;
+                exec.ac.update_ip(rel as i64)?;
             }
             Ok(())
         }
@@ -159,7 +148,7 @@ macro_rules! jcc_rel {
             if(!exec.[<check_rflags_ $cc>]()?){
                 let rel: $type = exec.[<get_ $rel>]()? as $type;
                 debug!("jmp: {}", rel);
-                exec.update_ip(rel as i64)?;
+                exec.ac.update_ip(rel as i64)?;
             }
             Ok(())
         }
@@ -172,8 +161,7 @@ macro_rules! test_dst_src {
             let dst: $type = exec.[<get_ $dst>]()? as $type;
             let src: $type = exec.[<get_ $src>]()? as $type;
             debug!("test: {:02x}, {:02x}", dst, src);
-            exec.update_rflags_and(dst, src)?;
-            Ok(())
+            exec.update_rflags_and(dst, src)
         }
     } };
 }
@@ -197,8 +185,7 @@ macro_rules! mov_dst_src {
         fn [<mov_ $dst _ $src>](exec: &mut exec::Exec) -> Result<(), EmuException> {
             let src: $type = exec.[<get_ $src>]()? as $type;
             debug!("mov: {:02x}", src);
-            exec.[<set_ $dst>](src)?;
-            Ok(())
+            exec.[<set_ $dst>](src)
         }
     } };
 }
@@ -208,8 +195,7 @@ macro_rules! lea_dst_src {
         fn [<lea_ $dst _ $src>](exec: &mut exec::Exec) -> Result<(), EmuException> {
             let src: $type = exec.get_m()? as $type;
             debug!("lea: {:02x}", src);
-            exec.[<set_ $dst>](src)?;
-            Ok(())
+            exec.[<set_ $dst>](src)
         }
     } };
 }
@@ -219,19 +205,28 @@ macro_rules! ret {
         fn ret(exec: &mut exec::Exec) -> Result<(), EmuException> {
             let ret: $type = exec.[<pop_ $type>]()? as $type;
             debug!("ret: {:04x}", ret);
-            exec.set_ip(ret)?;
-            Ok(())
+            exec.ac.set_ip(ret)
         }
     } };
 }
 
 macro_rules! jmp_rel {
-    ( $type:ty, $offs:ident ) => { paste::item! {
-        fn [<jmp_ $offs>](exec: &mut exec::Exec) -> Result<(), EmuException> {
-            let offs: $type = exec.[<get_ $offs>]()? as $type;
-            debug!("jmp: {:02x}", offs);
-            exec.update_ip(offs as i64)?;
-            Ok(())
+    ( $type:ty, $rel:ident ) => { paste::item! {
+        fn [<jmp_ $rel>](exec: &mut exec::Exec) -> Result<(), EmuException> {
+            let rel: $type = exec.[<get_ $rel>]()? as $type;
+            debug!("jmp: {:02x}", rel);
+            exec.ac.update_ip(rel as i64)
+        }
+    } };
+}
+
+macro_rules! jmpf_abs {
+    ( $type:ty, $sel:ident, $abs:ident ) => { paste::item! {
+        fn [<jmpf_ $sel _ $abs>](exec: &mut exec::Exec) -> Result<(), EmuException> {
+            let sel: u16 = exec.[<get_ $sel>]()?;
+            let abs: u64 = exec.[<get_ $abs>]()? as u64;
+            debug!("jmpf: {:02x}:{:02x}", sel, abs);
+            exec.jmpf(sel, abs)
         }
     } };
 }
@@ -240,14 +235,12 @@ macro_rules! setcc_dst {
     ( $type:ty, $cc:ident, $dst:ident ) => { paste::item! {
         fn [<set $cc _ $dst>](exec: &mut exec::Exec) -> Result<(), EmuException> {
             let flag: bool = exec.[<check_rflags_ $cc>]()?;
-            exec.[<set_ $dst>](flag as $type)?;
-            Ok(())
+            exec.[<set_ $dst>](flag as $type)
         }
 
         fn [<setn $cc _ $dst>](exec: &mut exec::Exec) -> Result<(), EmuException> {
             let flag: bool = exec.[<check_rflags_ $cc>]()?;
-            exec.[<set_ $dst>](!flag as $type)?;
-            Ok(())
+            exec.[<set_ $dst>](!flag as $type)
         }
     } };
 }

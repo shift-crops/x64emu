@@ -4,7 +4,7 @@ use num_enum::TryFromPrimitive;
 use std::convert::TryFrom;
 use crate::emulator::*;
 use crate::hardware::processor::model_specific::*;
-use crate::hardware::processor::segment::*;
+use super::register::*;
 
 #[derive(TryFromPrimitive)] #[repr(u32)]
 pub enum MSRAddress {
@@ -42,9 +42,9 @@ impl super::Access {
                 MSRAddress::CSTAR        => Box::new(&self.core.msr.cstar),
                 MSRAddress::LSTAR        => Box::new(&self.core.msr.lstar),
                 MSRAddress::FMASK        => Box::new(&self.core.msr.fmask),
-                MSRAddress::FSBase       => Box::new(&self.core.sgregs.get(SgReg::FS).cache),
-                MSRAddress::GSBase       => Box::new(&self.core.sgregs.get(SgReg::GS).cache),
-                MSRAddress::KernelGSBase => Box::new(&self.core.sgregs.get(SgReg::KernelGS).cache),
+                MSRAddress::FSBase       => Box::new(self.get_sgcache(SgReg::FS).unwrap()),
+                MSRAddress::GSBase       => Box::new(self.get_sgcache(SgReg::GS).unwrap()),
+                MSRAddress::KernelGSBase => Box::new(self.get_sgcache(SgReg::KernelGS).unwrap()),
             };
             return Some(v);
         }
@@ -59,9 +59,9 @@ impl super::Access {
                 MSRAddress::CSTAR        => Box::new(&mut self.core.msr.cstar),
                 MSRAddress::LSTAR        => Box::new(&mut self.core.msr.lstar),
                 MSRAddress::FMASK        => Box::new(&mut self.core.msr.fmask),
-                MSRAddress::FSBase       => Box::new(&mut self.core.sgregs.get_mut(SgReg::FS).cache),
-                MSRAddress::GSBase       => Box::new(&mut self.core.sgregs.get_mut(SgReg::GS).cache),
-                MSRAddress::KernelGSBase => Box::new(&mut self.core.sgregs.get_mut(SgReg::KernelGS).cache),
+                MSRAddress::FSBase       => Box::new(self.get_sgcache_mut(SgReg::FS).unwrap()),
+                MSRAddress::GSBase       => Box::new(self.get_sgcache_mut(SgReg::GS).unwrap()),
+                MSRAddress::KernelGSBase => Box::new(self.get_sgcache_mut(SgReg::KernelGS).unwrap()),
             };
             return Some(v);
         }

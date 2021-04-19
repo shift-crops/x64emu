@@ -1,6 +1,6 @@
+use crate::emulator::access::register::*;
 use crate::emulator::instruction::exec;
 use crate::emulator::instruction::opcode::*;
-use crate::emulator::instruction::exec::IpAccess;
 
 pub struct Opcode32 (pub super::OpcodeArr);
 impl Opcode32 {
@@ -14,7 +14,7 @@ impl super::OpcodeTrait for Opcode32 {
     }
 
     fn exec(&self, exec: &mut exec::Exec) -> Result<(), EmuException> {
-        exec.update_ip(exec.idata.len as i32)?;
+        exec.ac.update_ip(exec.idata.len as i32)?;
         (self.0[exec.idata.opcode as usize].func)(exec)?;
         Ok(())
     }

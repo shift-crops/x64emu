@@ -1,3 +1,4 @@
+pub mod register;
 mod memory;
 mod msr;
 

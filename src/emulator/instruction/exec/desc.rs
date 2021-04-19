@@ -4,18 +4,21 @@ use std::convert::TryFrom;
 use num_enum::TryFromPrimitive;
 use packed_struct::prelude::*;
 use crate::emulator::*;
-use crate::hardware::processor::*;
+use crate::emulator::access::register::*;
 
 #[derive(Debug, Default, Clone, Copy, PackedStruct)]
 #[packed_struct(bit_numbering="lsb0", size_bytes="8", endian="msb")]
 pub struct Desc {
     #[packed_field(bits="40:43")]  pub Type:    u8,
     #[packed_field(bits="44")]     pub S:       u8,
+    #[packed_field(bits="45:46")]  pub DPL:     u8,
 }
 
+#[derive(PartialEq)]
 enum DescType { System(SysDescType), Segment(SegDescType) }
-#[derive(TryFromPrimitive)] #[repr(u8)]
+#[derive(TryFromPrimitive, PartialEq)] #[repr(u8)]
 enum SysDescType { TSSAvl=1, LDT=2, TSSBsy=3, Call=4, Task=5, Intr=6, Trap=7 }
+#[derive(PartialEq)]
 enum SegDescType { Data, Code }
 
 impl Desc {
@@ -74,14 +77,89 @@ bitflags! { pub struct CodeDescFlag: u8 {
     const C   = 0b00000100;
 } }
 
+macro_rules! retf {
+    ( $type:ty ) => { paste::item! {
+        pub fn [<retf_ $type>](&mut self) -> Result<(), EmuException> {
+            let new_ip = self.[<pop_ $type>]()?;
+            let new_cs = self.[<pop_ $type>]()? as u16;
+
+            match self.ac.mode {
+                access::CpuMode::Real => {
+                    if new_ip > self.ac.get_sgcache(SgReg::CS)?.limit as $type {
+                        return Err(EmuException::CPUException(CPUException::GP));
+                    }
+                },
+                access::CpuMode::Protected | access::CpuMode::Long => {
+                    let mut cpl = self.ac.get_sgselector(SgReg::CS)?.RPL;
+                    let rpl = (new_cs & 3) as u8;
+
+                    if new_cs == 0 || 
+                       !self.check_desctype(new_cs, DescType::Segment(SegDescType::Code))? ||
+                       rpl < cpl
+                    {
+                        return Err(EmuException::CPUException(CPUException::GP));
+                    }
+
+                    if rpl > cpl {
+                        let new_sp = self.[<pop_ $type>]()?;
+                        let new_ss = self.[<pop_ $type>]()? as u16;
+                        self.ac.set_gpreg(GpReg64::RSP, new_sp as u64)?;
+                        self.set_segment(SgReg::SS, new_ss)?;
+                        cpl = rpl;
+                    }
+                    for r in vec!(SgReg::ES, SgReg::FS, SgReg::GS, SgReg::DS ).iter() {
+                        if cpl > self.ac.get_sgcache(*r)?.DPL {
+                            self.set_segment(*r, 0)?;
+                        }
+                    }
+                },
+            }
+
+            self.ac.set_ip(new_ip)?;
+            self.set_segment(SgReg::CS, new_cs)
+        }
+    } };
+}
+
 impl<'a> super::Exec<'a> {
-    pub fn check_codeseg(&self, sel: u16) -> Result<bool, EmuException> {
-        let ty = self.get_desctype(sel).unwrap();
-        let cd = if let Some(DescType::Segment(SegDescType::Code)) = ty { true } else { false };
-        Ok(cd)
+    retf!(u16);
+    retf!(u32);
+    retf!(u64);
+
+    pub fn jmpf(&mut self, sel: u16, abs: u64) -> Result<(), EmuException> {
+        match self.ac.mode {
+            access::CpuMode::Real => {
+                if abs > self.ac.get_sgcache(SgReg::CS)?.limit as u64 {
+                    return Err(EmuException::CPUException(CPUException::GP));
+                }
+
+                self.set_segment(SgReg::CS, sel)?;
+                self.ac.set_ip(abs)?;
+            },
+            access::CpuMode::Protected | access::CpuMode::Long => {
+                if let Some(ty) = self.desctype(sel)? {
+                    match ty {
+                        DescType::Segment(SegDescType::Code) => {},
+                        DescType::System(SysDescType::Call) => {},
+                        DescType::System(SysDescType::Task) => {},
+                        DescType::System(SysDescType::TSSAvl) => {},
+                        _ => {
+                            return Err(EmuException::CPUException(CPUException::GP));
+                        },
+                    };
+                } else {
+                    return Err(EmuException::CPUException(CPUException::GP));
+                }
+            },
+        }
+        Ok(())
     }
 
-    fn get_desctype(&self, sel: u16) -> Result<Option<DescType>, EmuException> {
+    fn check_desctype(&self, sel: u16, ty: DescType) -> Result<bool, EmuException> {
+        Ok(if let Some(t) = self.desctype(sel)? { t == ty } else { false })
+    }
+
+    fn desctype(&self, sel: u16) -> Result<Option<DescType>, EmuException> {
         let core = &self.ac.core;
         let (dt_base, _) = if sel>>2 == 1 { &core.dtregs.ldtr.cache } else { &core.dtregs.gdtr }.get();
         let dt_index = sel & 0xfff8;
@@ -145,11 +223,11 @@ impl<'a> super::Exec<'a> {
         Ok(())
     }
 
-    pub fn get_segment(&self, reg: segment::SgReg) -> Result<u16, EmuException> {
-        Ok(self.ac.core.sgregs.get(reg).selector.to_u16())
+    pub fn get_segment(&self, reg: SgReg) -> Result<u16, EmuException> {
+        Ok(self.ac.get_sgselector(reg)?.to_u16())
     }
 
-    pub fn set_segment(&mut self, reg: segment::SgReg, sel: u16) -> Result<(), EmuException> {
+    pub fn set_segment(&mut self, reg: SgReg, sel: u16) -> Result<(), EmuException> {
         let core = &mut self.ac.core;
         let sgreg = core.sgregs.get_mut(reg);
 
@@ -163,7 +241,7 @@ impl<'a> super::Exec<'a> {
                 let (dt_base, dt_limit) = if sgreg.selector.TI == 1 { &core.dtregs.ldtr.cache } else { &core.dtregs.gdtr }.get();
                 let dt_index = (sgreg.selector.IDX as u32) << 3;
 
-                if (reg == segment::SgReg::CS || reg == segment::SgReg::CS) && dt_index == 0 { return Err(EmuException::CPUException(CPUException::GP)) }
+                if (reg == SgReg::CS || reg == SgReg::CS) && dt_index == 0 { return Err(EmuException::CPUException(CPUException::GP)) }
                 if dt_index > dt_limit { return Err(EmuException::CPUException(CPUException::GP)) }
 
                 let seg: SegDesc = Default::default();

@@ -64,14 +64,6 @@ impl SgRegisters {
 
     pub fn get(&self, r: SgReg) -> &SgRegUnit { &self.0[r as usize] }
     pub fn get_mut(&mut self, r: SgReg) -> &mut SgRegUnit { &mut self.0[r as usize] }
-
-    /*
-    pub fn selector(&self, r: SgReg) -> &SgDescSelector { &self.0[r as usize].selector }
-    pub fn cache(&self, r: SgReg) -> &SgDescCache { &self.0[r as usize].cache }
-
-    pub fn selector_mut(&mut self, r: SgReg) -> &mut SgDescSelector { &mut self.0[r as usize].selector }
-    pub fn cache_mut(&mut self, r: SgReg) -> &mut SgDescCache { &mut self.0[r as usize].cache }
-    */
 }
 
 #[cfg(test)]

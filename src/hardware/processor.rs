@@ -45,7 +45,7 @@ impl Processor {
 
                 let gpreg_name = ["AX", "CX", "DX", "BX", "SP", "BP", "SI", "DI"];
                 for i in 0..gpreg_name.len() {
-                    println!("{} : 0x{:04x}", gpreg_name[i], self.gpregs.get(GpReg16::try_from(i).unwrap()));
+                    println!("{} : 0x{:04x}", gpreg_name[i], self.gpregs.get16(GpReg16::try_from(i).unwrap()));
                 }
             },
             (1, 0, 1) | (0, _, 1) => {  // 32 bit
@@ -53,7 +53,7 @@ impl Processor {
 
                 let gpreg_name = ["EAX", "ECX", "EDX", "EBX", "ESP", "EBP", "ESI", "EDI"];
                 for i in 0..gpreg_name.len() {
-                    println!("{} : 0x{:08x}", gpreg_name[i], self.gpregs.get(GpReg32::try_from(i).unwrap()));
+                    println!("{} : 0x{:08x}", gpreg_name[i], self.gpregs.get32(GpReg32::try_from(i).unwrap()));
                 }
             },
             (1, 1, 0) => {              // 64 bit
@@ -61,7 +61,7 @@ impl Processor {
 
                 let gpreg_name = ["RAX", "RCX", "RDX", "RBX", "RSP", "RBP", "RSI", "RDI", "R8 ", "R9 ", "R10", "R11", "R12", "R13", "R14", "R15"];
                 for i in 0..gpreg_name.len() {
-                    println!("{} : 0x{:016x}", gpreg_name[i], self.gpregs.get(GpReg64::try_from(i).unwrap()));
+                    println!("{} : 0x{:016x}", gpreg_name[i], self.gpregs.get64(GpReg64::try_from(i).unwrap()));
                 }
             },
             _ => { },

@@ -1,10 +1,7 @@
 use std::convert::TryFrom;
 use crate::emulator::*;
-use crate::emulator::access::*;
+use crate::emulator::access::register::*;
 use crate::emulator::instruction::opcode::*;
-use crate::emulator::instruction::exec::*;
-use crate::hardware::processor::general::*;
-use crate::hardware::processor::segment::*;
 
 pub struct Opcode16 (pub super::OpcodeArr);
 impl Opcode16 {
@@ -97,9 +94,9 @@ impl super::OpcodeTrait for Opcode16 {
         setop!(0x89, mov_rm16_r16,      OpFlags::MODRM);
         // 0x8a : mov_r8_rm8
         setop!(0x8b, mov_r16_rm16,      OpFlags::MODRM);
-        setop!(0x8c, mov_rm16_sreg,     OpFlags::MODRM);
+        setop!(0x8c, mov_rm16_sgr,     OpFlags::MODRM);
         setop!(0x8d, lea_r16_m16,       OpFlags::MODRM);
-        // 0x8e : mov_sreg_rm16
+        // 0x8e : mov_sgr_rm16
 
         // 0x90 : nop
 
@@ -140,7 +137,7 @@ impl super::OpcodeTrait for Opcode16 {
         // 0xcc : int3
         // 0xcd : int_imm8
             
-        // 0xcf : iret
+        //setop!(0xcf, iret,              OpFlags::NONE);
             
         /*
         // 0xe4 : in_al_imm8
@@ -150,10 +147,10 @@ impl super::OpcodeTrait for Opcode16 {
         */
         setop!(0xe8, call_imm16,        OpFlags::IMM16);
         setop!(0xe9, jmp_imm16,         OpFlags::IMM16);
-        /*
-        setop!(0xea, jmpf_ptr16_16,     OpFlags::PTR16 | OpFlags::IMM16);
+        setop!(0xea, jmpf_ptr16_imm16,  OpFlags::PTR16 | OpFlags::IMM16);
         // 0xeb : jmp_imm8
         // 0xec : in_al_dx
+        /*
         setop!(0xed, in_ax_dx,          OpFlags::NONE);
         // 0xee : out_dx_al
         setop!(0xef, out_dx_ax,         OpFlags::NONE);
@@ -202,7 +199,7 @@ impl super::OpcodeTrait for Opcode16 {
     }
 
     fn exec(&self, exec: &mut exec::Exec) -> Result<(), EmuException> {
-        exec.update_ip(exec.idata.len as i16)?;
+        exec.ac.update_ip(exec.idata.len as i16)?;
         (self.0[exec.idata.opcode as usize].func)(exec)?;
         Ok(())
     }
@@ -244,14 +241,12 @@ impl Opcode16 {
 
     fn inc_opr16(exec: &mut exec::Exec) -> Result<(), EmuException> {
         let opr = GpReg16::try_from((exec.idata.opcode&0x7) as usize).unwrap();
-        exec.ac.core.gpregs.update(opr, 1);
-        Ok(())
+        exec.ac.update_gpreg(opr, 1)
     }
 
     fn dec_opr16(exec: &mut exec::Exec) -> Result<(), EmuException> {
         let opr = GpReg16::try_from((exec.idata.opcode&0x7) as usize).unwrap();
-        exec.ac.core.gpregs.update(opr, -1);
-        Ok(())
+        exec.ac.update_gpreg(opr, -1)
     }
 
     push_src!(u16, opr16);
@@ -259,13 +254,13 @@ impl Opcode16 {
 
     fn pusha(exec: &mut exec::Exec) -> Result<(), EmuException> {
         debug!("pusha");
-        let sp = exec.ac.core.gpregs.get(GpReg16::SP);
+        let sp = exec.ac.get_gpreg(GpReg16::SP)?;
         for i in 0..4 {
-            exec.push_u16(exec.ac.core.gpregs.get(GpReg16::try_from(i).unwrap()))?;
+            exec.push_u16(exec.ac.get_gpreg(GpReg16::try_from(i).unwrap())?)?;
         }
         exec.push_u16(sp)?;
         for i in 5..8 {
-            exec.push_u16(exec.ac.core.gpregs.get(GpReg16::try_from(i).unwrap()))?;
+            exec.push_u16(exec.ac.get_gpreg(GpReg16::try_from(i).unwrap())?)?;
         }
         Ok(())
     }
@@ -274,15 +269,14 @@ impl Opcode16 {
         debug!("popa");
         for i in (5..8).rev() {
             let v = exec.pop_u16()?;
-            exec.ac.core.gpregs.set(GpReg16::try_from(i).unwrap(), v);
+            exec.ac.set_gpreg(GpReg16::try_from(i).unwrap(), v)?;
         }
         let sp = exec.pop_u16()?;
         for i in (0..4).rev() {
             let v = exec.pop_u16()?;
-            exec.ac.core.gpregs.set(GpReg16::try_from(i).unwrap(), v);
+            exec.ac.set_gpreg(GpReg16::try_from(i).unwrap(), v)?;
         }
-        exec.ac.core.gpregs.set(GpReg16::SP, sp);
-        Ok(())
+        exec.ac.set_gpreg(GpReg16::SP, sp)
     }
 
     push_src!(u16, imm8);
@@ -294,7 +288,7 @@ impl Opcode16 {
     xchg_dst_src!(u16, r16, rm16);
     mov_dst_src!(u16, rm16, r16);
     mov_dst_src!(u16, r16, rm16);
-    mov_dst_src!(u16, rm16, sreg);
+    mov_dst_src!(u16, rm16, sgr);
     lea_dst_src!(u16, r16, m16);
 
     xchg_dst_src!(u16, ax, opr16);
@@ -311,63 +305,27 @@ impl Opcode16 {
     mov_dst_src!(u16, rm16, imm16);
 
     fn leave (exec: &mut exec::Exec) -> Result<(), EmuException> {
-        let bp = exec.ac.core.gpregs.get(GpReg16::BP);
-        exec.ac.core.gpregs.set(GpReg16::SP, bp);
+        let bp = exec.ac.get_gpreg(GpReg16::BP)?;
+        exec.ac.set_gpreg(GpReg16::SP, bp)?;
         let new_bp = exec.pop_u16()?;
-        exec.ac.core.gpregs.set(GpReg16::BP, new_bp);
         debug!("leave: sp <- 0x{:04x}, bp <- 0x{:04x}", bp, new_bp);
-        Ok(())
+        exec.ac.set_gpreg(GpReg16::BP, new_bp)
     }
 
     fn retf (exec: &mut exec::Exec) -> Result<(), EmuException> {
-        let new_ip = exec.pop_u16()?;
-        let new_cs = exec.pop_u16()?;
-        let cs = exec.ac.core.sgregs.get(SgReg::CS);
-
-        match exec.ac.mode {
-            CpuMode::Real => {
-                if new_ip > cs.cache.limit as u16 {
-                    return Err(EmuException::CPUException(CPUException::GP));
-                }
-            },
-            CpuMode::Protected | CpuMode::Long => {
-                let mut cpl = cs.selector.RPL;
-                let rpl = (new_cs & 3) as u8;
-
-                if new_cs == 0 || !exec.check_codeseg(new_cs)? || rpl < cpl {
-                    return Err(EmuException::CPUException(CPUException::GP));
-                }
-
-                if rpl > cpl {
-                    let new_sp = exec.pop_u16()?;
-                    let new_ss = exec.pop_u16()?;
-                    exec.ac.core.gpregs.set(GpReg16::SP, new_sp);
-                    exec.set_segment(SgReg::SS, new_ss)?;
-                    cpl = rpl;
-                }
-                for r in vec!(SgReg::ES, SgReg::FS, SgReg::GS, SgReg::DS ).iter() {
-                    if cpl > exec.ac.core.sgregs.get(*r).cache.DPL {
-                        exec.set_segment(*r, 0)?;
-                    }
-                }
-            },
-        }
-
-        exec.set_ip(new_ip)?;
-        exec.set_segment(SgReg::CS, new_cs)?;
-        Ok(())
+        exec.retf_u16()
     }
 
     fn call_imm16 (exec: &mut exec::Exec) -> Result<(), EmuException> {
         let offs: i16 = exec.get_imm16()? as i16;
-        let rip: u16 = exec.get_ip()?;
+        let rip: u16 = exec.ac.get_ip()?;
         debug!("call: 0x{:04x}", rip as i16 + offs);
         exec.push_u16(rip)?;
-        exec.update_ip(offs)?;
-        Ok(())
+        exec.ac.update_ip(offs)
     }
 
     jmp_rel!(i16, imm16);
+    jmpf_abs!(u16, ptr16, imm16);
 
     jcc_rel!(i16, o, imm16);
     jcc_rel!(i16, b, imm16);
