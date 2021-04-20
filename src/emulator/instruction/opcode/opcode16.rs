@@ -94,9 +94,9 @@ impl super::OpcodeTrait for Opcode16 {
         setop!(0x89, mov_rm16_r16,      OpFlags::MODRM);
         // 0x8a : mov_r8_rm8
         setop!(0x8b, mov_r16_rm16,      OpFlags::MODRM);
-        setop!(0x8c, mov_rm16_sgr,     OpFlags::MODRM);
+        setop!(0x8c, mov_rm16_sreg,     OpFlags::MODRM);
         setop!(0x8d, lea_r16_m16,       OpFlags::MODRM);
-        // 0x8e : mov_sgr_rm16
+        // 0x8e : mov_sreg_rm16
 
         // 0x90 : nop
 
@@ -106,8 +106,10 @@ impl super::OpcodeTrait for Opcode16 {
         /*
         setop!(0x98, cbw,               OpFlags::NONE);
         setop!(0x99, cwd,               OpFlags::NONE);
-        setop!(0x9a, callf_ptr16_16,    OpFlags::PTR16 | OpFlags::IMM16);
+        */
+        setop!(0x9a, callf_ptr16_imm16, OpFlags::PTR16 | OpFlags::IMM16);
             
+        /*
         setop!(0x9c, pushf,             OpFlags::NONE);
         setop!(0x9d, popf,              OpFlags::NONE);
         */
@@ -288,10 +290,12 @@ impl Opcode16 {
     xchg_dst_src!(u16, r16, rm16);
     mov_dst_src!(u16, rm16, r16);
     mov_dst_src!(u16, r16, rm16);
-    mov_dst_src!(u16, rm16, sgr);
+    mov_dst_src!(u16, rm16, sreg);
     lea_dst_src!(u16, r16, m16);
 
     xchg_dst_src!(u16, ax, opr16);
+
+    callf_abs!(u16, ptr16, imm16);
 
     mov_dst_src!(u16, ax, moffs16);
     mov_dst_src!(u16, moffs16, ax);

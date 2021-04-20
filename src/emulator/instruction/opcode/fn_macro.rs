@@ -200,6 +200,17 @@ macro_rules! lea_dst_src {
     } };
 }
 
+macro_rules! callf_abs {
+    ( $type:ty, $sel:ident, $abs:ident ) => { paste::item! {
+        fn [<callf_ $sel _ $abs>](exec: &mut exec::Exec) -> Result<(), EmuException> {
+            let sel: u16   = exec.[<get_ $sel>]()?;
+            let abs: $type = exec.[<get_ $abs>]()? as $type;
+            debug!("callf: {:04x}:{:04x}", sel, abs);
+            exec.[<callf_ $type>](sel, abs)
+        }
+    } };
+}
+
 macro_rules! ret {
     ( $type:ty ) => { paste::item! {
         fn ret(exec: &mut exec::Exec) -> Result<(), EmuException> {
@@ -214,7 +225,7 @@ macro_rules! jmp_rel {
     ( $type:ty, $rel:ident ) => { paste::item! {
         fn [<jmp_ $rel>](exec: &mut exec::Exec) -> Result<(), EmuException> {
             let rel: $type = exec.[<get_ $rel>]()? as $type;
-            debug!("jmp: {:02x}", rel);
+            debug!("jmp: {:04x}", rel);
             exec.ac.update_ip(rel as i64)
         }
     } };
@@ -223,10 +234,10 @@ macro_rules! jmp_rel {
 macro_rules! jmpf_abs {
     ( $type:ty, $sel:ident, $abs:ident ) => { paste::item! {
         fn [<jmpf_ $sel _ $abs>](exec: &mut exec::Exec) -> Result<(), EmuException> {
-            let sel: u16 = exec.[<get_ $sel>]()?;
-            let abs: u64 = exec.[<get_ $abs>]()? as u64;
-            debug!("jmpf: {:02x}:{:02x}", sel, abs);
-            exec.jmpf(sel, abs)
+            let sel: u16   = exec.[<get_ $sel>]()?;
+            let abs: $type = exec.[<get_ $abs>]()? as $type;
+            debug!("jmpf: {:04x}:{:04x}", sel, abs);
+            exec.[<jmpf_ $type>](sel, abs)
         }
     } };
 }

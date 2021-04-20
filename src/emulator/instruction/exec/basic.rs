@@ -1,5 +1,5 @@
 use std::convert::TryFrom;
-use crate::emulator::EmuException;
+use crate::emulator::*;
 use crate::emulator::access::register::*;
 
 impl<'a> super::Exec<'a> {
@@ -103,14 +103,12 @@ impl<'a> super::Exec<'a> {
         self.ac.get_data64((SgReg::SS, rsp))
     }
 
-    pub fn set_sgr(&mut self, v: u16) -> Result<(), EmuException> {
+    pub fn set_sreg(&mut self, v: u16) -> Result<(), EmuException> {
         let sreg = SgReg::try_from(self.idata.modrm.reg as usize).unwrap();
-        self.set_segment(sreg, v)?;
-        if sreg == SgReg::CS { self.update_opadsize()?; }
-        Ok(())
+        self.mov_to_sreg(sreg, v)
     }
 
-    pub fn get_sgr(&mut self) -> Result<u16, EmuException> {
-        self.get_segment(SgReg::try_from(self.idata.modrm.reg as usize).unwrap())
+    pub fn get_sreg(&mut self) -> Result<u16, EmuException> {
+        Ok(self.ac.get_sgselector(SgReg::try_from(self.idata.modrm.reg as usize).unwrap())?.to_u16())
     }
 }

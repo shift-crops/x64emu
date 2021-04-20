@@ -5,21 +5,25 @@ use num_enum::TryFromPrimitive;
 use packed_struct::prelude::*;
 use crate::emulator::*;
 use crate::emulator::access::register::*;
+use crate::hardware::processor::segment::{SgDescSelector, SgDescCache};
+use crate::hardware::processor::descriptor::DescTbl;
 
-#[derive(Debug, Default, Clone, Copy, PackedStruct)]
-#[packed_struct(bit_numbering="lsb0", size_bytes="8", endian="msb")]
+#[derive(Default, PackedStruct)]
+#[packed_struct(bit_numbering="lsb0", size_bytes="16", endian="msb")]
 pub struct Desc {
+    #[packed_field(bits="0:15")]   pub limit_l: u16,
+    #[packed_field(bits="16:39")]  pub base_l:  u32,
     #[packed_field(bits="40:43")]  pub Type:    u8,
     #[packed_field(bits="44")]     pub S:       u8,
     #[packed_field(bits="45:46")]  pub DPL:     u8,
+    #[packed_field(bits="47")]     pub P:       u8,
+    #[packed_field(bits="48:51")]  pub limit_h: u8,
+    #[packed_field(bits="52")]     pub AVL:     u8,
+    #[packed_field(bits="53")]     pub L:       u8,
+    #[packed_field(bits="54")]     pub DB:      u8,
+    #[packed_field(bits="55")]     pub G:       u8,
+    #[packed_field(bits="56:95")]  pub base_h:  u64,
 }
-
-#[derive(PartialEq)]
-enum DescType { System(SysDescType), Segment(SegDescType) }
-#[derive(TryFromPrimitive, PartialEq)] #[repr(u8)]
-enum SysDescType { TSSAvl=1, LDT=2, TSSBsy=3, Call=4, Task=5, Intr=6, Trap=7 }
-#[derive(PartialEq)]
-enum SegDescType { Data, Code }
 
 impl Desc {
     fn get_type(&self) -> Option<DescType> {
@@ -28,54 +32,60 @@ impl Desc {
                 return Some(DescType::System(t));
             }
         } else {         // segment
-            return Some(DescType::Segment(if self.Type & 8 == 0 { SegDescType::Data } else { SegDescType::Code }));
+            let ds = if self.Type & 8 == 0 { SegDescType::Data(DataDescFlag::from(self.Type&7)) } else { SegDescType::Code(CodeDescFlag::from(self.Type&7)) };
+            return Some(DescType::Segment(ds));
         }
         None
     }
 }
 
-#[derive(Debug, Default, Clone, Copy, PackedStruct)]
-#[packed_struct(bit_numbering="lsb0", size_bytes="16", endian="msb")]
-pub struct SysDesc {
-    #[packed_field(bits="0:15")]   pub limit_l: u16,
-    #[packed_field(bits="16:39")]  pub base_l:  u32,
-    #[packed_field(bits="40:43")]  pub Type:    u8,
-    #[packed_field(bits="44")]     pub S:       ReservedZero<packed_bits::Bits1>,
-    #[packed_field(bits="45:46")]  pub DPL:     u8,
-    #[packed_field(bits="47")]     pub P:       u8,
-    #[packed_field(bits="48:51")]  pub limit_h: u8,
-    #[packed_field(bits="55")]     pub G:       u8,
-    #[packed_field(bits="56:95")]  pub base_h:  u64,
-    #[packed_field(bits="104:111")] _r104: ReservedZero<packed_bits::Bits8>,
-}
-
-#[derive(Debug, Default, Clone, Copy, PackedStruct)]
-#[packed_struct(bit_numbering="lsb0", size_bytes="8", endian="msb")]
-pub struct SegDesc {
-    #[packed_field(bits="0:15")]   pub limit_l: u16,
-    #[packed_field(bits="16:39")]  pub base_l:  u32,
-    #[packed_field(bits="40:43")]  pub Type:    u8,
-    #[packed_field(bits="44")]     pub S:       ReservedOne<packed_bits::Bits1>,
-    #[packed_field(bits="45:46")]  pub DPL:     u8,
-    #[packed_field(bits="47")]     pub P:       u8,
-    #[packed_field(bits="48:51")]  pub limit_h: u8,
-    #[packed_field(bits="52")]     pub AVL:     u8,
-    #[packed_field(bits="53")]     pub L:       u8,
-    #[packed_field(bits="54")]     pub DB:      u8,
-    #[packed_field(bits="55")]     pub G:       u8,
-    #[packed_field(bits="56:63")]  pub base_h:  u8,
-}
+enum DescType { System(SysDescType), Segment(SegDescType) }
+#[derive(TryFromPrimitive)] #[repr(u8)]
+enum SysDescType { TSSAvl=1, LDT=2, TSSBsy=3, Call=4, Task=5, Intr=6, Trap=7 }
+enum SegDescType { Data(DataDescFlag), Code(CodeDescFlag) }
 
 bitflags! { pub struct DataDescFlag: u8 {
     const A   = 0b00000001;
     const W   = 0b00000010;
     const E   = 0b00000100;
 } }
+impl From<u8> for DataDescFlag {
+    fn from(v: u8) -> Self { Self { bits: v } }
+}
+
 bitflags! { pub struct CodeDescFlag: u8 {
     const A   = 0b00000001;
     const R   = 0b00000010;
     const C   = 0b00000100;
 } }
+impl From<u8> for CodeDescFlag {
+    fn from(v: u8) -> Self { Self { bits: v } }
+}
+
+impl From<Desc> for SgDescCache {
+    fn from(desc: Desc) -> Self {
+        Self {
+            base    : ((desc.base_h as u8 as u64) << 24) + desc.base_l as u64,
+            limit   : ((desc.limit_h as u32) << 16) + desc.limit_l as u32,
+            Type    : desc.Type,
+            DPL     : desc.DPL,
+            P       : desc.P,
+            AVL     : desc.AVL,
+            L       : desc.L,
+            DB      : desc.DB,
+            G       : desc.G,
+        }
+    }
+}
+
+impl From<Desc> for DescTbl {
+    fn from(desc: Desc) -> Self {
+        Self {
+            base    : (desc.base_h << 24) + desc.base_l as u64,
+            limit   : ((desc.limit_h as u32) << 16) + desc.limit_l as u32,
+        }
+    }
+}
 
 macro_rules! retf {
     ( $type:ty ) => { paste::item! {
@@ -85,38 +95,147 @@ macro_rules! retf {
 
             match self.ac.mode {
                 access::CpuMode::Real => {
-                    if new_ip > self.ac.get_sgcache(SgReg::CS)?.limit as $type {
+                    if new_ip as u32 > self.ac.get_sgcache(SgReg::CS)?.limit {
                         return Err(EmuException::CPUException(CPUException::GP));
                     }
+                    self.set_segment_real(SgReg::CS, new_cs)?;
                 },
                 access::CpuMode::Protected | access::CpuMode::Long => {
-                    let mut cpl = self.ac.get_sgselector(SgReg::CS)?.RPL;
+                    let cpl = self.ac.get_sgselector(SgReg::CS)?.RPL;
                     let rpl = (new_cs & 3) as u8;
 
-                    if new_cs == 0 || 
-                       !self.check_desctype(new_cs, DescType::Segment(SegDescType::Code))? ||
-                       rpl < cpl
-                    {
+                    if new_cs == 0 || rpl < cpl {
                         return Err(EmuException::CPUException(CPUException::GP));
                     }
+
+                    let desc = self.obtain_descriptor(new_cs, false)?;
+                    match desc.get_type() {
+                        Some(DescType::Segment(SegDescType::Code(f))) => {
+                            if f.contains(CodeDescFlag::C) && desc.DPL > rpl {
+                                return Err(EmuException::CPUException(CPUException::GP));
+                            }
+                        },
+                        _ => {
+                            return Err(EmuException::CPUException(CPUException::GP));
+                        }
+                    }
+
+                    if self.ac.size.op != access::AcsSize::BIT64 && new_ip as u32 > ((desc.limit_h as u32) << 16) + desc.limit_l as u32 {
+                        return Err(EmuException::CPUException(CPUException::GP));
+                    }
+                    self.set_segment_protected(SgReg::CS, new_cs, desc)?;
 
                     if rpl > cpl {
                         let new_sp = self.[<pop_ $type>]()?;
                         let new_ss = self.[<pop_ $type>]()? as u16;
                         self.ac.set_gpreg(GpReg64::RSP, new_sp as u64)?;
-                        self.set_segment(SgReg::SS, new_ss)?;
-                        cpl = rpl;
+                        self.set_segment_protected(SgReg::SS, new_ss, self.obtain_descriptor(new_ss, false)?)?;
                     }
                     for r in vec!(SgReg::ES, SgReg::FS, SgReg::GS, SgReg::DS ).iter() {
-                        if cpl > self.ac.get_sgcache(*r)?.DPL {
-                            self.set_segment(*r, 0)?;
+                        if rpl > self.ac.get_sgcache(*r)?.DPL {
+                            self.set_segment_protected(*r, 0, self.obtain_descriptor(0, false)?)?;
                         }
                     }
                 },
             }
 
-            self.ac.set_ip(new_ip)?;
-            self.set_segment(SgReg::CS, new_cs)
+            self.ac.set_ip(new_ip)
+        }
+    } };
+}
+
+macro_rules! jmpf {
+    ( $type:ty ) => { paste::item! {
+        pub fn [<jmpf_ $type>](&mut self, sel: u16, abs: $type) -> Result<(), EmuException> {
+            match self.ac.mode {
+                access::CpuMode::Real => {
+                    if abs as u32 > self.ac.get_sgcache(SgReg::CS)?.limit {
+                        return Err(EmuException::CPUException(CPUException::GP));
+                    }
+
+                    self.set_segment_real(SgReg::CS, sel)?;
+                    self.ac.set_ip(abs)?;
+                },
+                access::CpuMode::Protected | access::CpuMode::Long => {
+                    let cpl  = self.ac.get_sgselector(SgReg::CS)?.RPL;
+                    let rpl = (sel & 3) as u8;
+                    let desc = self.obtain_descriptor(sel, false)?;
+
+                    match desc.get_type() {
+                        Some(DescType::Segment(SegDescType::Code(f))) => {
+                            if f.contains(CodeDescFlag::C) {
+                                if desc.DPL > cpl {
+                                    return Err(EmuException::CPUException(CPUException::GP));
+                                }
+                            } else if rpl > cpl || desc.DPL != cpl {
+                                return Err(EmuException::CPUException(CPUException::GP));
+                            }
+                            if self.ac.size.op != access::AcsSize::BIT64 && abs as u32 > ((desc.limit_h as u32) << 16) + desc.limit_l as u32 {
+                                return Err(EmuException::CPUException(CPUException::GP));
+                            }
+                            self.set_segment_protected(SgReg::CS, (sel & 0xff8) | cpl as u16, desc)?;
+                            self.ac.set_ip(abs)?;
+                        },
+                        Some(DescType::System(SysDescType::Call)) => { return Err(EmuException::NotImplementedOpcode); },
+                        Some(DescType::System(SysDescType::Task)) => { return Err(EmuException::NotImplementedOpcode); },
+                        Some(DescType::System(SysDescType::TSSAvl)) => { return Err(EmuException::NotImplementedOpcode); },
+                        _ => {
+                            return Err(EmuException::CPUException(CPUException::GP));
+                        },
+                    }
+                },
+            }
+            Ok(())
+        }
+    } };
+}
+
+macro_rules! callf {
+    ( $type:ty ) => { paste::item! {
+        pub fn [<callf_ $type>](&mut self, sel: u16, abs: $type) -> Result<(), EmuException> {
+            match self.ac.mode {
+                access::CpuMode::Real => {
+                    if abs as u32 > self.ac.get_sgcache(SgReg::CS)?.limit {
+                        return Err(EmuException::CPUException(CPUException::GP));
+                    }
+
+                    self.[<push_ $type>](self.ac.get_sgselector(SgReg::CS)?.to_u16() as $type)?;
+                    self.[<push_ $type>](self.ac.get_ip()?)?;
+                    self.set_segment_real(SgReg::CS, sel)?;
+                    self.ac.set_ip(abs)?;
+                },
+                access::CpuMode::Protected | access::CpuMode::Long => {
+                    let cpl  = self.ac.get_sgselector(SgReg::CS)?.RPL;
+                    let rpl = (sel & 3) as u8;
+                    let desc = self.obtain_descriptor(sel, false)?;
+
+                    match desc.get_type() {
+                        Some(DescType::Segment(SegDescType::Code(f))) => {
+                            if f.contains(CodeDescFlag::C) {
+                                if desc.DPL > cpl {
+                                    return Err(EmuException::CPUException(CPUException::GP));
+                                }
+                            } else if rpl > cpl || desc.DPL != cpl {
+                                return Err(EmuException::CPUException(CPUException::GP));
+                            }
+                            if self.ac.size.op != access::AcsSize::BIT64 && abs as u32 > ((desc.limit_h as u32) << 16) + desc.limit_l as u32 {
+                                return Err(EmuException::CPUException(CPUException::GP));
+                            }
+                            self.[<push_ $type>](self.ac.get_sgselector(SgReg::CS)?.to_u16() as $type)?;
+                            self.[<push_ $type>](self.ac.get_ip()?)?;
+                            self.set_segment_protected(SgReg::CS, (sel & 0xff8) | cpl as u16, desc)?;
+                            self.ac.set_ip(abs)?;
+                        },
+                        Some(DescType::System(SysDescType::Call)) => { return Err(EmuException::NotImplementedOpcode); },
+                        Some(DescType::System(SysDescType::Task)) => { return Err(EmuException::NotImplementedOpcode); },
+                        Some(DescType::System(SysDescType::TSSAvl)) => { return Err(EmuException::NotImplementedOpcode); },
+                        _ => {
+                            return Err(EmuException::CPUException(CPUException::GP));
+                        },
+                    }
+                },
+            }
+            Ok(())
         }
     } };
 }
@@ -126,47 +245,108 @@ impl<'a> super::Exec<'a> {
     retf!(u32);
     retf!(u64);
 
-    pub fn jmpf(&mut self, sel: u16, abs: u64) -> Result<(), EmuException> {
+    jmpf!(u16);
+    jmpf!(u32);
+    jmpf!(u64);
+
+    callf!(u16);
+    callf!(u32);
+    callf!(u64);
+
+    pub fn mov_to_sreg(&mut self, reg: SgReg, sel: u16) -> Result<(), EmuException> {
+        if reg == SgReg::CS {
+            return Err(EmuException::CPUException(CPUException::UD));
+        }
         match self.ac.mode {
             access::CpuMode::Real => {
-                if abs > self.ac.get_sgcache(SgReg::CS)?.limit as u64 {
-                    return Err(EmuException::CPUException(CPUException::GP));
-                }
-
-                self.set_segment(SgReg::CS, sel)?;
-                self.ac.set_ip(abs)?;
+                self.set_segment_real(reg, sel)
             },
             access::CpuMode::Protected | access::CpuMode::Long => {
-                if let Some(ty) = self.desctype(sel)? {
-                    match ty {
-                        DescType::Segment(SegDescType::Code) => {},
-                        DescType::System(SysDescType::Call) => {},
-                        DescType::System(SysDescType::Task) => {},
-                        DescType::System(SysDescType::TSSAvl) => {},
-                        _ => {
-                            return Err(EmuException::CPUException(CPUException::GP));
-                        },
-                    };
-                } else {
-                    return Err(EmuException::CPUException(CPUException::GP));
-                }
+                self.set_segment_protected(reg, sel, self.obtain_descriptor(sel, false)?)
             },
         }
+    }
+}
+
+impl<'a> super::Exec<'a> {
+    fn obtain_descriptor(&self, sel: u16, gonly: bool) -> Result<Desc, EmuException> {
+        let core = &self.ac.core;
+
+        let mut selector: SgDescSelector = Default::default();
+        selector.from_u16(sel);
+
+        let dt_index = (selector.IDX as u32) << 3;
+        let desc: Desc = Default::default();
+
+        if dt_index > 0 {
+            let (dt_base, dt_limit) = if !gonly && selector.TI == 1 { &core.dtregs.ldtr.cache } else { &core.dtregs.gdtr }.get();
+            if dt_index > dt_limit { return Err(EmuException::CPUException(CPUException::GP)) }
+            self.ac.read_data_l(&desc as *const _ as *mut _, dt_base + dt_index as u64, std::mem::size_of::<Desc>())?;
+        }
+        Ok(desc)
+    }
+
+    fn set_segment_real(&mut self, reg: SgReg, sel: u16) -> Result<(), EmuException> {
+        self.ac.get_sgselector_mut(reg)?.from_u16(sel);
+        self.ac.get_sgcache_mut(reg)?.base = (sel as u64) << 4;
         Ok(())
     }
 
-    fn check_desctype(&self, sel: u16, ty: DescType) -> Result<bool, EmuException> {
-        Ok(if let Some(t) = self.desctype(sel)? { t == ty } else { false })
-    }
+    fn set_segment_protected(&mut self, reg: SgReg, sel: u16, desc: Desc) -> Result<(), EmuException> {
+        let cpl  = self.ac.get_sgselector(SgReg::CS)?.RPL;
+        let rpl = (sel & 3) as u8;
+        let ty   = desc.get_type();
 
-    fn desctype(&self, sel: u16) -> Result<Option<DescType>, EmuException> {
-        let core = &self.ac.core;
-        let (dt_base, _) = if sel>>2 == 1 { &core.dtregs.ldtr.cache } else { &core.dtregs.gdtr }.get();
-        let dt_index = sel & 0xfff8;
+        match (reg, ty) {
+            (_, Some(DescType::System(_))) => {
+                return Err(EmuException::CPUException(CPUException::GP));
+            },
+            (SgReg::CS, None) | (SgReg::SS, None) => {
+                return Err(EmuException::CPUException(CPUException::GP));
+            },
+            (SgReg::CS, Some(DescType::Segment(t))) => {
+                match t {
+                    SegDescType::Code(_) => { },
+                    _ => { return Err(EmuException::CPUException(CPUException::GP)); }
+                }
+                if desc.P == 0 {
+                    return Err(EmuException::CPUException(CPUException::NP));
+                }
+            },
+            (SgReg::SS, Some(DescType::Segment(t))) => {
+                if rpl != cpl || desc.DPL != cpl {
+                    return Err(EmuException::CPUException(CPUException::GP));
+                }
+                match t {
+                    SegDescType::Data(f) => {
+                        if !f.contains(DataDescFlag::W) { return Err(EmuException::CPUException(CPUException::GP)); }
+                    },
+                    _ => { return Err(EmuException::CPUException(CPUException::GP)); }
+                }
+                if desc.P == 0 {
+                    return Err(EmuException::CPUException(CPUException::SS));
+                }
+            },
+            (_, Some(DescType::Segment(t))) => {
+                match t {
+                    SegDescType::Data(_) => {},
+                    SegDescType::Code(f) => {
+                        if !f.contains(CodeDescFlag::R) {
+                            return Err(EmuException::CPUException(CPUException::GP));
+                        }
+                    },
+                }
+                if desc.P == 0 {
+                    return Err(EmuException::CPUException(CPUException::NP));
+                }
+            },
+            (_, None) => {},
+        }
 
-        let desc: Desc = Default::default();
-        self.ac.read_data_l(&desc as *const _ as *mut _, dt_base + dt_index as u64, std::mem::size_of::<Desc>())?;
-        Ok(desc.get_type())
+        self.ac.get_sgselector_mut(reg)?.from_u16(sel);
+        *self.ac.get_sgcache_mut(reg)? = SgDescCache::from(desc);
+        if reg == SgReg::CS { self.update_opadsize()?; }
+        Ok(())
     }
 
     fn set_gdtr(&mut self, base: u64, limit: u16) -> Result<(), EmuException> {
@@ -188,16 +368,9 @@ impl<'a> super::Exec<'a> {
     }
 
     fn set_ldtr(&mut self, sel: u16) -> Result<(), EmuException> {
-        let (gdt_base, gdt_limit)  = self.ac.core.dtregs.gdtr.get();
-
-        if sel > gdt_limit as u16 { return Err(EmuException::CPUException(CPUException::GP)) }
-
-        let ldt: SysDesc = Default::default();
-        self.ac.read_data_l(&ldt as *const _ as *mut _, gdt_base + sel as u64, std::mem::size_of::<SysDesc>())?;
-
+        let desc = self.obtain_descriptor(sel, true)?;
         let ldtr = &mut self.ac.core.dtregs.ldtr;
-        ldtr.cache.base  = (ldt.base_h << 24) + ldt.base_l as u64; 
-        ldtr.cache.limit = ((ldt.limit_h as u32) << 16) + ldt.limit_l as u32; 
+        ldtr.cache       = DescTbl::from(desc);
         ldtr.selector    = sel;
 
         Ok(())
@@ -208,57 +381,11 @@ impl<'a> super::Exec<'a> {
     }
 
     fn set_tr(&mut self, sel: u16) -> Result<(), EmuException> {
-        let (gdt_base, gdt_limit)  = self.ac.core.dtregs.gdtr.get();
-
-        if sel > gdt_limit as u16{ return Err(EmuException::CPUException(CPUException::GP)) }
-
-        let tss: SysDesc = Default::default();
-        self.ac.read_data_l(&tss as *const _ as *mut _, gdt_base + sel as u64, std::mem::size_of::<SysDesc>())?;
-
+        let desc = self.obtain_descriptor(sel, true)?;
         let tr = &mut self.ac.core.dtregs.tr;
-        tr.cache.base  = (tss.base_h << 24) + tss.base_l as u64; 
-        tr.cache.limit = ((tss.limit_h as u32) << 16) + tss.limit_l as u32; 
-        tr.selector    = sel;
+        tr.cache    = DescTbl::from(desc);
+        tr.selector = sel;
 
-        Ok(())
-    }
-
-    pub fn get_segment(&self, reg: SgReg) -> Result<u16, EmuException> {
-        Ok(self.ac.get_sgselector(reg)?.to_u16())
-    }
-
-    pub fn set_segment(&mut self, reg: SgReg, sel: u16) -> Result<(), EmuException> {
-        let core = &mut self.ac.core;
-        let sgreg = core.sgregs.get_mut(reg);
-
-        sgreg.selector.from_u16(sel);
-
-        match self.ac.mode {
-            access::CpuMode::Real => {
-                sgreg.cache.base = (sel as u64) << 4;
-            }
-            access::CpuMode::Long | access::CpuMode::Protected => {
-                let (dt_base, dt_limit) = if sgreg.selector.TI == 1 { &core.dtregs.ldtr.cache } else { &core.dtregs.gdtr }.get();
-                let dt_index = (sgreg.selector.IDX as u32) << 3;
-
-                if (reg == SgReg::CS || reg == SgReg::CS) && dt_index == 0 { return Err(EmuException::CPUException(CPUException::GP)) }
-                if dt_index > dt_limit { return Err(EmuException::CPUException(CPUException::GP)) }
-
-                let seg: SegDesc = Default::default();
-                self.ac.read_data_l(&seg as *const _ as *mut _, dt_base + dt_index as u64, std::mem::size_of::<SegDesc>())?;
-
-                let cache = &mut self.ac.core.sgregs.get_mut(reg).cache;
-                cache.base  = ((seg.base_h as u64) << 24) + seg.base_l as u64; 
-                cache.limit = ((seg.limit_h as u32) << 16) + seg.limit_l as u32; 
-                cache.Type  = seg.Type;
-                cache.DPL   = seg.DPL;
-                cache.P     = seg.P;
-                cache.AVL   = seg.AVL;
-                cache.L     = seg.L;
-                cache.DB    = seg.DB;
-                cache.G     = seg.G;
-            }
-        }
         Ok(())
     }
 }
