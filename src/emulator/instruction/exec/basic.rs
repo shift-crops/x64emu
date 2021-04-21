@@ -55,12 +55,25 @@ impl<'a> super::Exec<'a> {
         self.ac.get_data64((SgReg::SS, rsp))
     }
 
+    pub fn get_sreg(&mut self) -> Result<u16, EmuException> {
+        Ok(self.ac.get_sgselector(SgReg::try_from(self.idata.modrm.reg as usize).unwrap())?.to_u16())
+    }
+
     pub fn set_sreg(&mut self, v: u16) -> Result<(), EmuException> {
         let sreg = SgReg::try_from(self.idata.modrm.reg as usize).unwrap();
         self.mov_to_sreg(sreg, v)
     }
 
-    pub fn get_sreg(&mut self) -> Result<u16, EmuException> {
-        Ok(self.ac.get_sgselector(SgReg::try_from(self.idata.modrm.reg as usize).unwrap())?.to_u16())
+    pub fn mov_r32_cr(&mut self) -> Result<(), EmuException> {
+        let cr = self.ac.get_cregs(self.idata.modrm.reg as usize)?;
+        self.ac.set_gpreg(GpReg32::try_from(self.idata.modrm.rm as usize).unwrap(), cr)
+    }
+
+    pub fn mov_cr_r32(&mut self) -> Result<(), EmuException> {
+        let r = self.idata.modrm.reg as usize;
+        let v = self.ac.get_gpreg(GpReg32::try_from(self.idata.modrm.rm as usize).unwrap())?;
+        self.ac.set_cregs(r, v)?;
+        if r == 0 { self.update_cpumode()?; }
+        Ok(())
     }
 }

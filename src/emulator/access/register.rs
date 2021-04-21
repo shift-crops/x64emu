@@ -91,4 +91,15 @@ impl super::Access {
 
     pub fn get_sgselector_mut(&mut self, r: SgReg) -> Result<&mut segment::SgDescSelector, EmuException> { Ok(&mut self.core.sgregs.get_mut(r).selector) }
     pub fn get_sgcache_mut(&mut self, r: SgReg) -> Result<&mut segment::SgDescCache, EmuException> { Ok(&mut self.core.sgregs.get_mut(r).cache) }
+
+    pub fn get_rflags(&self) -> Result<u64, EmuException> { Ok(self.core.rflags.to_u64()) }
+    pub fn set_rflags(&mut self, v: u64) -> Result<(), EmuException> { self.core.rflags.from_u64(v); Ok(()) }
+
+    pub fn get_cregs(&self, r: usize) -> Result<u32, EmuException> {
+        if let Some(cr) = self.core.cregs.get(r) { Ok(cr.to_u32()) } else { Err(EmuException::NotImplementedOpcode) }
+    }
+
+    pub fn set_cregs(&mut self, r: usize, v: u32) -> Result<(), EmuException> {
+        if let Some(cr) = self.core.cregs.get_mut(r) { cr.from_u32(v); Ok(()) } else { Err(EmuException::UnexpectedError) }
+    }
 }

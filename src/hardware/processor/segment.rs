@@ -44,8 +44,8 @@ impl SgDescSelector {
 }
 
 impl super::model_specific::MSRAccess for SgDescCache {
-    fn get(&self) -> u64 { self.base }
-    fn set(&mut self, v: u64) -> () { self.base = v; }
+    fn to_u64(&self) -> u64 { self.base }
+    fn from_u64(&mut self, v: u64) -> () { self.base = v; }
 }
 
 #[derive(Debug, Default, Clone, Copy)]

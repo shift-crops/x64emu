@@ -156,6 +156,7 @@ impl ParseInstr {
 
         if opcode == 0x0f {
             opcode = (1<<8) + ac.get_code8(self.instr.len)? as u16;
+            self.instr.len += 1;
         }
         debug!("opcode: {:02x} ", opcode);
         self.instr.opcode = opcode;

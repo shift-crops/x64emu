@@ -109,10 +109,8 @@ impl super::OpcodeTrait for Opcode16 {
         */
         setop!(0x9a, callf_ptr16_imm16, OpFlags::PTR16 | OpFlags::IMM16);
             
-        /*
         setop!(0x9c, pushf,             OpFlags::NONE);
         setop!(0x9d, popf,              OpFlags::NONE);
-        */
             
         // 0xa0 : mov_al_moffs8
         setop!(0xa1, mov_ax_moffs16,    OpFlags::MOFFS);
@@ -175,9 +173,9 @@ impl super::OpcodeTrait for Opcode16 {
         setop!(0x0f8e, jle_imm16,       OpFlags::IMM16);
         setop!(0x0f8f, jnle_imm16,      OpFlags::IMM16);
             
-        /*
         setop!(0x0faf, imul_r16_rm16,   OpFlags::MODRM);
             
+        /*
         setop!(0x0fb6, movzx_r16_rm8,   OpFlags::MODRM);
         setop!(0x0fb7, movzx_r16_rm16,  OpFlags::MODRM);
             
@@ -297,6 +295,9 @@ impl Opcode16 {
 
     callf_abs!(u16, ptr16, imm16);
 
+    pushf!(u16);
+    popf!(u16);
+
     mov_dst_src!(u16, ax, moffs16);
     mov_dst_src!(u16, moffs16, ax);
 
@@ -339,6 +340,8 @@ impl Opcode16 {
     jcc_rel!(i16, p, imm16);
     jcc_rel!(i16, l, imm16);
     jcc_rel!(i16, le, imm16);
+
+    imul_dst_src!(u16, r16, rm16);
 
     fn code_81(exec: &mut exec::Exec) -> Result<(), EmuException> {
         match exec.idata.modrm.reg as u16 {

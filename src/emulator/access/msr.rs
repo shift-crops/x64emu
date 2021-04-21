@@ -21,14 +21,14 @@ pub enum MSRAddress {
 impl super::Access {
     pub fn read_msr(&self, addr: u32) -> Result<u64, EmuException> {
         if let Some(msr) = self.get_msr(addr) {
-            return Ok(msr.get());
+            return Ok(msr.to_u64());
         }
         Err(EmuException::CPUException(CPUException::GP))
     }
 
     pub fn write_msr(&mut self, addr: u32, val: u64) -> Result<(), EmuException> {
         if let Some(msr) = self.get_mut_msr(addr) {
-            msr.set(val);
+            msr.from_u64(val);
             return Ok(());
         }
         Err(EmuException::CPUException(CPUException::GP))

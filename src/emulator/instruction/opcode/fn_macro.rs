@@ -121,13 +121,14 @@ macro_rules! pop_dst {
         }
     } };
 }
+
 macro_rules! imul_dst_src1_src2 {
     ( $type:ty, $dst:ident, $src1:ident, $src2:ident ) => { paste::item! {
         fn [<imul_ $dst _ $src1 _ $src2>](exec: &mut exec::Exec) -> Result<(), EmuException> {
             let src1: $type = exec.[<get_ $src1>]()? as $type;
             let src2: $type = exec.[<get_ $src2>]()? as $type;
             debug!("imul: {:02x}, {:02x}", src1, src2);
-            exec.update_rflags_sub(src1, src2)?;
+            exec.update_rflags_mul(src1, src2)?;
             exec.[<set_ $dst>](src1.wrapping_mul(src2))
         }
     } };
@@ -211,6 +212,26 @@ macro_rules! callf_abs {
     } };
 }
 
+macro_rules! pushf {
+    ( $type:ty ) => { paste::item! {
+        fn pushf(exec: &mut exec::Exec) -> Result<(), EmuException> {
+            let flag = exec.ac.get_rflags()? as $type;
+            debug!("pushf: {:08x}", flag);
+            exec.[<push_ $type>](flag)
+        }
+    } };
+}
+
+macro_rules! popf {
+    ( $type:ty ) => { paste::item! {
+        fn popf(exec: &mut exec::Exec) -> Result<(), EmuException> {
+            let flag = exec.[<pop_ $type>]()?;
+            debug!("popf: {:08x}", flag);
+            exec.ac.set_rflags(flag as u64)
+        }
+    } };
+}
+
 macro_rules! ret {
     ( $type:ty ) => { paste::item! {
         fn ret(exec: &mut exec::Exec) -> Result<(), EmuException> {
@@ -252,6 +273,18 @@ macro_rules! setcc_dst {
         fn [<setn $cc _ $dst>](exec: &mut exec::Exec) -> Result<(), EmuException> {
             let flag: bool = exec.[<check_rflags_ $cc>]()?;
             exec.[<set_ $dst>](!flag as $type)
+        }
+    } };
+}
+
+macro_rules! imul_dst_src {
+    ( $type:ty, $dst:ident, $src:ident ) => { paste::item! {
+        fn [<imul_ $dst _ $src>](exec: &mut exec::Exec) -> Result<(), EmuException> {
+            let dst: $type = exec.[<get_ $dst>]()? as $type;
+            let src: $type = exec.[<get_ $src>]()? as $type;
+            debug!("imul: {:02x}, {:02x}", dst, src);
+            exec.update_rflags_mul(dst, src)?;
+            exec.[<set_ $dst>](dst.wrapping_mul(src))
         }
     } };
 }

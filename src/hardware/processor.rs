@@ -71,8 +71,13 @@ impl Processor {
         let sgreg_name = ["ES", "CS", "SS", "DS", "FS", "GS"];
         for i in 0..sgreg_name.len() {
             let sgreg = self.sgregs.get(SgReg::try_from(i).unwrap());
-            println!("{} : {:?},  {:x?}", sgreg_name[i], sgreg.selector, sgreg.cache);
+            println!("{} : {:x?},  {:x?}", sgreg_name[i], sgreg.selector, sgreg.cache);
         }
+        println!("");
+
+        println!("{:x?}", self.cregs.0);
+        println!("{:x?}", self.cregs.3);
+        println!("{:x?}", self.cregs.4);
         println!("");
 
         println!("GDTR : {:x?}", self.dtregs.gdtr);

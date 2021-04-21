@@ -78,10 +78,10 @@ pub fn init_cmn_opcode(op: &mut super::OpcodeArr){
     setcmnop!(0xfc, cld,           OpFlags::NONE);
     setcmnop!(0xfd, std,           OpFlags::NONE);
     setcmnop!(0xf4, hlt,           OpFlags::NONE);
+    */
 
     setcmnop!(0x0f20, mov_r32_cr,  OpFlags::MODRM);
     setcmnop!(0x0f22, mov_cr_r32,  OpFlags::MODRM);
-    */
     setcmnop!(0x0f90, seto_rm8,    OpFlags::MODRM);
     setcmnop!(0x0f91, setno_rm8,   OpFlags::MODRM);
     setcmnop!(0x0f92, setb_rm8,    OpFlags::MODRM);
@@ -155,7 +155,7 @@ mov_dst_src!(u8, r8, rm8);
 
 mov_dst_src!(u16, sreg, rm16);
 
-fn nop (_exec: &mut exec::Exec) -> Result<(), EmuException> { Ok(()) }
+fn nop(_exec: &mut exec::Exec) -> Result<(), EmuException> { Ok(()) }
 
 mov_dst_src!(u8, al, moffs8);
 mov_dst_src!(u8, moffs8, al);
@@ -167,6 +167,9 @@ mov_dst_src!(u8, opr8, imm8);
 mov_dst_src!(u8, rm8, imm8);
 
 jmp_rel!(i8, imm8);
+
+fn mov_r32_cr(exec: &mut exec::Exec) -> Result<(), EmuException> { exec.mov_r32_cr() }
+fn mov_cr_r32(exec: &mut exec::Exec) -> Result<(), EmuException> { exec.mov_cr_r32() }
 
 setcc_dst!(u8, o, rm8);
 setcc_dst!(u8, b, rm8);
