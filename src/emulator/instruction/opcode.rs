@@ -14,18 +14,17 @@ bitflags! {
         const NONE  = 0b00000000;
         const MODRM = 0b00000001;
         const IMM   = 0b00000010;
-        const PTR   = 0b00000100;
+        const PTR16 = 0b00000100;
         const MOFFS = 0b00001000;
-        const SZ64  = 0b00010000;
-        const SZ32  = 0b00100000;
-        const SZ16  = 0b01000000;
-        const SZ8   = 0b10000000;
-        const IMM32     = Self::IMM.bits | Self::SZ32.bits;
-        const IMM16     = Self::IMM.bits | Self::SZ16.bits;
+        const SZ8   = 0b00010000;
+        const SZ16  = 0b00100000;
+        const SZ32  = 0b01000000;
+        const SZ64  = 0b10000000;
+        const SZBIT     = Self::SZ8.bits | Self::SZ16.bits | Self::SZ32.bits | Self::SZ64.bits;
         const IMM8      = Self::IMM.bits | Self::SZ8.bits;
-        const PTR16     = Self::PTR.bits | Self::SZ16.bits;
-        const MOFFSX    = Self::MOFFS.bits | Self::SZ32.bits | Self::SZ16.bits;
-        const MOFFS8    = Self::MOFFS.bits | Self::SZ8.bits;
+        const IMM16     = Self::IMM.bits | Self::SZ16.bits;
+        const IMM32     = Self::IMM.bits | Self::SZ32.bits;
+        const IMM64     = Self::IMM.bits | Self::SZ64.bits;
     }
 }
 

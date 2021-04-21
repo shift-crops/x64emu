@@ -11,13 +11,12 @@ use crate::emulator::access::register::*;
 pub struct Exec<'a> {
     pub ac: &'a mut access::Access,
     pub idata: &'a parse::InstrData,
-    segment: Option<SgReg>,
-    rep: Option<parse::Rep>
+    pdata: &'a parse::PrefixData,
 }
 
 impl<'a> Exec<'a> {
-    pub fn new(ac: &'a mut access::Access, idata: &'a parse::InstrData, segment: Option<SgReg>, rep: Option<parse::Rep>) -> Self {
-        Self { ac, idata, segment, rep, }
+    pub fn new(ac: &'a mut access::Access, parse: &'a parse::ParseInstr) -> Self {
+        Self { ac, idata: &parse.instr, pdata: &parse.prefix, }
     }
 
     fn update_cpumode(&mut self) -> Result<(), EmuException> {
@@ -26,10 +25,10 @@ impl<'a> Exec<'a> {
         let cr0 = &ac.core.cregs.0;
 
         ac.mode = match (efer.LME, cr0.PE, cr0.PG) {
-            (0, 0, _) => { access::CpuMode::Real },
-            (0, 1, _) => { access::CpuMode::Protected },
-            (1, 1, 1) => { access::CpuMode::Long },
-            _ => { return Err(EmuException::CPUException(CPUException::GP)); },
+            (0, 0, _) => access::CpuMode::Real,
+            (0, 1, _) => access::CpuMode::Protected,
+            (1, 1, 1) => access::CpuMode::Long,
+            _ => return Err(EmuException::CPUException(CPUException::GP)),
         };
         Ok(())
     }
@@ -40,10 +39,10 @@ impl<'a> Exec<'a> {
         let cs = &ac.core.sgregs.get(SgReg::CS).cache;
 
         let (op, ad) = match (efer.LMA, cs.L, cs.DB) {
-            (1, 0, 0) | (0, _, 0) => { (access::AcsSize::BIT16, access::AcsSize::BIT16) },
-            (1, 0, 1) | (0, _, 1) => { (access::AcsSize::BIT32, access::AcsSize::BIT32) },
-            (1, 1, 0)             => { (access::AcsSize::BIT32, access::AcsSize::BIT64) },
-            _ => { return Err(EmuException::CPUException(CPUException::GP)); },
+            (1, 0, 0) | (0, _, 0) => (access::AcsSize::BIT16, access::AcsSize::BIT16),
+            (1, 0, 1) | (0, _, 1) => (access::AcsSize::BIT32, access::AcsSize::BIT32),
+            (1, 1, 0)             => (access::AcsSize::BIT32, access::AcsSize::BIT64),
+            _ => return Err(EmuException::CPUException(CPUException::GP)),
         };
         ac.size = access::OpAdSize { op, ad };
         Ok(())
@@ -58,9 +57,9 @@ pub fn exec_test() {
     let hw = hardware::Hardware::new(0, 0x1000);
 
     let mut ac = super::access::Access::new(hw);
-    let idata: parse::InstrData = Default::default();
+    let parse: parse::ParseInstr = Default::default();
 
-    let mut exe = Exec::new(&mut ac, &idata, None, None);
+    let mut exe = Exec::new(&mut ac, &parse);
     exe.ac.set_gpreg(GpReg64::RSP, 0xf20).unwrap();
     exe.push_u64(0xdeadbeef).unwrap();
     exe.push_u64(0xcafebabe).unwrap();

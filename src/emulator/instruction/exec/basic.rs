@@ -19,54 +19,6 @@ impl<'a> super::Exec<'a> {
         self.ac.set_gpreg(GpReg16::AX, v)
     }
 
-    pub fn get_opr8(&self) -> Result<u8, EmuException> {
-        let opr = (self.idata.opcode&0x7) as usize;
-        let r = GpReg8::try_from(opr).unwrap();
-        self.ac.get_gpreg(r)
-    }
-
-    pub fn set_opr8(&mut self, v: u8) -> Result<(), EmuException> {
-        let opr = (self.idata.opcode&0x7) as usize;
-        let r = GpReg8::try_from(opr).unwrap();
-        self.ac.set_gpreg(r, v)
-    }
-
-    pub fn get_opr16(&self) -> Result<u16, EmuException> {
-        let opr = (self.idata.opcode&0x7) as usize;
-        let r = GpReg16::try_from(opr).unwrap();
-        self.ac.get_gpreg(r)
-    }
-
-    pub fn set_opr16(&mut self, v: u16) -> Result<(), EmuException> {
-        let opr = (self.idata.opcode&0x7) as usize;
-        let r = GpReg16::try_from(opr).unwrap();
-        self.ac.set_gpreg(r, v)
-    }
-
-    pub fn get_opr32(&self) -> Result<u32, EmuException> {
-        let opr = (self.idata.opcode&0x7) as usize;
-        let r = GpReg32::try_from(opr).unwrap();
-        self.ac.get_gpreg(r)
-    }
-
-    pub fn set_opr32(&mut self, v: u32) -> Result<(), EmuException> {
-        let opr = (self.idata.opcode&0x7) as usize;
-        let r = GpReg32::try_from(opr).unwrap();
-        self.ac.set_gpreg(r, v)
-    }
-
-    pub fn get_opr64(&self) -> Result<u64, EmuException> {
-        let opr = (self.idata.opcode&0x7) as usize;
-        let r = GpReg64::try_from(opr).unwrap();
-        self.ac.get_gpreg(r)
-    }
-
-    pub fn set_opr64(&mut self, v: u64) -> Result<(), EmuException> {
-        let opr = (self.idata.opcode&0x7) as usize;
-        let r = GpReg64::try_from(opr).unwrap();
-        self.ac.set_gpreg(r, v)
-    }
-
     pub fn push_u16(&mut self, v: u16) -> Result<(), EmuException> {
         self.ac.update_gpreg(GpReg16::SP, -2)?;
         let sp = self.ac.get_gpreg(GpReg16::SP)? as u64;

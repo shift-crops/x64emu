@@ -78,10 +78,10 @@ impl super::Access {
     fn write_vaddr(&mut self, sg: SgReg, vaddr: u64, v: u64, size: MemAccessSize) -> Result<(), EmuException> {
         let paddr = self.trans_v2p(MemAccessMode::Write, sg, vaddr)? as usize;
         match size {
-            MemAccessSize::Byte  => { self.mem.write8(paddr, v as u8) },
-            MemAccessSize::Word  => { self.mem.write16(paddr, v as u16) },
-            MemAccessSize::DWord => { self.mem.write32(paddr, v as u32) },
-            MemAccessSize::QWord => { self.mem.write64(paddr, v) },
+            MemAccessSize::Byte  => self.mem.write8(paddr, v as u8),
+            MemAccessSize::Word  => self.mem.write16(paddr, v as u16),
+            MemAccessSize::DWord => self.mem.write32(paddr, v as u32),
+            MemAccessSize::QWord => self.mem.write64(paddr, v),
         }
         Ok(())
     }

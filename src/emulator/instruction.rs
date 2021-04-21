@@ -22,7 +22,7 @@ impl Instruction {
         parse.parse_opcode(ac)?;
         parse.parse_oprand(ac, op.flag(parse.instr.opcode), size.ad)?;
 
-        op.exec(&mut exec::Exec::new(ac, &parse.instr, parse.prefix.segment, parse.prefix.repeat))?;
+        op.exec(&mut exec::Exec::new(ac, &parse))?;
 
         Ok(())
     }

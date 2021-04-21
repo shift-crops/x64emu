@@ -64,7 +64,7 @@ impl Processor {
                     println!("{} : 0x{:016x}", gpreg_name[i], self.gpregs.get64(GpReg64::try_from(i).unwrap()));
                 }
             },
-            _ => { },
+            _ => {},
         }
         println!("{:?}\n", self.rflags);
 

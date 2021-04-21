@@ -258,12 +258,10 @@ impl<'a> super::Exec<'a> {
             return Err(EmuException::CPUException(CPUException::UD));
         }
         match self.ac.mode {
-            access::CpuMode::Real => {
-                self.set_segment_real(reg, sel)
-            },
-            access::CpuMode::Protected | access::CpuMode::Long => {
-                self.set_segment_protected(reg, sel, self.obtain_descriptor(sel, false)?)
-            },
+            access::CpuMode::Real =>
+                self.set_segment_real(reg, sel),
+            access::CpuMode::Protected | access::CpuMode::Long =>
+                self.set_segment_protected(reg, sel, self.obtain_descriptor(sel, false)?),
         }
     }
 }
