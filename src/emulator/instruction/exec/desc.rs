@@ -109,15 +109,12 @@ macro_rules! retf {
                     }
 
                     let desc = self.obtain_descriptor(new_cs, false)?;
-                    match desc.get_type() {
-                        Some(DescType::Segment(SegDescType::Code(f))) => {
-                            if f.contains(CodeDescFlag::C) && desc.DPL > rpl {
-                                return Err(EmuException::CPUException(CPUException::GP));
-                            }
-                        },
-                        _ => {
+                    if let Some(DescType::Segment(SegDescType::Code(f))) = desc.get_type() {
+                        if f.contains(CodeDescFlag::C) && desc.DPL > rpl {
                             return Err(EmuException::CPUException(CPUException::GP));
                         }
+                    } else {
+                        return Err(EmuException::CPUException(CPUException::GP));
                     }
 
                     if self.ac.size.op != access::AcsSize::BIT64 && new_ip as u32 > ((desc.limit_h as u32) << 16) + desc.limit_l as u32 {

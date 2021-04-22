@@ -2,6 +2,7 @@ mod basic;
 mod flag;
 mod reg_mem;
 mod desc;
+mod misc;
 
 use super::parse;
 use crate::emulator::*;

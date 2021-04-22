@@ -2,15 +2,12 @@ use crate::emulator::access::register::*;
 use crate::emulator::instruction::exec;
 use crate::emulator::instruction::opcode::*;
 
-// macro_rules! get_al { ($exec:expr) => { $exec.ac.core.gpregs().get(GpReg8::AL) } }
-// macro_rules! set_al { ($exec:expr, $val:expr) => { $exec.ac.core.gpregs_mut().set(GpReg8::AL, $val) } }
-
 pub fn init_cmn_opcode(op: &mut super::OpcodeArr){
     macro_rules! setcmnop {
         ($n:expr, $fnc:ident, $flg:expr) => { op[$n & 0x1ff] = OpcodeType{func:$fnc, flag:$flg} }
     }
 
-    //setcmnop!(0x00, add_rm8_r8,    OpFlags::MODRM);
+    setcmnop!(0x00, add_rm8_r8,    OpFlags::MODRM);
     setcmnop!(0x02, add_r8_rm8,    OpFlags::MODRM);
     setcmnop!(0x04, add_al_imm8,   OpFlags::IMM8);
     setcmnop!(0x08, or_rm8_r8,     OpFlags::MODRM);
@@ -168,8 +165,8 @@ mov_dst_src!(u8, rm8, imm8);
 
 jmp_rel!(i8, imm8);
 
-fn mov_r32_cr(exec: &mut exec::Exec) -> Result<(), EmuException> { exec.mov_r32_cr() }
-fn mov_cr_r32(exec: &mut exec::Exec) -> Result<(), EmuException> { exec.mov_cr_r32() }
+fn mov_r32_cr(exec: &mut exec::Exec) -> Result<(), EmuException> { exec.cr_to_r32() }
+fn mov_cr_r32(exec: &mut exec::Exec) -> Result<(), EmuException> { exec.cr_from_r32() }
 
 setcc_dst!(u8, o, rm8);
 setcc_dst!(u8, b, rm8);

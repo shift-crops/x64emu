@@ -288,3 +288,13 @@ macro_rules! imul_dst_src {
         }
     } };
 }
+
+macro_rules! movx_dst_src {
+    ( $zs:ident, $dtype:ty, $dst:ident, $stype:ty, $src:ident ) => { paste::item! {
+        fn [<mov $zs x_ $dst _ $src>](exec: &mut exec::Exec) -> Result<(), EmuException> {
+            let src: $stype = exec.[<get_ $src>]()? as $stype;
+            debug!("movzsx: {:02x}", src);
+            exec.[<set_ $dst>](src as $dtype)
+        }
+    } };
+}

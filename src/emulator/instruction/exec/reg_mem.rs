@@ -272,10 +272,7 @@ impl<'a> super::Exec<'a> {
             },
         }
 
-        let sg = if let Some(x) = self.pdata.segment { x }
-                 else if let Some(y) = segment { y }
-                 else { SgReg::DS };
-        Ok((sg, addr))
+        Ok((self.select_segment(segment.unwrap_or(SgReg::DS))?, addr))
     }
 
     fn addr_sib(&self) -> Result<(Option<SgReg>, u64), EmuException> {
