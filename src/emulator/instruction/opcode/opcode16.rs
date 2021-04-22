@@ -174,7 +174,7 @@ impl super::OpcodeTrait for Opcode16 {
         setop!(0x0f8f, jnle_imm16,      OpFlags::IMM16);
             
         setop!(0x0faf, imul_r16_rm16,   OpFlags::MODRM);
-            
+
         /*
         setop!(0x0fb6, movzx_r16_rm8,   OpFlags::MODRM);
         setop!(0x0fb7, movzx_r16_rm16,  OpFlags::MODRM);

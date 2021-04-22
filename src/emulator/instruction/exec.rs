@@ -54,7 +54,7 @@ impl<'a> Exec<'a> {
 pub fn exec_test() {
     use crate::hardware;
 
-    let hw = hardware::Hardware::new(0, 0x1000);
+    let hw = hardware::Hardware::new(0x1000);
 
     let mut ac = super::access::Access::new(hw);
     let parse: parse::ParseInstr = Default::default();

@@ -34,34 +34,34 @@ impl super::Access {
         Err(EmuException::CPUException(CPUException::GP))
     }
 
-    fn get_msr(&self, addr: u32) -> Option<Box<&dyn MSRAccess>> {
+    fn get_msr(&self, addr: u32) -> Option<&dyn MSRAccess> {
         if let Ok(ad) = MSRAddress::try_from(addr) {
-            let v: Box<&dyn MSRAccess> = match ad {
-                MSRAddress::IA32_EFER    => Box::new(&self.core.msr.efer),
-                MSRAddress::STAR         => Box::new(&self.core.msr.star),
-                MSRAddress::CSTAR        => Box::new(&self.core.msr.cstar),
-                MSRAddress::LSTAR        => Box::new(&self.core.msr.lstar),
-                MSRAddress::FMASK        => Box::new(&self.core.msr.fmask),
-                MSRAddress::FSBase       => Box::new(self.get_sgcache(SgReg::FS).unwrap()),
-                MSRAddress::GSBase       => Box::new(self.get_sgcache(SgReg::GS).unwrap()),
-                MSRAddress::KernelGSBase => Box::new(self.get_sgcache(SgReg::KernelGS).unwrap()),
+            let v: &dyn MSRAccess = match ad {
+                MSRAddress::IA32_EFER    => &self.core.msr.efer,
+                MSRAddress::STAR         => &self.core.msr.star,
+                MSRAddress::CSTAR        => &self.core.msr.cstar,
+                MSRAddress::LSTAR        => &self.core.msr.lstar,
+                MSRAddress::FMASK        => &self.core.msr.fmask,
+                MSRAddress::FSBase       => self.get_sgcache(SgReg::FS).unwrap(),
+                MSRAddress::GSBase       => self.get_sgcache(SgReg::GS).unwrap(),
+                MSRAddress::KernelGSBase => self.get_sgcache(SgReg::KernelGS).unwrap(),
             };
             return Some(v);
         }
         None
     }
 
-    fn get_mut_msr(&mut self, addr: u32) -> Option<Box<&mut dyn MSRAccess>> {
+    fn get_mut_msr(&mut self, addr: u32) -> Option<&mut dyn MSRAccess> {
         if let Ok(ad) = MSRAddress::try_from(addr) {
-            let v: Box<&mut dyn MSRAccess> = match ad {
-                MSRAddress::IA32_EFER    => Box::new(&mut self.core.msr.efer),
-                MSRAddress::STAR         => Box::new(&mut self.core.msr.star),
-                MSRAddress::CSTAR        => Box::new(&mut self.core.msr.cstar),
-                MSRAddress::LSTAR        => Box::new(&mut self.core.msr.lstar),
-                MSRAddress::FMASK        => Box::new(&mut self.core.msr.fmask),
-                MSRAddress::FSBase       => Box::new(self.get_sgcache_mut(SgReg::FS).unwrap()),
-                MSRAddress::GSBase       => Box::new(self.get_sgcache_mut(SgReg::GS).unwrap()),
-                MSRAddress::KernelGSBase => Box::new(self.get_sgcache_mut(SgReg::KernelGS).unwrap()),
+            let v: &mut dyn MSRAccess = match ad {
+                MSRAddress::IA32_EFER    => &mut self.core.msr.efer,
+                MSRAddress::STAR         => &mut self.core.msr.star,
+                MSRAddress::CSTAR        => &mut self.core.msr.cstar,
+                MSRAddress::LSTAR        => &mut self.core.msr.lstar,
+                MSRAddress::FMASK        => &mut self.core.msr.fmask,
+                MSRAddress::FSBase       => self.get_sgcache_mut(SgReg::FS).unwrap(),
+                MSRAddress::GSBase       => self.get_sgcache_mut(SgReg::GS).unwrap(),
+                MSRAddress::KernelGSBase => self.get_sgcache_mut(SgReg::KernelGS).unwrap(),
             };
             return Some(v);
         }
@@ -72,7 +72,7 @@ impl super::Access {
 #[cfg(test)]
 #[test]
 pub fn access_msr_test() {
-    let hw = hardware::Hardware::new(0, 0x1000);
+    let hw = hardware::Hardware::new(0x1000);
     let mut ac = access::Access::new(hw);
 
     ac.core.msr.efer.LMA = 1;
@@ -86,7 +86,7 @@ pub fn access_msr_test() {
 #[test]
 #[should_panic]
 pub fn access_msr_test_panic() {
-    let hw = hardware::Hardware::new(0, 0x1000);
+    let hw = hardware::Hardware::new(0x1000);
     let mut ac = access::Access::new(hw);
 
     ac.write_msr(0xc0000103, 0xdeadbeef).unwrap();

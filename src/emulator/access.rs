@@ -26,6 +26,7 @@ pub struct Access {
     pub size: OpAdSize,
     pub core: hardware::processor::Processor,
     pub mem: hardware::memory::Memory,
+    a20gate: bool,
 }
 
 impl Access {
@@ -35,6 +36,7 @@ impl Access {
             size: Default::default(),
             core: hw.core,
             mem: hw.mem,
+            a20gate: false,
         }
     }
 

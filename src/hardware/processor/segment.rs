@@ -29,7 +29,7 @@ pub struct SgDescCache {
 }
 impl Default for SgDescCache {
     fn default() -> Self {
-        Self{ base:0, limit:0xffff, Type:0, DPL:0, P:0, AVL:0, L:0, DB:0, G:0 }
+        Self{ base:0, limit:0xffff, Type:3, DPL:0, P:1, AVL:0, L:0, DB:0, G:0 }
     }
 }
 

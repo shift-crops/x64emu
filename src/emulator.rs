@@ -49,7 +49,13 @@ impl Emulator {
         }
     }
 
-    pub fn load_binary(&mut self, path: String, addr: usize) -> Result<(), Box<dyn error::Error>> {
+    pub fn map_binary(&mut self, addr: usize, bin: &[u8]) -> Result<(), Box<dyn error::Error>> {
+        self.ac.mem.write_data(addr, bin.as_ptr() as *const _, bin.len())?;
+
+        Ok(())
+    }
+
+    pub fn load_binfile(&mut self, addr: usize, path: String) -> Result<(), Box<dyn error::Error>> {
         use std::io::Read;
         use std::fs::File;
 

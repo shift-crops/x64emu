@@ -21,16 +21,24 @@ pub struct Processor {
 }
 
 impl Processor {
-    pub fn new(rst_vct: u64) -> Self {
-        Self {
-            ip: ip::InstructionPointer::new(rst_vct),
+    pub fn new() -> Self {
+        let mut prc = Self {
+            ip: ip::InstructionPointer::new(0xfff0),
             gpregs: general::GpRegisters::new(),
             rflags: Default::default(),
             cregs:  Default::default(),
             sgregs: segment::SgRegisters::new(),
             dtregs: Default::default(),
             msr: Default::default(),
-        }
+        };
+
+        let cs = prc.sgregs.get_mut(SgReg::CS);
+        cs.selector.from_u16(0xf000);
+        cs.cache.base = 0xffff0000;
+
+        prc.cregs.get_mut(0).unwrap().from_u32(0x60000010);
+
+        prc
     }
 
     pub fn dump(&self) -> () {

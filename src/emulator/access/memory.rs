@@ -100,7 +100,9 @@ impl super::Access {
 
     fn trans_v2p(&self, acsmode: MemAccessMode, sg: SgReg, vaddr: u64) -> Result<u64, EmuException> {
         let laddr = self.trans_v2l(acsmode, sg, vaddr)?;
-        self.trans_l2p(acsmode, laddr)
+        let paddr = self.trans_l2p(acsmode, laddr)?;
+
+        Ok( if self.a20gate { paddr } else { paddr & (1<<20)-1 } )
     }
 
     fn trans_v2l(&self, _acsmode: MemAccessMode, sg: SgReg, vaddr: u64) -> Result<u64, EmuException> {
@@ -136,7 +138,7 @@ impl super::Access {
 #[cfg(test)]
 #[test]
 pub fn access_mem_test() {
-    let hw = hardware::Hardware::new(0, 0x1000);
+    let hw = hardware::Hardware::new(0x1000);
 
     let mut ac = access::Access::new(hw);
     ac.set_data32((SgReg::DS, 0x10), 0xdeadbeef).unwrap();

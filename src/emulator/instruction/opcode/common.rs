@@ -10,7 +10,7 @@ pub fn init_cmn_opcode(op: &mut super::OpcodeArr){
         ($n:expr, $fnc:ident, $flg:expr) => { op[$n & 0x1ff] = OpcodeType{func:$fnc, flag:$flg} }
     }
 
-    setcmnop!(0x00, add_rm8_r8,    OpFlags::MODRM);
+    //setcmnop!(0x00, add_rm8_r8,    OpFlags::MODRM);
     setcmnop!(0x02, add_r8_rm8,    OpFlags::MODRM);
     setcmnop!(0x04, add_al_imm8,   OpFlags::IMM8);
     setcmnop!(0x08, or_rm8_r8,     OpFlags::MODRM);
