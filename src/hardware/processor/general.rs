@@ -60,10 +60,14 @@ pub fn gpreg_test() {
     let mut reg = GpRegisters::new();
 
     reg.set64(GpReg64::RAX, 0xdeadbeefcafebabe);
-    reg.set32(GpReg32::EAX, 0x11223344);
+    reg.set16(GpReg16::AX, 0x1122);
     reg.set8h(GpReg8h::AH, 0x00);
     reg.update64(GpReg64::RAX, -0x10);
-    assert_eq!(reg.get64(GpReg64::RAX), 0xdeadbeef11220034);
+    assert_eq!(reg.get64(GpReg64::RAX), 0xdeadbeefcafe0012);
+    reg.update32(GpReg32::EAX, 0x10000000);
+    assert_eq!(reg.get64(GpReg64::RAX), 0xdafe0012);
+
+    reg.set32(GpReg32::EAX, 0x11223344);
 
     reg.set32(GpReg32::EDI, 0xc0bebeef);
     reg.set8l(GpReg8l::DIL, 0xff);

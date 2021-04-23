@@ -1,0 +1,26 @@
+[tasks.build]
+description = "Build x64emu"
+category = "Build"
+command = "cargo"
+args = ["build", "--all-features"]
+dependencies = ["bios"]
+
+[tasks.bios]
+description = "Build bios"
+category = "Build"
+command = "make"
+args = ["-C", "${CARGO_MAKE_WORKSPACE_WORKING_DIRECTORY}/src/bios"]
+
+[tasks.test]
+description = "Test x64emu"
+category = "Test"
+command = "cargo"
+args = ["test", "--all-features"]
+
+[tasks.clean]
+category = "Clean"
+command = "cargo"
+args = ["clean"]
+
+[tasks.default]
+alias = "build"
