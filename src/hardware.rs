@@ -8,23 +8,10 @@ pub struct Hardware {
 }
 
 impl Hardware {
-    pub fn new() -> Self {
-        Hardware {
+    pub fn new(size: usize) -> Self {
+        Self {
             core: processor::Processor::new(),
-            mem: memory::Memory::new(),
+            mem: memory::Memory::new(size),
         }
-    }
-
-    pub fn init_memory(&mut self, size: usize) -> () {
-        self.mem.set_size(size);
-    }
-
-    #[cfg(test)]
-    pub fn test(&mut self) -> () {
-        self.core.test();
-        self.core.dump();
-
-        self.mem.test();
-        self.mem.dump(0x1000, 0x100);
     }
 }

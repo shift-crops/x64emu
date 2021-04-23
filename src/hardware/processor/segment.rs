@@ -1,11 +1,11 @@
 #![allow(non_snake_case)]
 use packed_struct::prelude::*;
-use num_enum::FromPrimitive;
+use num_enum::TryFromPrimitive;
 
-#[derive(Clone, Copy, FromPrimitive)] #[repr(usize)]
-pub enum SgReg { #[num_enum(default)] ES, CS, SS, DS, FS, GS } 
+#[derive(Clone, Copy, PartialEq, TryFromPrimitive)] #[repr(usize)]
+pub enum SgReg { ES, CS, SS, DS, FS, GS, KernelGS, END }
 
-const SGREGS_COUNT: usize = 6;
+const SGREGS_COUNT: usize = SgReg::END as usize;
 
 #[derive(Debug, Default, Clone, Copy, PackedStruct)]
 #[packed_struct(bit_numbering="lsb0", size_bytes="2", endian="msb")]
@@ -15,18 +15,22 @@ pub struct SgDescSelector {
     #[packed_field(bits="3:15")] pub IDX: u16,
 }
 
-#[derive(Debug, Default, Clone, Copy, PackedStruct)]
-#[packed_struct(bit_numbering="lsb0", size_bytes="8", endian="msb")]
+#[derive(Debug, Clone, Copy)]
 pub struct SgDescCache {
-    #[packed_field(bits="0:31")]  pub Base:  u32,
-    #[packed_field(bits="32:51")] pub Limit: u32,
-    #[packed_field(bits="52:55")] pub Type:  u8,
-    #[packed_field(bits="56")]    pub S:     u8,
-    #[packed_field(bits="57:58")] pub DPL:   u8,
-    #[packed_field(bits="59")]    pub P:     u8,
-    #[packed_field(bits="60")]    pub AVL:   u8,
-    #[packed_field(bits="62")]    pub DB:    u8,
-    #[packed_field(bits="63")]    pub G:     u8,
+    pub base:  u64,
+    pub limit: u32,
+    pub Type:  u8,
+    pub DPL:   u8,
+    pub P:     u8,
+    pub AVL:   u8,
+    pub L:     u8,
+    pub DB:    u8,
+    pub G:     u8,
+}
+impl Default for SgDescCache {
+    fn default() -> Self {
+        Self{ base:0, limit:0xffff, Type:3, DPL:0, P:1, AVL:0, L:0, DB:0, G:0 }
+    }
 }
 
 impl SgDescSelector {
@@ -39,29 +43,46 @@ impl SgDescSelector {
     }
 }
 
+impl super::model_specific::MSRAccess for SgDescCache {
+    fn to_u64(&self) -> u64 { self.base }
+    fn from_u64(&mut self, v: u64) -> () { self.base = v; }
+}
+
 #[derive(Debug, Default, Clone, Copy)]
 pub struct SgRegUnit {
-    selector: SgDescSelector,
-    cache: SgDescCache,
+    pub selector: SgDescSelector,
+    pub cache: SgDescCache,
 }
 
-impl SgRegUnit {
-    pub fn new() -> Self {
-        SgRegUnit::default()
-    }
-}
-
-#[derive(Clone, Copy)]
 pub struct SgRegisters ([SgRegUnit; SGREGS_COUNT]);
 
 impl SgRegisters {
     pub fn new() -> Self {
-        SgRegisters ([SgRegUnit::new(); SGREGS_COUNT])
+        Self ([Default::default(); SGREGS_COUNT])
     }
 
-    pub fn selector(&self, r: SgReg) -> &SgDescSelector { &self.0[r as usize].selector }
-    pub fn cache(&self, r: SgReg) -> &SgDescCache { &self.0[r as usize].cache }
+    pub fn get(&self, r: SgReg) -> &SgRegUnit { &self.0[r as usize] }
+    pub fn get_mut(&mut self, r: SgReg) -> &mut SgRegUnit { &mut self.0[r as usize] }
+}
 
-    pub fn selector_mut(&mut self, r: SgReg) -> &mut SgDescSelector { &mut self.0[r as usize].selector }
-    pub fn cache_mut(&mut self, r: SgReg) -> &mut SgDescCache { &mut self.0[r as usize].cache }
+#[cfg(test)]
+#[test]
+pub fn sgreg_test() {
+    let mut reg = SgRegisters::new();
+
+    let mut sel = reg.get_mut(SgReg::ES).selector;
+    sel.from_u16(0x2e);
+    assert_eq!(sel.IDX, 5);
+    assert_eq!(sel.TI, 1);
+    assert_eq!(sel.RPL, 2);
+}
+
+#[cfg(test)]
+#[test]
+#[should_panic]
+pub fn sgreg_test_panic() {
+    use std::convert::TryFrom;
+
+    let reg = SgRegisters::new();
+    reg.get(SgReg::try_from(10).unwrap());
 }

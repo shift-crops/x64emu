@@ -1,62 +1,69 @@
 mod access;
 mod instruction;
 
-use crate::hardware::Hardware;
-use crate::emulator::access::Access;
-use crate::emulator::instruction::Instruction;
+use std::error;
+use thiserror::Error;
+use super::hardware;
+
+#[derive(Debug, Error)]
+pub enum EmuException {
+    #[error("Undefined Opecode")]
+    UndefinedOpcode,
+    #[error("Not Implemented Opecode")]
+    NotImplementedOpcode,
+    #[error("CPU Exception {0:?}")]
+    CPUException(CPUException),
+    #[error("Unexpected Error")]
+    UnexpectedError,
+}
+
+#[derive(Debug)]
+pub enum CPUException {
+    DE = 0,  DB = 1,           BP = 3,  OF = 4,  BR = 5,  UD = 6,  NM = 7,
+    DF = 8,           TS = 10, NP = 11, SS = 12, GP = 13, PF = 14,
+    MF = 16, AC = 17, MC = 18, XF = 19, VE = 20,          SX = 30
+}
 
 pub struct Emulator {
-    ac: Access,
+    ac: access::Access,
+    inst: instruction::Instruction,
 }
 
 impl Emulator {
-    pub fn new(hw: Hardware) -> Self {
-        Emulator {
-            ac: Access::new(hw),
+    pub fn new(hw: hardware::Hardware) -> Self {
+        Self {
+            ac: access::Access::new(hw),
+            inst: instruction::Instruction::new(),
         }
     }
 
-    pub fn load_binary(&mut self, path: String, addr: usize) -> Result<(), Box<dyn std::error::Error>> {
-        use std::io::Read;
-        use std::fs::File;
-        use libc::c_void;
+    pub fn step(&mut self) -> () {
+        debug!("IP : 0x{:016x}", self.ac.core.ip.get_rip());
+        if let Err(err) = self.inst.fetch_exec(&mut self.ac) {
+            match err {
+                _ => {
+                    self.ac.dump();
+                    panic!("{}", err);
+                }
+            }
+        }
+    }
 
-        let mut file = File::open(path)?;
-        let mut buf = Vec::new();
-        let len = file.read_to_end(&mut buf)?;
-        self.ac.mem.write_data(addr, buf.as_ptr() as *const c_void, len)?;
+    pub fn map_binary(&mut self, addr: usize, bin: &[u8]) -> Result<(), Box<dyn error::Error>> {
+        self.ac.mem.write_data(addr, bin.as_ptr() as *const _, bin.len())?;
 
         Ok(())
     }
 
-    pub fn run(&mut self) -> () {
-        let mut inst = Instruction::new();
+    pub fn load_binfile(&mut self, addr: usize, path: String) -> Result<(), Box<dyn error::Error>> {
+        use std::io::Read;
+        use std::fs::File;
 
-        loop {
-            inst.fetch_exec(&mut self.ac);
-        }
-    }
+        let mut file = File::open(path)?;
+        let mut buf = Vec::new();
+        let len = file.read_to_end(&mut buf)?;
+        self.ac.mem.write_data(addr, buf.as_ptr() as *const _, len)?;
 
-    #[cfg(test)]
-    pub fn test(&mut self) -> () {
-        use crate::hardware::processor::general::*;
-
-        self.ac.core.gpregs.set(GpReg64::RSP, 0xf20);
-        self.ac.push64(0xdeadbeef);
-        self.ac.push64(0xcafebabe);
-        assert_eq!(self.ac.pop64(), 0xcafebabe);
-        assert_eq!(self.ac.pop64(), 0xdeadbeef);
-
-        let mut x = self.ac.mem.as_mut_ptr(0xf20).unwrap() as *mut u64;
-        unsafe {
-            *x = 0x11223344;
-            x = (x as usize + 8) as *mut u64;
-            *x = 0x55667788;
-        }
-        assert_eq!(self.ac.pop64(), 0x11223344);
-        assert_eq!(self.ac.pop64(), 0x55667788);
-
-        self.ac.core.dump();
-        self.ac.mem.dump(self.ac.core.gpregs.get(GpReg64::RSP) as usize, 0x40);
+        Ok(())
     }
 }

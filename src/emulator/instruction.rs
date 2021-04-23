@@ -2,30 +2,52 @@ mod parse;
 mod opcode;
 mod exec;
 
-use crate::emulator::access;
+use super::access;
+use crate::emulator::EmuException;
 
-pub struct InstrArg<'a> {
-    ac: &'a mut access::Access,
-    idata: &'a parse::InstrData,
-}
-
-pub struct Instruction {
-    idata: parse::InstrData,
-    opcode: opcode::Opcode,
-}
+pub struct Instruction(opcode::Opcode);
 
 impl Instruction {
     pub fn new() -> Self {
-        Instruction {
-            idata: Default::default(),
-            opcode: opcode::Opcode::new(),
-        }
+        Self (opcode::Opcode::new())
     }
 
-    pub fn fetch_exec(&mut self, ac: &mut access::Access) -> () {
-        self.idata.parse(ac, &self.opcode);
+    pub fn fetch_exec(&mut self, ac: &mut access::Access) -> Result<(), EmuException> {
+        let mut parse: parse::ParseInstr = Default::default();
 
-        let op = self.opcode.get();
-        op.exec(&mut InstrArg{ac, idata: &self.idata});
+        parse.parse_prefix(ac)?;
+        let size = Instruction::opad_size(&ac.size, &parse.prefix);
+
+        let op = self.0.get(size.op);
+        parse.parse_opcode(ac)?;
+        parse.parse_oprand(ac, op.flag(parse.instr.opcode), size.ad)?;
+
+        op.exec(&mut exec::Exec::new(ac, &parse))?;
+
+        Ok(())
+    }
+
+    pub fn opad_size(size: &access::OpAdSize, pdata: &parse::PrefixData) -> access::OpAdSize {
+        let (mut op, mut ad) = (size.op, size.ad);
+
+        if pdata.rex.w == 1 { 
+            op = access::AcsSize::BIT64;
+        }
+        if pdata.size.contains(parse::OverrideSize::OP) {
+            op = match op {
+                access::AcsSize::BIT16 => access::AcsSize::BIT32,
+                access::AcsSize::BIT32 => access::AcsSize::BIT16,
+                access::AcsSize::BIT64 => access::AcsSize::BIT64,
+            };
+        }
+        if pdata.size.contains(parse::OverrideSize::AD) {
+            ad = match ad {
+                access::AcsSize::BIT16 => access::AcsSize::BIT32,
+                access::AcsSize::BIT32 => access::AcsSize::BIT16,
+                access::AcsSize::BIT64 => access::AcsSize::BIT32,
+            };
+        }
+
+        access::OpAdSize { op, ad }
     }
 }

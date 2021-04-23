@@ -47,3 +47,14 @@ impl RFlags {
     pub fn set_interrupt(&mut self, f: bool) -> () { self.IF = f as u8; }
     pub fn set_direction(&mut self, f: bool) -> () { self.DF = f as u8; }
 }
+
+#[cfg(test)]
+#[test]
+pub fn rflags_test() {
+    let mut flag: RFlags = Default::default();
+
+    flag.from_u64(0);
+    assert_eq!(flag.to_u64(), 2);
+    flag.set_carry(true);
+    assert_eq!(flag.to_u64(), 3);
+}

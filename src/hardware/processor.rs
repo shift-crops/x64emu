@@ -2,60 +2,97 @@ pub mod ip;
 pub mod general;
 pub mod rflags;
 pub mod segment;
+pub mod control;
 pub mod descriptor;
+pub mod model_specific;
 
+use std::convert::TryFrom;
 use general::*;
 use segment::*;
 
-#[derive(Clone)]
 pub struct Processor {
-    pub rip: ip::InstructionPointer,
+    pub ip: ip::InstructionPointer,
     pub gpregs: general::GpRegisters,
-    pub sgregs: segment::SgRegisters,
     pub rflags: rflags::RFlags,
+    pub cregs:  control::CRegisters,
+    pub sgregs: segment::SgRegisters,
+    pub dtregs: descriptor::DTRegisters, 
+    pub msr: model_specific::ModelSpecific,
 }
 
 impl Processor {
     pub fn new() -> Self {
-        Processor{
-            rip: ip::InstructionPointer::new(0xfff0),
+        let mut prc = Self {
+            ip: ip::InstructionPointer::new(0xfff0),
             gpregs: general::GpRegisters::new(),
-            sgregs: segment::SgRegisters::new(),
             rflags: Default::default(),
-        }
+            cregs:  Default::default(),
+            sgregs: segment::SgRegisters::new(),
+            dtregs: Default::default(),
+            msr: Default::default(),
+        };
+
+        let cs = prc.sgregs.get_mut(SgReg::CS);
+        cs.selector.from_u16(0xf000);
+        cs.cache.base = 0xffff0000;
+
+        prc.cregs.get_mut(0).unwrap().from_u32(0x60000010);
+
+        prc
     }
 
     pub fn dump(&self) -> () {
-        let gpreg_name = ["RAX", "RCX", "RDX", "RBX", "RSP", "RBP", "RSI", "RDI", "R8 ", "R9 ", "R10", "R11", "R12", "R13", "R14", "R15"];
-        let sgreg_name = ["ES", "CS", "SS", "DS", "FS", "GS"];
-        let dtreg_name = ["GDTR", "IDTR", "LDTR", " TR "];
-
         println!("Registers Dump");
-        println!("RIP : 0x{:016x}", self.rip.get());
-        for i in 0..gpreg_name.len() {
-            println!("{} : 0x{:016x}", gpreg_name[i], self.gpregs.get(GpReg64::from(i)));
-        }
-        println!("{:?}", self.rflags);
 
-        for i in 0..sgreg_name.len() {
-            println!("{} : {:?},  {:?}", sgreg_name[i], self.sgregs.selector(SgReg::from(i)), self.sgregs.cache(SgReg::from(i)));
+        let efer = &self.msr.efer;
+        let cs = &self.sgregs.get(SgReg::CS).cache;
+
+        match (efer.LMA, cs.L, cs.DB) {
+            (1, 0, 0) | (0, _, 0) => {  // 16 bit
+                println!("IP : 0x{:04x}", self.ip.get_ip());
+
+                let gpreg_name = ["AX", "CX", "DX", "BX", "SP", "BP", "SI", "DI"];
+                for i in 0..gpreg_name.len() {
+                    println!("{} : 0x{:04x}", gpreg_name[i], self.gpregs.get16(GpReg16::try_from(i).unwrap()));
+                }
+            },
+            (1, 0, 1) | (0, _, 1) => {  // 32 bit
+                println!("EIP : 0x{:08x}", self.ip.get_eip());
+
+                let gpreg_name = ["EAX", "ECX", "EDX", "EBX", "ESP", "EBP", "ESI", "EDI"];
+                for i in 0..gpreg_name.len() {
+                    println!("{} : 0x{:08x}", gpreg_name[i], self.gpregs.get32(GpReg32::try_from(i).unwrap()));
+                }
+            },
+            (1, 1, 0) => {              // 64 bit
+                println!("RIP : 0x{:016x}", self.ip.get_rip());
+
+                let gpreg_name = ["RAX", "RCX", "RDX", "RBX", "RSP", "RBP", "RSI", "RDI", "R8 ", "R9 ", "R10", "R11", "R12", "R13", "R14", "R15"];
+                for i in 0..gpreg_name.len() {
+                    println!("{} : 0x{:016x}", gpreg_name[i], self.gpregs.get64(GpReg64::try_from(i).unwrap()));
+                }
+            },
+            _ => {},
         }
+        println!("{:?}\n", self.rflags);
+
+        let sgreg_name = ["ES", "CS", "SS", "DS", "FS", "GS"];
+        for i in 0..sgreg_name.len() {
+            let sgreg = self.sgregs.get(SgReg::try_from(i).unwrap());
+            println!("{} : {:x?},  {:x?}", sgreg_name[i], sgreg.selector, sgreg.cache);
+        }
+        println!("");
+
+        println!("{:x?}", self.cregs.0);
+        println!("{:x?}", self.cregs.3);
+        println!("{:x?}", self.cregs.4);
+        println!("");
+
+        println!("GDTR : {:x?}", self.dtregs.gdtr);
+        println!("IDTR : {:x?}", self.dtregs.idtr);
+        println!("LDTR : {:x?}", self.dtregs.ldtr);
+        println!("TR   : {:x?}", self.dtregs.tr);
 
         println!("");
-    }
- 
-    #[cfg(test)]
-    pub fn test(&mut self) -> () {
-        self.gpregs.set(GpReg64::from(0), 0xdeadbeefcafebabe);
-        self.gpregs.set(GpReg32::EAX, 0x11223344);
-        self.gpregs.set(GpReg8::AH, 0x00);
-        self.gpregs.update(GpReg64::RAX, -0x10);
-        assert_eq!(self.gpregs.get(GpReg64::RAX), 0xdeadbeef11220034);
-
-        // self.gpregs.set(GpReg8l::DIL, 0xff);
-        // assert_eq!(self.gpregs.get(GpReg64::RDI), 0xff);
-
-        self.rflags.from_u64(0xdeadbeef);
-        self.sgregs.selector_mut(SgReg::ES).from_u16(0x114);
     }
 }
