@@ -61,14 +61,14 @@ impl SingleThreadOps for emulator::Emulator {
 
     fn read_registers(&mut self, regs: &mut arch::x86::reg::X86CoreRegs) -> TargetResult<(), Self> {
         let core = &self.ac.core;
-        regs.eax = core.gpregs.get(GpReg32::EAX);
-        regs.ecx = core.gpregs.get(GpReg32::ECX);
-        regs.edx = core.gpregs.get(GpReg32::EDX);
-        regs.ebx = core.gpregs.get(GpReg32::EBX);
-        regs.esi = core.gpregs.get(GpReg32::ESI);
-        regs.edi = core.gpregs.get(GpReg32::EDI);
-        regs.ebp = core.gpregs.get(GpReg32::EBP);
-        regs.esp = core.gpregs.get(GpReg32::ESP);
+        regs.eax = core.gpregs.get32(GpReg32::EAX);
+        regs.ecx = core.gpregs.get32(GpReg32::ECX);
+        regs.edx = core.gpregs.get32(GpReg32::EDX);
+        regs.ebx = core.gpregs.get32(GpReg32::EBX);
+        regs.esi = core.gpregs.get32(GpReg32::ESI);
+        regs.edi = core.gpregs.get32(GpReg32::EDI);
+        regs.ebp = core.gpregs.get32(GpReg32::EBP);
+        regs.esp = core.gpregs.get32(GpReg32::ESP);
 
         regs.eip = core.ip.get_eip();
         regs.eflags = core.rflags.to_u64() as u32;
@@ -84,14 +84,14 @@ impl SingleThreadOps for emulator::Emulator {
 
     fn write_registers(&mut self, regs: &arch::x86::reg::X86CoreRegs) -> TargetResult<(), Self> {
         let core = &mut self.ac.core;
-        core.gpregs.set(GpReg32::EAX, regs.eax);
-        core.gpregs.set(GpReg32::ECX, regs.ecx);
-        core.gpregs.set(GpReg32::EDX, regs.edx);
-        core.gpregs.set(GpReg32::EBX, regs.ebx);
-        core.gpregs.set(GpReg32::ESI, regs.esi);
-        core.gpregs.set(GpReg32::EDI, regs.edi);
-        core.gpregs.set(GpReg32::EBP, regs.ebp);
-        core.gpregs.set(GpReg32::ESP, regs.esp);
+        core.gpregs.set32(GpReg32::EAX, regs.eax);
+        core.gpregs.set32(GpReg32::ECX, regs.ecx);
+        core.gpregs.set32(GpReg32::EDX, regs.edx);
+        core.gpregs.set32(GpReg32::EBX, regs.ebx);
+        core.gpregs.set32(GpReg32::ESI, regs.esi);
+        core.gpregs.set32(GpReg32::EDI, regs.edi);
+        core.gpregs.set32(GpReg32::EBP, regs.ebp);
+        core.gpregs.set32(GpReg32::ESP, regs.esp);
 
         core.ip.set_eip(regs.eip);
         core.rflags.from_u64(regs.eflags as u64);
@@ -110,14 +110,14 @@ impl SingleThreadOps for emulator::Emulator {
         let core = &self.ac.core;
         let reg_val = match reg_id {
             X86CoreRegId::Eip => Some(core.ip.get_eip()),
-            X86CoreRegId::Eax => Some(core.gpregs.get(GpReg32::EAX)),
-            X86CoreRegId::Ebx => Some(core.gpregs.get(GpReg32::EBX)),
-            X86CoreRegId::Ecx => Some(core.gpregs.get(GpReg32::ECX)),
-            X86CoreRegId::Edx => Some(core.gpregs.get(GpReg32::EDX)),
-            X86CoreRegId::Edi => Some(core.gpregs.get(GpReg32::EDI)),
-            X86CoreRegId::Esi => Some(core.gpregs.get(GpReg32::ESI)),
-            X86CoreRegId::Ebp => Some(core.gpregs.get(GpReg32::EBP)),
-            X86CoreRegId::Esp => Some(core.gpregs.get(GpReg32::ESP)),
+            X86CoreRegId::Eax => Some(core.gpregs.get32(GpReg32::EAX)),
+            X86CoreRegId::Ebx => Some(core.gpregs.get32(GpReg32::EBX)),
+            X86CoreRegId::Ecx => Some(core.gpregs.get32(GpReg32::ECX)),
+            X86CoreRegId::Edx => Some(core.gpregs.get32(GpReg32::EDX)),
+            X86CoreRegId::Edi => Some(core.gpregs.get32(GpReg32::EDI)),
+            X86CoreRegId::Esi => Some(core.gpregs.get32(GpReg32::ESI)),
+            X86CoreRegId::Ebp => Some(core.gpregs.get32(GpReg32::EBP)),
+            X86CoreRegId::Esp => Some(core.gpregs.get32(GpReg32::ESP)),
             _ => None,
         };
 
@@ -137,14 +137,14 @@ impl SingleThreadOps for emulator::Emulator {
         let core = &mut self.ac.core;
         match reg_id {
             X86CoreRegId::Eip => core.ip.set_eip(w),
-            X86CoreRegId::Eax => core.gpregs.set(GpReg32::EAX, w),
-            X86CoreRegId::Ebx => core.gpregs.set(GpReg32::EBX, w),
-            X86CoreRegId::Ecx => core.gpregs.set(GpReg32::ECX, w),
-            X86CoreRegId::Edx => core.gpregs.set(GpReg32::EDX, w),
-            X86CoreRegId::Edi => core.gpregs.set(GpReg32::EDI, w),
-            X86CoreRegId::Esi => core.gpregs.set(GpReg32::ESI, w),
-            X86CoreRegId::Ebp => core.gpregs.set(GpReg32::EBP, w),
-            X86CoreRegId::Esp => core.gpregs.set(GpReg32::ESP, w),
+            X86CoreRegId::Eax => core.gpregs.set32(GpReg32::EAX, w),
+            X86CoreRegId::Ebx => core.gpregs.set32(GpReg32::EBX, w),
+            X86CoreRegId::Ecx => core.gpregs.set32(GpReg32::ECX, w),
+            X86CoreRegId::Edx => core.gpregs.set32(GpReg32::EDX, w),
+            X86CoreRegId::Edi => core.gpregs.set32(GpReg32::EDI, w),
+            X86CoreRegId::Esi => core.gpregs.set32(GpReg32::ESI, w),
+            X86CoreRegId::Ebp => core.gpregs.set32(GpReg32::EBP, w),
+            X86CoreRegId::Esp => core.gpregs.set32(GpReg32::ESP, w),
             _ => {},
         };
         Ok(())

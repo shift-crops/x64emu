@@ -47,6 +47,12 @@ impl Emulator {
         }
     }
 
+    pub fn run(&mut self) -> () {
+        loop {
+            self.step();
+        }
+    }
+
     pub fn step(&mut self) -> Option<Event> {
         debug!("IP : 0x{:016x}", self.ac.core.ip.get_rip());
         if let Err(err) = self.inst.fetch_exec(&mut self.ac) {
