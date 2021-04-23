@@ -11,6 +11,8 @@ mod hardware;
 mod interface;
 
 use std::env;
+use interface::gdbserver;
+use gdbstub::{Connection, GdbStub};
 
 fn main() {
     logger::init();
@@ -25,6 +27,10 @@ fn main() {
     let img = if args.len() > 1 { args[1].clone() } else { "/tmp/test".to_string() };
     emu.load_binfile(0x7c00, img).expect("Failed to load binary");
 
+    let connection: Box<dyn Connection<Error = std::io::Error>> = Box::new(gdbserver::wait_for_tcp(9001).expect("wait error"));
+    let mut debugger = GdbStub::new(connection);
+
+    debugger.run(&mut emu).expect("debugger error");
     loop {
         emu.step();
     }
