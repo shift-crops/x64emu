@@ -25,19 +25,35 @@ pub enum CPUException {
 }
 
 pub struct Emulator {
-    ac: access::Access,
+    pub ac: access::Access,
     inst: instruction::Instruction,
+    pub breakpoints: Vec<u32>,
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum Event {
+    Halted,
+    Break,
+    WatchWrite(u32),
+    WatchRead(u32),
 }
 
 impl Emulator {
     pub fn new(hw: hardware::Hardware) -> Self {
-        Self {
+        Emulator {
             ac: access::Access::new(hw),
             inst: instruction::Instruction::new(),
+            breakpoints: Vec::new(),
         }
     }
 
-    pub fn step(&mut self) -> () {
+    pub fn run(&mut self) -> () {
+        loop {
+            self.step();
+        }
+    }
+
+    pub fn step(&mut self) -> Option<Event> {
         debug!("IP : 0x{:016x}", self.ac.core.ip.get_rip());
         if let Err(err) = self.inst.fetch_exec(&mut self.ac) {
             match err {
@@ -47,6 +63,11 @@ impl Emulator {
                 }
             }
         }
+
+        if self.breakpoints.contains(&(self.ac.core.ip.get_eip())) {
+            return Some(Event::Break);
+        }
+        None
     }
 
     pub fn map_binary(&mut self, addr: usize, bin: &[u8]) -> Result<(), Box<dyn error::Error>> {

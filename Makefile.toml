@@ -2,7 +2,7 @@
 description = "Build x64emu"
 category = "Build"
 command = "cargo"
-args = ["build", "--all-features"]
+args = ["build", "--all-features", "-${@}"]
 dependencies = ["bios"]
 
 [tasks.bios]
@@ -15,7 +15,7 @@ args = ["-C", "${CARGO_MAKE_WORKSPACE_WORKING_DIRECTORY}/src/bios"]
 description = "Test x64emu"
 category = "Test"
 command = "cargo"
-args = ["test", "--all-features"]
+args = ["test", "--all-features", "-${@}"]
 
 [tasks.clean]
 category = "Clean"
