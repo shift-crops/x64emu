@@ -283,7 +283,7 @@ impl<'a> super::Exec<'a> {
             (4..=5, _, 0) => (Some(SgReg::SS), get_gpreg!(self, GpReg64, sib.base)?),
             _ => (None, get_gpreg!(self, GpReg64, (rex.b<<3) + sib.base)?),
         };
-        let idx = get_gpreg!(self, GpReg64, (rex.x<<3) + sib.index)?;
+        let idx = if sib.scale > 0 { get_gpreg!(self, GpReg64, (rex.x<<3) + sib.index)? } else { 0 };
 
         Ok((seg, base + idx * (1<<sib.scale)))
     }
