@@ -100,6 +100,7 @@ pub fn init_cmn_opcode(op: &mut super::OpcodeArr){
     //setcmnop!(0x82, code_82,       OpFlags::MODRM | OpFlags::IMM8);
     //setcmnop!(0xc0, code_c0,       OpFlags::MODRM | OpFlags::IMM8);
     //setcmnop!(0xf6, code_f6,       OpFlags::MODRM);
+    setcmnop!(0x0f00, code_0f00,   OpFlags::MODRM);
 }
 
 add_dst_src!(8, rm8, r8);
@@ -200,3 +201,22 @@ and_dst_src!(8, rm8, imm8);
 sub_dst_src!(8, rm8, imm8);
 xor_dst_src!(8, rm8, imm8);
 cmp_dst_src!(8, rm8, imm8);
+
+fn code_0f00(exec: &mut exec::Exec) -> Result<(), EmuException> {
+    match exec.idata.modrm.reg as u16 {
+        2 => lldt_rm16(exec)?,
+        3 => ltr_rm16(exec)?,
+        _ => { return Err(EmuException::NotImplementedOpcode); },
+    }
+    Ok(())
+}
+
+fn lldt_rm16(exec: &mut exec::Exec) -> Result<(), EmuException> {
+    let sel = exec.get_rm16()?;
+    exec.set_ldtr(sel)
+}
+
+fn ltr_rm16(exec: &mut exec::Exec) -> Result<(), EmuException> {
+    let sel = exec.get_rm16()?;
+    exec.set_tr(sel)
+}

@@ -199,8 +199,8 @@ impl<'a> super::Exec<'a> {
         self.ac.set_data64((SgReg::DS, self.idata.moffs), v)
     }
 
-    pub fn get_m(&self) -> Result<u64, EmuException> {
-        Ok(Self::addr_modrm(self)?.1)
+    pub fn get_m(&self) -> Result<(SgReg, u64), EmuException> {
+        Ok(Self::addr_modrm(self)?)
     }
 
     fn addr_modrm(&self) -> Result<(SgReg, u64), EmuException> {

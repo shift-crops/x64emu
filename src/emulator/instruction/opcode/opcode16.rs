@@ -196,9 +196,9 @@ impl super::OpcodeTrait for Opcode16 {
         setop!(0xd3, code_d3, OpFlags::MODRM);
         setop!(0xf7, code_f7, OpFlags::MODRM);
         setop!(0xff, code_ff, OpFlags::MODRM);
-        setop!(0x0f00, code_0f00, OpFlags::MODRM);
-        setop!(0x0f01, code_0f01, OpFlags::MODRM);
         */
+        // 0x0f00 : code_0f00
+        setop!(0x0f01, code_0f01, OpFlags::MODRM);
     }
 
     fn exec(&self, exec: &mut exec::Exec) -> Result<(), EmuException> {
@@ -242,16 +242,8 @@ impl Opcode16 {
     cmp_dst_src!(16, r16, rm16);
     cmp_dst_src!(16, ax, imm16);
 
-    fn inc_opr16(exec: &mut exec::Exec) -> Result<(), EmuException> {
-        let v = exec.get_opr16()?;
-        exec.set_opr16(v+1)
-    }
-
-    fn dec_opr16(exec: &mut exec::Exec) -> Result<(), EmuException> {
-        let v = exec.get_opr16()?;
-        exec.set_opr16(v-1)
-    }
-
+    inc_opr!(16);
+    dec_opr!(16);
     push_src!(16, opr16);
     pop_dst!(16, opr16);
 
@@ -410,4 +402,31 @@ impl Opcode16 {
     sub_dst_src!(16, rm16, imm8);
     xor_dst_src!(16, rm16, imm8);
     cmp_dst_src!(16, rm16, imm8);
+
+    fn code_0f01(exec: &mut exec::Exec) -> Result<(), EmuException> {
+        match exec.idata.modrm.reg as u16 {
+            2 => Opcode16::lgdt_m16_24(exec)?,
+            3 => Opcode16::lidt_m16_24(exec)?,
+            _ => { return Err(EmuException::NotImplementedOpcode); },
+        }
+        Ok(())
+    }
+
+    fn lgdt_m16_24(exec: &mut exec::Exec) -> Result<(), EmuException> {
+        let (sg, adr) = exec.get_m()?;
+
+        let limit = exec.ac.get_data16((sg,adr))?;
+        let base  = exec.ac.get_data32((sg,adr+2))? & ((1<<24)-1);
+        debug!("lgdt: base = {:04x}, limit = {:02x}", base, limit);
+        exec.set_gdtr(base as u64, limit)
+    }
+
+    fn lidt_m16_24(exec: &mut exec::Exec) -> Result<(), EmuException> {
+        let (sg, adr) = exec.get_m()?;
+
+        let limit = exec.ac.get_data16((sg,adr))?;
+        let base  = exec.ac.get_data32((sg,adr+2))? & ((1<<24)-1);
+        debug!("lidt: base = {:04x}, limit = {:02x}", base, limit);
+        exec.set_idtr(base as u64, limit)
+    }
 }

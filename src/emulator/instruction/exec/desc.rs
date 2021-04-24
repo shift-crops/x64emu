@@ -271,14 +271,15 @@ impl<'a> super::Exec<'a> {
         selector.from_u16(sel);
 
         let dt_index = (selector.IDX as u32) << 3;
-        let desc: Desc = Default::default();
+        let mut desc: [u8;16] = [0;16];
 
         if dt_index > 0 {
             let (dt_base, dt_limit) = if !gonly && selector.TI == 1 { &core.dtregs.ldtr.cache } else { &core.dtregs.gdtr }.get();
             if dt_index > dt_limit { return Err(EmuException::CPUException(CPUException::GP)) }
-            self.ac.read_data_l(&desc as *const _ as *mut _, dt_base + dt_index as u64, std::mem::size_of::<Desc>())?;
+            self.ac.read_data_l(desc.as_mut_ptr() as *mut _, dt_base + dt_index as u64, desc.len())?;
+            desc.reverse();
         }
-        Ok(desc)
+        Ok(Desc::unpack(&desc).unwrap_or(Default::default()))
     }
 
     fn set_segment_real(&mut self, reg: SgReg, sel: u16) -> Result<(), EmuException> {
@@ -344,14 +345,14 @@ impl<'a> super::Exec<'a> {
         Ok(())
     }
 
-    fn set_gdtr(&mut self, base: u64, limit: u16) -> Result<(), EmuException> {
+    pub fn set_gdtr(&mut self, base: u64, limit: u16) -> Result<(), EmuException> {
         let gdtr = &mut self.ac.core.dtregs.gdtr;
         gdtr.base = base;
         gdtr.limit = limit as u32;
         Ok(())
     }
 
-    fn set_idtr(&mut self, base: u64, limit: u16) -> Result<(), EmuException> {
+    pub fn set_idtr(&mut self, base: u64, limit: u16) -> Result<(), EmuException> {
         let idtr = &mut self.ac.core.dtregs.idtr;
         idtr.base = base;
         idtr.limit = limit as u32;
@@ -362,7 +363,7 @@ impl<'a> super::Exec<'a> {
         Ok(self.ac.core.dtregs.ldtr.selector)
     }
 
-    fn set_ldtr(&mut self, sel: u16) -> Result<(), EmuException> {
+    pub fn set_ldtr(&mut self, sel: u16) -> Result<(), EmuException> {
         let desc = self.obtain_descriptor(sel, true)?;
         let ldtr = &mut self.ac.core.dtregs.ldtr;
         ldtr.cache       = DescTbl::from(desc);
@@ -375,7 +376,7 @@ impl<'a> super::Exec<'a> {
         Ok(self.ac.core.dtregs.tr.selector)
     }
 
-    fn set_tr(&mut self, sel: u16) -> Result<(), EmuException> {
+    pub fn set_tr(&mut self, sel: u16) -> Result<(), EmuException> {
         let desc = self.obtain_descriptor(sel, true)?;
         let tr = &mut self.ac.core.dtregs.tr;
         tr.cache    = DescTbl::from(desc);

@@ -105,6 +105,24 @@ macro_rules! cmp_dst_src {
     } };
 }
 
+macro_rules! inc_opr {
+    ( $size:expr ) => { paste::item! {
+        fn [<inc_opr $size>](exec: &mut exec::Exec) -> Result<(), EmuException> {
+            let v = exec.[<get_opr $size>]()?;
+            exec.[<set_opr $size>](v+1)
+        }
+    } };
+}
+
+macro_rules! dec_opr {
+    ( $size:expr ) => { paste::item! {
+        fn [<dec_opr $size>](exec: &mut exec::Exec) -> Result<(), EmuException> {
+            let v = exec.[<get_opr $size>]()?;
+            exec.[<set_opr $size>](v-1)
+        }
+    } };
+}
+
 macro_rules! push_src {
     ( $size:expr, $src:ident ) => { paste::item! {
         fn [<push_ $src>](exec: &mut exec::Exec) -> Result<(), EmuException> {
@@ -197,7 +215,7 @@ macro_rules! mov_dst_src {
 macro_rules! lea_dst_src {
     ( $size:expr, $dst:ident, $src:ident ) => { paste::item! {
         fn [<lea_ $dst _ $src>](exec: &mut exec::Exec) -> Result<(), EmuException> {
-            let src: u!($size) = exec.get_m()? as u!($size);
+            let src: u!($size) = exec.get_m()?.1 as u!($size);
             debug!("lea: {:02x}", src);
             exec.[<set_ $dst>](src)
         }
