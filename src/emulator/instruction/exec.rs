@@ -2,6 +2,7 @@ mod basic;
 mod flag;
 mod reg_mem;
 mod desc;
+mod string;
 mod misc;
 
 use super::parse;

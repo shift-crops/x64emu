@@ -114,19 +114,18 @@ impl super::OpcodeTrait for Opcode16 {
         setop!(0xa1, mov_ax_moffs16,    OpFlags::MOFFS);
         // 0xa2 : mov_moffs8_al
         setop!(0xa3, mov_moffs16_ax,    OpFlags::MOFFS);
-            
-        setop!(0xa4, movs_m8_m8,        OpFlags::NONE);
-        setop!(0xa5, movs_m16_m16,      OpFlags::NONE);
-        setop!(0xa6, cmps_m8_m8,        OpFlags::NONE);
-        setop!(0xa7, cmps_m16_m16,      OpFlags::NONE);
+        setop!(0xa4, movs_m8,           OpFlags::NONE);
+        setop!(0xa5, movs_m16,          OpFlags::NONE);
+        setop!(0xa6, cmps_m8,           OpFlags::NONE);
+        setop!(0xa7, cmps_m16,          OpFlags::NONE);
         // 0xa8 : test_al_imm8
         setop!(0xa9, test_ax_imm16,     OpFlags::IMM16);
-        setop!(0xaa, stos_m8_al,        OpFlags::NONE);
-        setop!(0xab, stos_m16_ax,       OpFlags::NONE);
-        setop!(0xac, lods_al_m8,        OpFlags::NONE);
-        setop!(0xad, lods_ax_m16,       OpFlags::NONE);
-        setop!(0xae, scas_al_m8,        OpFlags::NONE);
-        setop!(0xaf, scas_ax_m16,       OpFlags::NONE);
+        setop!(0xaa, stos_m8,           OpFlags::NONE);
+        setop!(0xab, stos_m16,          OpFlags::NONE);
+        setop!(0xac, lods_m8,           OpFlags::NONE);
+        setop!(0xad, lods_m16,          OpFlags::NONE);
+        setop!(0xae, scas_m8,           OpFlags::NONE);
+        setop!(0xaf, scas_m16,          OpFlags::NONE);
             
         // 0xb0-0xb7 : mov_r8_imm
         for i in 0..8 {
@@ -314,142 +313,19 @@ impl Opcode16 {
 
     mov_dst_src!(16, ax, moffs16);
     mov_dst_src!(16, moffs16, ax);
-
-    fn movs_m8_m8(exec: &mut exec::Exec) -> Result<(), EmuException> {
-        let seg = exec.select_segment(SgReg::DS)?;
-        let step = if exec.ac.core.rflags.is_direction() { -1 } else { 1 };
-        loop {
-            let src = exec.ac.get_data8((seg, exec.ac.get_gpreg(GpReg16::SI)? as u64))?;
-            exec.ac.set_data8((SgReg::ES, exec.ac.get_gpreg(GpReg16::DI)? as u64), src)?;
-
-            exec.ac.update_gpreg(GpReg16::SI, step)?;
-            exec.ac.update_gpreg(GpReg16::DI, step)?;
-            if !exec.repeat_cx()? { break }
-        }
-        Ok(())
-    }
-
-    fn movs_m16_m16(exec: &mut exec::Exec) -> Result<(), EmuException> {
-        let seg = exec.select_segment(SgReg::DS)?;
-        let step = if exec.ac.core.rflags.is_direction() { -2 } else { 2 };
-        loop {
-            let src = exec.ac.get_data16((seg, exec.ac.get_gpreg(GpReg16::SI)? as u64))?;
-            exec.ac.set_data16((SgReg::ES, exec.ac.get_gpreg(GpReg16::DI)? as u64), src)?;
-
-            exec.ac.update_gpreg(GpReg16::SI, step)?;
-            exec.ac.update_gpreg(GpReg16::DI, step)?;
-            if !exec.repeat_cx()? { break }
-        }
-        Ok(())
-    }
-
-    fn cmps_m8_m8(exec: &mut exec::Exec) -> Result<(), EmuException> {
-        let seg = exec.select_segment(SgReg::DS)?;
-        let step = if exec.ac.core.rflags.is_direction() { -1 } else { 1 };
-        loop {
-            let src = exec.ac.get_data8((seg, exec.ac.get_gpreg(GpReg16::SI)? as u64))?;
-            let dst = exec.ac.get_data8((SgReg::ES, exec.ac.get_gpreg(GpReg16::DI)? as u64))?;
-
-            exec.update_rflags_sub(src, dst)?;
-            exec.ac.update_gpreg(GpReg16::SI, step)?;
-            exec.ac.update_gpreg(GpReg16::DI, step)?;
-            if !exec.repeat_cx()? { break }
-        }
-        Ok(())
-    }
-
-    fn cmps_m16_m16(exec: &mut exec::Exec) -> Result<(), EmuException> {
-        let seg = exec.select_segment(SgReg::DS)?;
-        let step = if exec.ac.core.rflags.is_direction() { -2 } else { 2 };
-        loop {
-            let src = exec.ac.get_data16((seg, exec.ac.get_gpreg(GpReg16::SI)? as u64))?;
-            let dst = exec.ac.get_data16((SgReg::ES, exec.ac.get_gpreg(GpReg16::DI)? as u64))?;
-
-            exec.update_rflags_sub(src, dst)?;
-            exec.ac.update_gpreg(GpReg16::SI, step)?;
-            exec.ac.update_gpreg(GpReg16::DI, step)?;
-            if !exec.repeat_cx()? { break }
-        }
-        Ok(())
-    }
+    movs_dst_src!(16, 8);
+    movs_dst_src!(16, 16);
+    cmps_src_dst!(16, 8);
+    cmps_src_dst!(16, 16);
 
     test_dst_src!(16, ax, imm16);
+    stos_dst_src!(16, 8);
+    stos_dst_src!(16, 16);
+    lods_dst_src!(16, 8);
+    lods_dst_src!(16, 16);
+    scas_src_dst!(16, 8);
+    scas_src_dst!(16, 16);
 
-    fn stos_m8_al(exec: &mut exec::Exec) -> Result<(), EmuException> {
-        let step = if exec.ac.core.rflags.is_direction() { -1 } else { 1 };
-        loop {
-            let al = exec.get_al()?;
-            exec.ac.set_data8((SgReg::ES, exec.ac.get_gpreg(GpReg16::DI)? as u64), al)?;
-
-            exec.ac.update_gpreg(GpReg16::DI, step)?;
-            if !exec.repeat_cx()? { break }
-        }
-        Ok(())
-    }
-
-    fn stos_m16_ax(exec: &mut exec::Exec) -> Result<(), EmuException> {
-        let step = if exec.ac.core.rflags.is_direction() { -2 } else { 2 };
-        loop {
-            let ax = exec.get_ax()?;
-            exec.ac.set_data16((SgReg::ES, exec.ac.get_gpreg(GpReg16::DI)? as u64), ax)?;
-
-            exec.ac.update_gpreg(GpReg16::DI, step)?;
-            if !exec.repeat_cx()? { break }
-        }
-        Ok(())
-    }
-
-    fn lods_al_m8(exec: &mut exec::Exec) -> Result<(), EmuException> {
-        let seg = exec.select_segment(SgReg::DS)?;
-        let step = if exec.ac.core.rflags.is_direction() { -1 } else { 1 };
-        loop {
-            let src = exec.ac.get_data8((seg, exec.ac.get_gpreg(GpReg16::SI)? as u64))?;
-
-            exec.set_al(src)?;
-            exec.ac.update_gpreg(GpReg16::SI, step)?;
-            if !exec.repeat_cx()? { break }
-        }
-        Ok(())
-    }
-
-    fn lods_ax_m16(exec: &mut exec::Exec) -> Result<(), EmuException> {
-        let seg = exec.select_segment(SgReg::DS)?;
-        let step = if exec.ac.core.rflags.is_direction() { -2 } else { 2 };
-        loop {
-            let src = exec.ac.get_data16((seg, exec.ac.get_gpreg(GpReg16::SI)? as u64))?;
-
-            exec.set_ax(src)?;
-            exec.ac.update_gpreg(GpReg16::SI, step)?;
-            if !exec.repeat_cx()? { break }
-        }
-        Ok(())
-    }
-
-    fn scas_al_m8(exec: &mut exec::Exec) -> Result<(), EmuException> {
-        let step = if exec.ac.core.rflags.is_direction() { -1 } else { 1 };
-        loop {
-            let al  = exec.get_al()?;
-            let dst = exec.ac.get_data8((SgReg::ES, exec.ac.get_gpreg(GpReg16::DI)? as u64))?;
-
-            exec.update_rflags_sub(al, dst)?;
-            exec.ac.update_gpreg(GpReg16::DI, step)?;
-            if !exec.repeat_cx()? { break }
-        }
-        Ok(())
-    }
-
-    fn scas_ax_m16(exec: &mut exec::Exec) -> Result<(), EmuException> {
-        let step = if exec.ac.core.rflags.is_direction() { -2 } else { 2 };
-        loop {
-            let ax  = exec.get_ax()?;
-            let dst = exec.ac.get_data16((SgReg::ES, exec.ac.get_gpreg(GpReg16::DI)? as u64))?;
-
-            exec.update_rflags_sub(ax, dst)?;
-            exec.ac.update_gpreg(GpReg16::DI, step)?;
-            if !exec.repeat_cx()? { break }
-        }
-        Ok(())
-    }
     mov_dst_src!(16, opr16, imm16);
 
     ret!(16);

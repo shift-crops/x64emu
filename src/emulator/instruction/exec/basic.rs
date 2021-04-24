@@ -19,6 +19,15 @@ impl<'a> super::Exec<'a> {
         self.ac.set_gpreg(GpReg16::AX, v)
     }
 
+    pub fn get_eax(&self) -> Result<u32, EmuException> {
+        self.ac.get_gpreg(GpReg32::EAX)
+    }
+
+    pub fn set_eax(&mut self, v: u32) -> Result<(), EmuException> {
+        self.ac.set_gpreg(GpReg32::EAX, v)
+    }
+
+
     pub fn push_u16(&mut self, v: u16) -> Result<(), EmuException> {
         self.ac.update_gpreg(GpReg16::SP, -2)?;
         let sp = self.ac.get_gpreg(GpReg16::SP)? as u64;

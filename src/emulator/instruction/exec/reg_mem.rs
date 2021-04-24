@@ -272,7 +272,7 @@ impl<'a> super::Exec<'a> {
             },
         }
 
-        Ok((self.select_segment(segment.unwrap_or(SgReg::DS))?, addr))
+        Ok((self.pdata.segment.or(segment).unwrap_or(SgReg::DS), addr))
     }
 
     fn addr_sib(&self) -> Result<(Option<SgReg>, u64), EmuException> {

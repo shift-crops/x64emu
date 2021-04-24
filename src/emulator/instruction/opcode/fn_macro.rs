@@ -235,6 +235,51 @@ macro_rules! popf {
     } };
 }
 
+macro_rules! movs_dst_src {
+    ( $opsize:expr, $adsize:expr ) => { paste::item! {
+        pub fn [<movs_m $adsize>](exec: &mut exec::Exec) -> Result<(), EmuException> {
+            exec.[<move_str $adsize>]()?;
+            exec.[<repeat_ $opsize>]()
+        }
+    } };
+}
+
+macro_rules! cmps_src_dst {
+    ( $opsize:expr, $adsize:expr ) => { paste::item! {
+        pub fn [<cmps_m $adsize>](exec: &mut exec::Exec) -> Result<(), EmuException> {
+            exec.[<cmp_str $adsize>]()?;
+            exec.[<repeat_ $opsize>]()
+        }
+    } };
+}
+
+macro_rules! stos_dst_src {
+    ( $opsize:expr, $adsize:expr ) => { paste::item! {
+        pub fn [<stos_m $adsize>](exec: &mut exec::Exec) -> Result<(), EmuException> {
+            exec.[<store_str $adsize>]()?;
+            exec.[<repeat_ $opsize>]()
+        }
+    } };
+}
+
+macro_rules! lods_dst_src {
+    ( $opsize:expr, $adsize:expr ) => { paste::item! {
+        pub fn [<lods_m $adsize>](exec: &mut exec::Exec) -> Result<(), EmuException> {
+            exec.[<load_str $adsize>]()?;
+            exec.[<repeat_ $opsize>]()
+        }
+    } };
+}
+
+macro_rules! scas_src_dst {
+    ( $opsize:expr, $adsize:expr ) => { paste::item! {
+        pub fn [<scas_m $adsize>](exec: &mut exec::Exec) -> Result<(), EmuException> {
+            exec.[<scan_str $adsize>]()?;
+            exec.[<repeat_ $opsize>]()
+        }
+    } };
+}
+
 macro_rules! ret {
     ( $size:expr ) => { paste::item! {
         fn ret(exec: &mut exec::Exec) -> Result<(), EmuException> {
