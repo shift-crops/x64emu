@@ -228,7 +228,7 @@ macro_rules! callf_abs {
             let sel: u16   = exec.[<get_ $sel>]()?;
             let abs: u!($size) = exec.[<get_ $abs>]()? as u!($size);
             debug!("callf: {:04x}:{:04x}", sel, abs);
-            exec.[<callf_u $size>](sel, abs)
+            exec.[<call_far_u $size>](sel, abs)
         }
     } };
 }
@@ -311,7 +311,7 @@ macro_rules! ret {
 macro_rules! retf {
     ( $size:expr ) => { paste::item! {
         fn retf(exec: &mut exec::Exec) -> Result<(), EmuException> {
-            exec.[<retf_u $size>]()
+            exec.[<ret_far_u $size>]()
         }
     } };
 }
@@ -344,7 +344,7 @@ macro_rules! jmpf_abs {
             let sel: u16   = exec.[<get_ $sel>]()?;
             let abs: u!($size) = exec.[<get_ $abs>]()? as u!($size);
             debug!("jmpf: {:04x}:{:04x}", sel, abs);
-            exec.[<jmpf_u $size>](sel, abs)
+            exec.[<jmp_far_u $size>](sel, abs)
         }
     } };
 }

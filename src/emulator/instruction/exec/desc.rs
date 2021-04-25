@@ -87,9 +87,9 @@ impl From<Desc> for DescTbl {
     }
 }
 
-macro_rules! retf {
+macro_rules! ret_far {
     ( $type:ty ) => { paste::item! {
-        pub fn [<retf_ $type>](&mut self) -> Result<(), EmuException> {
+        pub fn [<ret_far_ $type>](&mut self) -> Result<(), EmuException> {
             let new_ip = self.[<pop_ $type>]()?;
             let new_cs = self.[<pop_ $type>]()? as u16;
 
@@ -141,9 +141,9 @@ macro_rules! retf {
     } };
 }
 
-macro_rules! jmpf {
+macro_rules! jmp_far {
     ( $type:ty ) => { paste::item! {
-        pub fn [<jmpf_ $type>](&mut self, sel: u16, abs: $type) -> Result<(), EmuException> {
+        pub fn [<jmp_far_ $type>](&mut self, sel: u16, abs: $type) -> Result<(), EmuException> {
             match self.ac.mode {
                 access::CpuMode::Real => {
                     if abs as u32 > self.ac.get_sgcache(SgReg::CS)?.limit {
@@ -187,9 +187,9 @@ macro_rules! jmpf {
     } };
 }
 
-macro_rules! callf {
+macro_rules! call_far {
     ( $type:ty ) => { paste::item! {
-        pub fn [<callf_ $type>](&mut self, sel: u16, abs: $type) -> Result<(), EmuException> {
+        pub fn [<call_far_ $type>](&mut self, sel: u16, abs: $type) -> Result<(), EmuException> {
             match self.ac.mode {
                 access::CpuMode::Real => {
                     if abs as u32 > self.ac.get_sgcache(SgReg::CS)?.limit {
@@ -238,17 +238,17 @@ macro_rules! callf {
 }
 
 impl<'a> super::Exec<'a> {
-    retf!(u16);
-    retf!(u32);
-    retf!(u64);
+    ret_far!(u16);
+    ret_far!(u32);
+    ret_far!(u64);
 
-    jmpf!(u16);
-    jmpf!(u32);
-    jmpf!(u64);
+    jmp_far!(u16);
+    jmp_far!(u32);
+    jmp_far!(u64);
 
-    callf!(u16);
-    callf!(u32);
-    callf!(u64);
+    call_far!(u16);
+    call_far!(u32);
+    call_far!(u64);
 
     pub fn mov_to_sreg(&mut self, reg: SgReg, sel: u16) -> Result<(), EmuException> {
         if reg == SgReg::CS {
@@ -284,7 +284,18 @@ impl<'a> super::Exec<'a> {
 
     fn set_segment_real(&mut self, reg: SgReg, sel: u16) -> Result<(), EmuException> {
         self.ac.get_sgselector_mut(reg)?.from_u16(sel);
-        self.ac.get_sgcache_mut(reg)?.base = (sel as u64) << 4;
+        let sg = self.ac.get_sgcache_mut(reg)?;
+        sg.base = (sel as u64) << 4;
+        sg.limit = 0xffff;
+        sg.L = 0;
+        sg.DB = 0;
+
+        match reg {
+            SgReg::CS => self.update_opadsize()?,
+            SgReg::SS => self.update_stacksize()?,
+            _ => {},
+        }
+
         Ok(())
     }
 
@@ -294,10 +305,7 @@ impl<'a> super::Exec<'a> {
         let ty   = desc.get_type();
 
         match (reg, ty) {
-            (_, Some(DescType::System(_))) => {
-                return Err(EmuException::CPUException(CPUException::GP));
-            },
-            (SgReg::CS, None) | (SgReg::SS, None) => {
+            (_, Some(DescType::System(_))) | (SgReg::CS, None) | (SgReg::SS, None) => {
                 return Err(EmuException::CPUException(CPUException::GP));
             },
             (SgReg::CS, Some(DescType::Segment(t))) => {
@@ -341,7 +349,13 @@ impl<'a> super::Exec<'a> {
 
         self.ac.get_sgselector_mut(reg)?.from_u16(sel);
         *self.ac.get_sgcache_mut(reg)? = SgDescCache::from(desc);
-        if reg == SgReg::CS { self.update_opadsize()?; }
+
+        match reg {
+            SgReg::CS => self.update_opadsize()?,
+            SgReg::SS => self.update_stacksize()?,
+            _ => {},
+        }
+
         Ok(())
     }
 

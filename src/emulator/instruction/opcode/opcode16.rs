@@ -295,7 +295,7 @@ impl Opcode16 {
 
     fn cwd(exec: &mut exec::Exec) -> Result<(), EmuException> {
         let ax = exec.ac.get_gpreg(GpReg16::AX)? as i16;
-        exec.ac.set_gpreg(GpReg16::DX, if ax < 0 { 0xffff } else { 0 })
+        exec.ac.set_gpreg(GpReg16::DX, if ax < 0 { u16::MAX } else { 0 })
     }
 
     callf_abs!(16, ptr16, imm16);

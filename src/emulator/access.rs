@@ -24,6 +24,7 @@ pub struct OpAdSize {
 pub struct Access {
     pub mode: CpuMode,
     pub size: OpAdSize,
+    pub stsz: AcsSize,
     pub core: hardware::processor::Processor,
     pub mem: hardware::memory::Memory,
     a20gate: bool,
@@ -34,6 +35,7 @@ impl Access {
         Self {
             mode: CpuMode::Real,
             size: Default::default(),
+            stsz: Default::default(),
             core: hw.core,
             mem: hw.mem,
             a20gate: false,

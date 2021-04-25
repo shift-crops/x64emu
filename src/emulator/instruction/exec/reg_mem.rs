@@ -248,7 +248,7 @@ impl<'a> super::Exec<'a> {
                     _      => (None, get_gpreg!(self, GpReg32, rm as usize)? as u64),
                 };
                 segment = sgad.0;
-                addr += sgad.1;
+                addr += sgad.1 as u32 as u64;
             },
             access::AcsSize::BIT64 => {
                 let b = self.pdata.rex.b;
@@ -283,7 +283,7 @@ impl<'a> super::Exec<'a> {
             (4..=5, _, 0) => (Some(SgReg::SS), get_gpreg!(self, GpReg64, sib.base)?),
             _ => (None, get_gpreg!(self, GpReg64, (rex.b<<3) + sib.base)?),
         };
-        let idx = if sib.scale > 0 { get_gpreg!(self, GpReg64, (rex.x<<3) + sib.index)? } else { 0 };
+        let idx = if sib.index == 4 { 0 } else { get_gpreg!(self, GpReg64, (rex.x<<3) + sib.index)? };
 
         Ok((seg, base + idx * (1<<sib.scale)))
     }

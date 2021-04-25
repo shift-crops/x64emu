@@ -76,8 +76,8 @@ impl super::OpcodeTrait for Opcode32 {
             setop!(0x58+i, pop_opr32,   OpFlags::NONE);
         }
 
-        setop!(0x60, pusha,             OpFlags::NONE);
-        setop!(0x61, popa,              OpFlags::NONE);
+        setop!(0x60, pushad,            OpFlags::NONE);
+        setop!(0x61, popad,             OpFlags::NONE);
 
         setop!(0x68, push_imm32,            OpFlags::IMM32);
         setop!(0x69, imul_r32_rm32_imm32,   OpFlags::MODRM | OpFlags::IMM32);
@@ -248,8 +248,8 @@ impl Opcode32 {
     push_src!(32, opr32);
     pop_dst!(32, opr32);
 
-    fn pusha(exec: &mut exec::Exec) -> Result<(), EmuException> {
-        debug!("pusha");
+    fn pushad(exec: &mut exec::Exec) -> Result<(), EmuException> {
+        debug!("pushad");
         let sp = exec.ac.get_gpreg(GpReg32::ESP)?;
         for i in 0..4 {
             exec.push_u32(exec.ac.get_gpreg(GpReg32::try_from(i).unwrap())?)?;
@@ -261,8 +261,8 @@ impl Opcode32 {
         Ok(())
     }
 
-    fn popa(exec: &mut exec::Exec) -> Result<(), EmuException> {
-        debug!("popa");
+    fn popad(exec: &mut exec::Exec) -> Result<(), EmuException> {
+        debug!("popad");
         for i in (5..8).rev() {
             let v = exec.pop_u32()?;
             exec.ac.set_gpreg(GpReg32::try_from(i).unwrap(), v)?;
@@ -296,7 +296,7 @@ impl Opcode32 {
 
     fn cwd(exec: &mut exec::Exec) -> Result<(), EmuException> {
         let eax = exec.ac.get_gpreg(GpReg32::EAX)? as i32;
-        exec.ac.set_gpreg(GpReg32::EDX, if eax < 0 { 0xffffffff } else { 0 })
+        exec.ac.set_gpreg(GpReg32::EDX, if eax < 0 { u32::MAX } else { 0 })
     }
 
     callf_abs!(32, ptr16, imm32);
@@ -326,11 +326,11 @@ impl Opcode32 {
     mov_dst_src!(32, rm32, imm32);
 
     fn leave(exec: &mut exec::Exec) -> Result<(), EmuException> {
-        let bp = exec.ac.get_gpreg(GpReg32::EBP)?;
-        exec.ac.set_gpreg(GpReg32::ESP, bp)?;
-        let new_bp = exec.pop_u32()?;
-        debug!("leave: sp <- 0x{:04x}, bp <- 0x{:04x}", bp, new_bp);
-        exec.ac.set_gpreg(GpReg32::EBP, new_bp)
+        let ebp = exec.ac.get_gpreg(GpReg32::EBP)?;
+        exec.ac.set_gpreg(GpReg32::ESP, ebp)?;
+        let new_ebp = exec.pop_u32()?;
+        debug!("leave: esp <- 0x{:04x}, ebp <- 0x{:04x}", ebp, new_ebp);
+        exec.ac.set_gpreg(GpReg32::EBP, new_ebp)
     }
 
     retf!(32);

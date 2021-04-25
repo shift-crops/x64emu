@@ -49,6 +49,18 @@ impl<'a> Exec<'a> {
         ac.size = access::OpAdSize { op, ad };
         Ok(())
     }
+
+    fn update_stacksize(&mut self) -> Result<(), EmuException> {
+        let ss = &self.ac.core.sgregs.get(SgReg::SS).cache;
+
+        self.ac.stsz = match (ss.L, ss.DB) {
+            (0, 0) => access::AcsSize::BIT16,
+            (0, 1) => access::AcsSize::BIT32,
+            (1, 0) => access::AcsSize::BIT64,
+            _ => return Err(EmuException::CPUException(CPUException::SS)),
+        };
+        Ok(())
+    }
 }
 
 #[cfg(test)]
