@@ -1,6 +1,7 @@
 use crate::emulator::access::register::*;
 use crate::emulator::instruction::exec;
 use crate::emulator::instruction::opcode::*;
+use crate::emulator::interrupt::Event;
 
 pub fn init_cmn_opcode(op: &mut super::OpcodeArr){
     macro_rules! setcmnop {
@@ -60,9 +61,10 @@ pub fn init_cmn_opcode(op: &mut super::OpcodeArr){
         setcmnop!(0xb0+i, mov_opr8_imm8, OpFlags::IMM8);
     }
     setcmnop!(0xc6, mov_rm8_imm8,  OpFlags::MODRM | OpFlags::IMM8);
-    /*
     setcmnop!(0xcc, int3,          OpFlags::NONE);
     setcmnop!(0xcd, int_imm8,      OpFlags::IMM8);
+    setcmnop!(0xce, into,          OpFlags::NONE);
+    /*
     setcmnop!(0xe4, in_al_imm8,    OpFlags::IMM8);
     setcmnop!(0xe6, out_imm8_al,   OpFlags::IMM8);
     */
@@ -163,6 +165,10 @@ test_dst_src!(8, al, imm8);
 mov_dst_src!(8, opr8, imm8);
 
 mov_dst_src!(8, rm8, imm8);
+
+fn int3(_exec: &mut exec::Exec) -> Result<(), EmuException> { Err(EmuException::Interrupt(Event::Software(3))) }
+fn int_imm8(exec: &mut exec::Exec) -> Result<(), EmuException> { Err(EmuException::Interrupt(Event::Software(exec.get_imm8()?))) }
+fn into(_exec: &mut exec::Exec) -> Result<(), EmuException> { Err(EmuException::Interrupt(Event::Software(4))) }
 
 jmp_rel!(8, imm8);
 

@@ -1,6 +1,7 @@
 pub mod register;
 mod memory;
 mod msr;
+pub mod descriptor;
 
 use crate::hardware;
 

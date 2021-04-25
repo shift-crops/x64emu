@@ -1,6 +1,6 @@
+mod regmem;
 mod basic;
 mod flag;
-mod reg_mem;
 mod desc;
 mod string;
 mod misc;
@@ -73,12 +73,12 @@ pub fn exec_test() {
     let mut ac = super::access::Access::new(hw);
     let parse: parse::ParseInstr = Default::default();
 
-    let mut exe = Exec::new(&mut ac, &parse);
+    let exe = Exec::new(&mut ac, &parse);
     exe.ac.set_gpreg(GpReg64::RSP, 0xf20).unwrap();
-    exe.push_u64(0xdeadbeef).unwrap();
-    exe.push_u64(0xcafebabe).unwrap();
-    assert_eq!(exe.pop_u64().unwrap(), 0xcafebabe);
-    assert_eq!(exe.pop_u64().unwrap(), 0xdeadbeef);
+    exe.ac.push_u64(0xdeadbeef).unwrap();
+    exe.ac.push_u64(0xcafebabe).unwrap();
+    assert_eq!(exe.ac.pop_u64().unwrap(), 0xcafebabe);
+    assert_eq!(exe.ac.pop_u64().unwrap(), 0xdeadbeef);
 
     let mut x = exe.ac.mem.as_mut_ptr(0xf20).unwrap() as *mut u64;
     unsafe {
@@ -86,6 +86,6 @@ pub fn exec_test() {
         x = (x as usize + 8) as *mut u64;
         *x = 0x55667788;
     }
-    assert_eq!(exe.pop_u64().unwrap(), 0x11223344);
-    assert_eq!(exe.pop_u64().unwrap(), 0x55667788);
+    assert_eq!(exe.ac.pop_u64().unwrap(), 0x11223344);
+    assert_eq!(exe.ac.pop_u64().unwrap(), 0x55667788);
 }

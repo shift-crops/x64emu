@@ -22,6 +22,36 @@ impl super::Access {
     pub fn get_code32(&self, index: u64) -> Result<u32, EmuException> { Ok(self.fetch_vaddr(index, MemAccessSize::DWord)? as u32) }
     pub fn get_code64(&self, index: u64) -> Result<u64, EmuException> { Ok(self.fetch_vaddr(index, MemAccessSize::QWord)?) }
 
+    pub fn push_u16(&mut self, v: u16) -> Result<(), EmuException> {
+        let sp = self.stack_addr(-2)?;
+        self.set_data16((SgReg::SS, sp), v)
+    }
+
+    pub fn pop_u16(&mut self) -> Result<u16, EmuException> {
+        let sp = self.stack_addr(2)?;
+        self.get_data16((SgReg::SS, sp-2))
+    }
+
+    pub fn push_u32(&mut self, v: u32) -> Result<(), EmuException> {
+        let esp = self.stack_addr(-4)?;
+        self.set_data32((SgReg::SS, esp), v)
+    }
+
+    pub fn pop_u32(&mut self) -> Result<u32, EmuException> {
+        let esp = self.stack_addr(4)?;
+        self.get_data32((SgReg::SS, esp-4))
+    }
+
+    pub fn push_u64(&mut self, v: u64) -> Result<(), EmuException> {
+        let rsp = self.stack_addr(-8)?;
+        self.set_data64((SgReg::SS, rsp), v)
+    }
+
+    pub fn pop_u64(&mut self) -> Result<u64, EmuException> {
+        let rsp = self.stack_addr(8)?;
+        self.get_data64((SgReg::SS, rsp-8))
+    }
+
     pub fn read_data_p(&self, dst: *mut c_void, src_addr: u64, len: usize) -> Result<usize, EmuException> {
         if let Ok(n) = self.mem.read_data(dst, src_addr as usize, len) { return Ok(n); }
         Err(EmuException::UnexpectedError)
@@ -64,6 +94,24 @@ impl super::Access {
 }
 
 impl super::Access {
+    fn stack_addr(&mut self, size: i8) -> Result<u64, EmuException> {
+        let sp = match self.stsz {
+            access::AcsSize::BIT16 => {
+                self.update_gpreg(GpReg16::SP, size as i16)?;
+                self.get_gpreg(GpReg16::SP)? as u64
+            },
+            access::AcsSize::BIT32 => {
+                self.update_gpreg(GpReg32::ESP, size as i32)?;
+                self.get_gpreg(GpReg32::ESP)? as u64
+            },
+            access::AcsSize::BIT64 => {
+                self.update_gpreg(GpReg64::RSP, size as i64)?;
+                self.get_gpreg(GpReg64::RSP)?
+            },
+        };
+        Ok(sp)
+    }
+
     fn read_vaddr(&self, sg: SgReg, vaddr: u64, size: MemAccessSize) -> Result<u64, EmuException> {
         let paddr = self.trans_v2p(MemAccessMode::Read, sg, vaddr)? as usize;
         let v = match size {

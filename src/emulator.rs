@@ -1,5 +1,6 @@
 mod access;
 mod instruction;
+mod interrupt;
 
 use std::error;
 use thiserror::Error;
@@ -13,6 +14,8 @@ pub enum EmuException {
     NotImplementedOpcode,
     #[error("CPU Exception {0:?}")]
     CPUException(CPUException),
+    #[error("Interrupt {0:?}")]
+    Interrupt(interrupt::Event),
     #[error("Unexpected Error")]
     UnexpectedError,
 }
@@ -23,10 +26,16 @@ pub enum CPUException {
     DF = 8,           TS = 10, NP = 11, SS = 12, GP = 13, PF = 14,
     MF = 16, AC = 17, MC = 18, XF = 19, VE = 20,          SX = 30
 }
+impl From<CPUException> for interrupt::Event {
+    fn from(e: CPUException) -> Self {
+        Self::Hardware(e as u8)
+    }
+}
 
 pub struct Emulator {
     pub ac: access::Access,
     inst: instruction::Instruction,
+    intrpt: interrupt::Interrupt,
     pub breakpoints: Vec<u32>,
 }
 
@@ -43,6 +52,7 @@ impl Emulator {
         Emulator {
             ac: access::Access::new(hw),
             inst: instruction::Instruction::new(),
+            intrpt: Default::default(),
             breakpoints: Vec::new(),
         }
     }
@@ -54,9 +64,16 @@ impl Emulator {
     }
 
     pub fn step(&mut self) -> Option<Event> {
+        self.intrpt.handle(&mut self.ac).unwrap();
+
         debug!("IP : 0x{:016x}", self.ac.core.ip.get_rip());
         if let Err(err) = self.inst.fetch_exec(&mut self.ac) {
             match err {
+                EmuException::Interrupt(i)    => self.intrpt.enqueue(i),
+                EmuException::CPUException(e) => {
+                    debug!("CPUException {:?}", e);
+                    self.intrpt.enqueue(e.into())
+                },
                 _ => {
                     self.ac.dump();
                     panic!("{}", err);

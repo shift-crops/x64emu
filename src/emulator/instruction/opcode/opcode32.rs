@@ -204,8 +204,7 @@ impl super::OpcodeTrait for Opcode32 {
 
     fn exec(&self, exec: &mut exec::Exec) -> Result<(), EmuException> {
         exec.ac.update_ip(exec.idata.len as i32)?;
-        (self.0[exec.idata.opcode as usize].func)(exec)?;
-        Ok(())
+        (self.0[exec.idata.opcode as usize].func)(exec)
     }
     fn flag(&self, opcode: u16) -> OpFlags { self.0[opcode as usize].flag }
 }
@@ -252,11 +251,11 @@ impl Opcode32 {
         debug!("pushad");
         let sp = exec.ac.get_gpreg(GpReg32::ESP)?;
         for i in 0..4 {
-            exec.push_u32(exec.ac.get_gpreg(GpReg32::try_from(i).unwrap())?)?;
+            exec.ac.push_u32(exec.ac.get_gpreg(GpReg32::try_from(i).unwrap())?)?;
         }
-        exec.push_u32(sp)?;
+        exec.ac.push_u32(sp)?;
         for i in 5..8 {
-            exec.push_u32(exec.ac.get_gpreg(GpReg32::try_from(i).unwrap())?)?;
+            exec.ac.push_u32(exec.ac.get_gpreg(GpReg32::try_from(i).unwrap())?)?;
         }
         Ok(())
     }
@@ -264,12 +263,12 @@ impl Opcode32 {
     fn popad(exec: &mut exec::Exec) -> Result<(), EmuException> {
         debug!("popad");
         for i in (5..8).rev() {
-            let v = exec.pop_u32()?;
+            let v = exec.ac.pop_u32()?;
             exec.ac.set_gpreg(GpReg32::try_from(i).unwrap(), v)?;
         }
-        let sp = exec.pop_u32()?;
+        let sp = exec.ac.pop_u32()?;
         for i in (0..4).rev() {
-            let v = exec.pop_u32()?;
+            let v = exec.ac.pop_u32()?;
             exec.ac.set_gpreg(GpReg32::try_from(i).unwrap(), v)?;
         }
         exec.ac.set_gpreg(GpReg32::ESP, sp)
@@ -328,7 +327,7 @@ impl Opcode32 {
     fn leave(exec: &mut exec::Exec) -> Result<(), EmuException> {
         let ebp = exec.ac.get_gpreg(GpReg32::EBP)?;
         exec.ac.set_gpreg(GpReg32::ESP, ebp)?;
-        let new_ebp = exec.pop_u32()?;
+        let new_ebp = exec.ac.pop_u32()?;
         debug!("leave: esp <- 0x{:04x}, ebp <- 0x{:04x}", ebp, new_ebp);
         exec.ac.set_gpreg(GpReg32::EBP, new_ebp)
     }

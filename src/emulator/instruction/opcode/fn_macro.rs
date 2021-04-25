@@ -128,7 +128,7 @@ macro_rules! push_src {
         fn [<push_ $src>](exec: &mut exec::Exec) -> Result<(), EmuException> {
             let v: u!($size) = exec.[<get_ $src>]()? as u!($size);
             debug!("push: {:02x}", v);
-            exec.[<push_u $size>](v)
+            exec.ac.[<push_u $size>](v)
         }
     } };
 }
@@ -136,7 +136,7 @@ macro_rules! push_src {
 macro_rules! pop_dst {
     ( $size:expr, $dst:ident ) => { paste::item! {
         fn [<pop_ $dst>](exec: &mut exec::Exec) -> Result<(), EmuException> {
-            let v: u!($size) = exec.[<pop_u $size>]()? as u!($size);
+            let v: u!($size) = exec.ac.[<pop_u $size>]()? as u!($size);
             debug!("pop: {:02x}", v);
             exec.[<set_ $dst>](v)
         }
@@ -238,7 +238,7 @@ macro_rules! pushf {
         fn pushf(exec: &mut exec::Exec) -> Result<(), EmuException> {
             let flag = exec.ac.get_rflags()? as u!($size);
             debug!("pushf: {:08x}", flag);
-            exec.[<push_u $size>](flag)
+            exec.ac.[<push_u $size>](flag)
         }
     } };
 }
@@ -246,7 +246,7 @@ macro_rules! pushf {
 macro_rules! popf {
     ( $size:expr ) => { paste::item! {
         fn popf(exec: &mut exec::Exec) -> Result<(), EmuException> {
-            let flag = exec.[<pop_u $size>]()?;
+            let flag = exec.ac.[<pop_u $size>]()?;
             debug!("popf: {:08x}", flag);
             exec.ac.set_rflags(flag as u64)
         }
@@ -301,7 +301,7 @@ macro_rules! scas_src_dst {
 macro_rules! ret {
     ( $size:expr ) => { paste::item! {
         fn ret(exec: &mut exec::Exec) -> Result<(), EmuException> {
-            let ret: u!($size) = exec.[<pop_u $size>]()? as u!($size);
+            let ret: u!($size) = exec.ac.[<pop_u $size>]()? as u!($size);
             debug!("ret: {:04x}", ret);
             exec.ac.set_ip(ret)
         }
@@ -322,7 +322,7 @@ macro_rules! call_rel {
             let offs: i!($size) = exec.[<get_ $rel>]()? as i!($size);
             let rip: u!($size) = exec.ac.get_ip()?;
             debug!("call: 0x{:04x}", rip as i!($size) + offs);
-            exec.[<push_u $size>](rip)?;
+            exec.ac.[<push_u $size>](rip)?;
             exec.ac.update_ip(offs)
         }
     } };

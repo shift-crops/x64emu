@@ -203,8 +203,7 @@ impl super::OpcodeTrait for Opcode16 {
 
     fn exec(&self, exec: &mut exec::Exec) -> Result<(), EmuException> {
         exec.ac.update_ip(exec.idata.len as i16)?;
-        (self.0[exec.idata.opcode as usize].func)(exec)?;
-        Ok(())
+        (self.0[exec.idata.opcode as usize].func)(exec)
     }
     fn flag(&self, opcode: u16) -> OpFlags { self.0[opcode as usize].flag }
 }
@@ -251,11 +250,11 @@ impl Opcode16 {
         debug!("pusha");
         let sp = exec.ac.get_gpreg(GpReg16::SP)?;
         for i in 0..4 {
-            exec.push_u16(exec.ac.get_gpreg(GpReg16::try_from(i).unwrap())?)?;
+            exec.ac.push_u16(exec.ac.get_gpreg(GpReg16::try_from(i).unwrap())?)?;
         }
-        exec.push_u16(sp)?;
+        exec.ac.push_u16(sp)?;
         for i in 5..8 {
-            exec.push_u16(exec.ac.get_gpreg(GpReg16::try_from(i).unwrap())?)?;
+            exec.ac.push_u16(exec.ac.get_gpreg(GpReg16::try_from(i).unwrap())?)?;
         }
         Ok(())
     }
@@ -263,12 +262,12 @@ impl Opcode16 {
     fn popa(exec: &mut exec::Exec) -> Result<(), EmuException> {
         debug!("popa");
         for i in (5..8).rev() {
-            let v = exec.pop_u16()?;
+            let v = exec.ac.pop_u16()?;
             exec.ac.set_gpreg(GpReg16::try_from(i).unwrap(), v)?;
         }
-        let sp = exec.pop_u16()?;
+        let sp = exec.ac.pop_u16()?;
         for i in (0..4).rev() {
-            let v = exec.pop_u16()?;
+            let v = exec.ac.pop_u16()?;
             exec.ac.set_gpreg(GpReg16::try_from(i).unwrap(), v)?;
         }
         exec.ac.set_gpreg(GpReg16::SP, sp)
@@ -327,7 +326,7 @@ impl Opcode16 {
     fn leave(exec: &mut exec::Exec) -> Result<(), EmuException> {
         let bp = exec.ac.get_gpreg(GpReg16::BP)?;
         exec.ac.set_gpreg(GpReg16::SP, bp)?;
-        let new_bp = exec.pop_u16()?;
+        let new_bp = exec.ac.pop_u16()?;
         debug!("leave: sp <- 0x{:04x}, bp <- 0x{:04x}", bp, new_bp);
         exec.ac.set_gpreg(GpReg16::BP, new_bp)
     }
@@ -415,6 +414,10 @@ impl Opcode16 {
     fn lgdt_m16_24(exec: &mut exec::Exec) -> Result<(), EmuException> {
         let (sg, adr) = exec.get_m()?;
 
+        if exec.get_cpl()? > 0 {
+            return Err(EmuException::CPUException(CPUException::GP));
+        }
+
         let limit = exec.ac.get_data16((sg,adr))?;
         let base  = exec.ac.get_data32((sg,adr+2))? & ((1<<24)-1);
         debug!("lgdt: base = {:04x}, limit = {:02x}", base, limit);
@@ -423,6 +426,10 @@ impl Opcode16 {
 
     fn lidt_m16_24(exec: &mut exec::Exec) -> Result<(), EmuException> {
         let (sg, adr) = exec.get_m()?;
+
+        if exec.get_cpl()? > 0 {
+            return Err(EmuException::CPUException(CPUException::GP));
+        }
 
         let limit = exec.ac.get_data16((sg,adr))?;
         let base  = exec.ac.get_data32((sg,adr+2))? & ((1<<24)-1);
