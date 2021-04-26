@@ -8,12 +8,6 @@ pub enum Event {
     Software(u8),
 }
 
-#[derive(Debug, Default)] #[repr(C)]
-struct IVT {
-    offset: u16,
-    segment: u16,
-}
-
 #[derive(Default)]
 pub struct Interrupt(VecDeque<Event>);
 
@@ -37,15 +31,15 @@ impl Interrupt {
 
                     if ivt_ofs > idtr.limit { return Err(EmuException::CPUException(CPUException::GP)); }
 
-                    let ivt: IVT = Default::default();
-                    ac.read_data_p(&ivt as *const _ as *mut _, idtr.base + ivt_ofs as u64, std::mem::size_of::<IVT>())?;
+                    let mut ivt: [u16;2] = [0; 2]; // [offset, segment]
+                    ac.read_data_p(ivt.as_mut_ptr() as *mut _, idtr.base + ivt_ofs as u64, std::mem::size_of_val(&ivt))?;
 
                     self.save_regs(ac)?;
-                    ac.set_segment_real(SgReg::CS, ivt.segment)?;
-                    ac.set_ip(ivt.offset)?;
+                    ac.set_segment_real(SgReg::CS, ivt[1])?;
+                    ac.set_ip(ivt[0])?;
                 },
                 access::CpuMode::Protected | access::CpuMode::Long => {
-                    return Err(EmuException::NotImplementedOpcode);
+                    return Err(EmuException::NotImplementedFunction);
                 },
             }
         }
@@ -53,15 +47,17 @@ impl Interrupt {
     }
 
     fn save_regs(&mut self, ac: &mut access::Access) -> Result<(), EmuException> {
-        match ac.size.op {
+        match ac.size.ad {
             access::AcsSize::BIT16 => {
                 ac.push_u16(ac.get_rflags()? as u16)?;
                 ac.push_u16(ac.get_sgselector(SgReg::CS)?.to_u16())?;
                 ac.push_u16(ac.get_ip()?)?;
             },
             access::AcsSize::BIT32 => {
+                return Err(EmuException::NotImplementedFunction);
             },
             access::AcsSize::BIT64 => {
+                return Err(EmuException::NotImplementedFunction);
             },
         }
         Ok(())

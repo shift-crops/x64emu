@@ -96,7 +96,7 @@ impl super::Access {
     pub fn set_rflags(&mut self, v: u64) -> Result<(), EmuException> { self.core.rflags.from_u64(v); Ok(()) }
 
     pub fn get_cregs(&self, r: usize) -> Result<u32, EmuException> {
-        if let Some(cr) = self.core.cregs.get(r) { Ok(cr.to_u32()) } else { Err(EmuException::NotImplementedOpcode) }
+        if let Some(cr) = self.core.cregs.get(r) { Ok(cr.to_u32()) } else { Err(EmuException::NotImplementedFunction) }
     }
 
     pub fn set_cregs(&mut self, r: usize, v: u32) -> Result<(), EmuException> {

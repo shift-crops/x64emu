@@ -12,6 +12,8 @@ pub enum EmuException {
     UndefinedOpcode,
     #[error("Not Implemented Opecode")]
     NotImplementedOpcode,
+    #[error("Not Implemented Function")]
+    NotImplementedFunction,
     #[error("CPU Exception {0:?}")]
     CPUException(CPUException),
     #[error("Interrupt {0:?}")]
@@ -64,7 +66,17 @@ impl Emulator {
     }
 
     pub fn step(&mut self) -> Option<Event> {
-        self.intrpt.handle(&mut self.ac).unwrap();
+        loop {
+            if let Err(err) = self.intrpt.handle(&mut self.ac) {
+                match err {
+                    EmuException::CPUException(e) => self.intrpt.enqueue(e.into()),
+                    _ => {
+                        self.ac.dump();
+                        panic!("{}", err)
+                    },
+                }
+            } else { break; }
+        }
 
         debug!("IP : 0x{:016x}", self.ac.core.ip.get_rip());
         if let Err(err) = self.inst.fetch_exec(&mut self.ac) {

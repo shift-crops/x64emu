@@ -23,32 +23,32 @@ impl super::Access {
     pub fn get_code64(&self, index: u64) -> Result<u64, EmuException> { Ok(self.fetch_vaddr(index, MemAccessSize::QWord)?) }
 
     pub fn push_u16(&mut self, v: u16) -> Result<(), EmuException> {
-        let sp = self.stack_addr(-2)?;
+        let sp = self.stack_update(-2)?;
         self.set_data16((SgReg::SS, sp), v)
     }
 
     pub fn pop_u16(&mut self) -> Result<u16, EmuException> {
-        let sp = self.stack_addr(2)?;
+        let sp = self.stack_update(2)?;
         self.get_data16((SgReg::SS, sp-2))
     }
 
     pub fn push_u32(&mut self, v: u32) -> Result<(), EmuException> {
-        let esp = self.stack_addr(-4)?;
+        let esp = self.stack_update(-4)?;
         self.set_data32((SgReg::SS, esp), v)
     }
 
     pub fn pop_u32(&mut self) -> Result<u32, EmuException> {
-        let esp = self.stack_addr(4)?;
+        let esp = self.stack_update(4)?;
         self.get_data32((SgReg::SS, esp-4))
     }
 
     pub fn push_u64(&mut self, v: u64) -> Result<(), EmuException> {
-        let rsp = self.stack_addr(-8)?;
+        let rsp = self.stack_update(-8)?;
         self.set_data64((SgReg::SS, rsp), v)
     }
 
     pub fn pop_u64(&mut self) -> Result<u64, EmuException> {
-        let rsp = self.stack_addr(8)?;
+        let rsp = self.stack_update(8)?;
         self.get_data64((SgReg::SS, rsp-8))
     }
 
@@ -94,7 +94,7 @@ impl super::Access {
 }
 
 impl super::Access {
-    fn stack_addr(&mut self, size: i8) -> Result<u64, EmuException> {
+    fn stack_update(&mut self, size: i8) -> Result<u64, EmuException> {
         let sp = match self.stsz {
             access::AcsSize::BIT16 => {
                 self.update_gpreg(GpReg16::SP, size as i16)?;
