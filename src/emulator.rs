@@ -66,17 +66,6 @@ impl Emulator {
     }
 
     pub fn step(&mut self) -> Option<Event> {
-        loop {
-            if let Err(err) = self.intrpt.handle(&mut self.ac) {
-                match err {
-                    EmuException::CPUException(e) => self.intrpt.enqueue(e.into()),
-                    _ => {
-                        self.ac.dump();
-                        panic!("{}", err)
-                    },
-                }
-            } else { break; }
-        }
 
         debug!("IP : 0x{:016x}", self.ac.core.ip.get_rip());
         if let Err(err) = self.inst.fetch_exec(&mut self.ac) {
@@ -90,6 +79,16 @@ impl Emulator {
                     self.ac.dump();
                     panic!("{}", err);
                 }
+            }
+        }
+
+        if let Err(err) = self.intrpt.handle(&mut self.ac) {
+            match err {
+                EmuException::CPUException(e) => self.intrpt.enqueue(e.into()),
+                _ => {
+                    self.ac.dump();
+                    panic!("{}", err)
+                },
             }
         }
 

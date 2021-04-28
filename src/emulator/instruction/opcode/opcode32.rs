@@ -142,7 +142,7 @@ impl super::OpcodeTrait for Opcode32 {
         // 0xcc : int3
         // 0xcd : int_imm8
             
-        //setop!(0xcf, iret,              OpFlags::NONE);
+        setop!(0xcf, iret,              OpFlags::NONE);
             
         /*
         // 0xe4 : in_al_imm8
@@ -333,6 +333,8 @@ impl Opcode32 {
     }
 
     retf!(32);
+
+    iret!(32);
 
     call_rel!(32, imm32);
 

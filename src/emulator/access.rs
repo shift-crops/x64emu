@@ -46,7 +46,13 @@ impl Access {
     pub fn dump(&self) -> () {
         println!("CPU Mode: {:?} mode\n", self.mode);
         self.core.dump();
-        self.dump_code();
-        self.dump_stack();
+
+        let unit = match self.size.ad {
+            AcsSize::BIT16 => hardware::memory::MemDumpSize::Word,
+            AcsSize::BIT32 => hardware::memory::MemDumpSize::DWord,
+            AcsSize::BIT64 => hardware::memory::MemDumpSize::QWord
+        };
+        self.dump_code(unit);
+        self.dump_stack(unit);
     }
 }

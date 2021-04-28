@@ -316,6 +316,14 @@ macro_rules! retf {
     } };
 }
 
+macro_rules! iret {
+    ( $size:expr ) => { paste::item! {
+        fn iret(exec: &mut exec::Exec) -> Result<(), EmuException> {
+            exec.[<intr_ret_u $size>]()
+        }
+    } };
+}
+
 macro_rules! call_rel {
     ( $size:expr, $rel:ident ) => { paste::item! {
         fn [<call_ $rel>](exec: &mut exec::Exec) -> Result<(), EmuException> {

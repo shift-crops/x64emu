@@ -3,96 +3,63 @@ use crate::emulator::access::register::*;
 use crate::emulator::access::descriptor::*;
 use crate::hardware::processor::descriptor::DescTbl;
 
-macro_rules! ret_far {
-    ( $type:ty ) => { paste::item! {
-        pub fn [<ret_far_ $type>](&mut self) -> Result<(), EmuException> {
-            let new_ip = self.ac.[<pop_ $type>]()?;
-            let new_cs = self.ac.[<pop_ $type>]()? as u16;
-
-            match self.ac.mode {
-                access::CpuMode::Real => {
-                    if new_ip as u32 > self.ac.get_sgcache(SgReg::CS)?.limit {
-                        return Err(EmuException::CPUException(CPUException::GP));
-                    }
-                    self.ac.set_segment_real(SgReg::CS, new_cs)?;
-                },
-                access::CpuMode::Protected | access::CpuMode::Long => {
-                    let cpl = self.get_cpl()?;
-                    let rpl = (new_cs & 3) as u8;
-
-                    if new_cs == 0 || rpl < cpl {
-                        return Err(EmuException::CPUException(CPUException::GP));
-                    }
-
-                    if let Some(DescType::Segment(SegDescType::Code(cd))) = self.ac.obtain_gl_descriptor(new_cs)? {
-                        if CodeDescFlag::from(&cd).contains(CodeDescFlag::C) && cd.DPL > rpl {
-                            return Err(EmuException::CPUException(CPUException::GP));
-                        }
-
-                        if self.ac.size.op != access::AcsSize::BIT64 && new_ip as u32 > ((cd.limit_h as u32) << 16) + cd.limit_l as u32 {
-                            return Err(EmuException::CPUException(CPUException::GP));
-                        }
-                    } else {
-                        return Err(EmuException::CPUException(CPUException::GP));
-                    }
-
-                    self.ac.set_segment_protected(SgReg::CS, new_cs)?;
-
-                    if rpl > cpl {
-                        let new_sp = self.ac.[<pop_ $type>]()?;
-                        let new_ss = self.ac.[<pop_ $type>]()? as u16;
-                        self.ac.set_gpreg(GpReg64::RSP, new_sp as u64)?;
-                        self.ac.set_segment_protected(SgReg::SS, new_ss)?;
-                    }
-                    for r in vec!(SgReg::ES, SgReg::FS, SgReg::GS, SgReg::DS ).iter() {
-                        if rpl > self.ac.get_sgcache(*r)?.DPL {
-                            self.ac.set_segment_protected(*r, 0)?;
-                        }
-                    }
-                },
-            }
-
-            self.ac.set_ip(new_ip)?;
-            self.update_opadsize()
-        }
-    } };
-}
-
 macro_rules! jmp_far {
     ( $type:ty ) => { paste::item! {
         pub fn [<jmp_far_ $type>](&mut self, sel: u16, abs: $type) -> Result<(), EmuException> {
             match self.ac.mode {
                 access::CpuMode::Real => {
-                    if abs as u32 > self.ac.get_sgcache(SgReg::CS)?.limit {
-                        return Err(EmuException::CPUException(CPUException::GP));
-                    }
-
-                    self.ac.set_segment_real(SgReg::CS, sel)?;
+                    self.ac.load_segment(SgReg::CS, sel)?;
                     self.ac.set_ip(abs)?;
                 },
                 access::CpuMode::Protected | access::CpuMode::Long => {
-                    let cpl  = self.get_cpl()?;
+                    let cpl  = self.ac.get_cpl()?;
                     let rpl = (sel & 3) as u8;
-                    let desc = self.ac.obtain_gl_descriptor(sel)?;
 
-                    match desc {
-                        Some(DescType::Segment(SegDescType::Code(cd))) => {
-                            if CodeDescFlag::from(&cd).contains(CodeDescFlag::C) {
-                                if cd.DPL > cpl {
+                    match self.ac.obtain_gl_descriptor(sel)? {
+                        Some(DescType::Segment(SegDescType::Code(desc))) => {
+                            if CodeDescFlag::from(&desc).contains(CodeDescFlag::C) {
+                                if desc.DPL > cpl {
                                     return Err(EmuException::CPUException(CPUException::GP));
                                 }
-                            } else if rpl > cpl || cd.DPL != cpl {
+                            } else if rpl > cpl || desc.DPL != cpl {
                                 return Err(EmuException::CPUException(CPUException::GP));
                             }
-                            if self.ac.size.op != access::AcsSize::BIT64 && abs as u32 > ((cd.limit_h as u32) << 16) + cd.limit_l as u32 {
+                            if self.ac.size.op != access::AcsSize::BIT64 && abs as u32 > ((desc.limit_h as u32) << 16) + desc.limit_l as u32 {
                                 return Err(EmuException::CPUException(CPUException::GP));
                             }
-                            self.ac.set_segment_protected(SgReg::CS, (sel & 0xff8) | cpl as u16)?;
+
+                            let cache = self.ac.select_segdesc(SgReg::CS, cpl, Some(SegDescType::Code(desc)))?;
+                            self.ac.set_sgreg(SgReg::CS, (sel & 0xfff8) | cpl as u16, cache)?;
                             self.ac.set_ip(abs)?;
                         },
-                        Some(DescType::System(SysDescType::Call(_))) => { return Err(EmuException::NotImplementedFunction); },
-                        Some(DescType::System(SysDescType::Task(_))) => { return Err(EmuException::NotImplementedFunction); },
-                        Some(DescType::System(SysDescType::TSS(_))) => { return Err(EmuException::NotImplementedFunction); },
+                        Some(DescType::System(SysDescType::Call(gate))) => {
+                            if gate.DPL < cpl || gate.DPL < rpl { return Err(EmuException::CPUException(CPUException::GP)); }
+                            let ip = ((gate.offset_h as u32) << 16) + gate.offset_l as u32;
+                            let (sel, desc) = self.ac.select_callgate(gate)?;
+
+                            if CodeDescFlag::from(&desc).contains(CodeDescFlag::C) {
+                                if desc.DPL > cpl { return Err(EmuException::CPUException(CPUException::GP)); }
+                            } else if desc.DPL != cpl {
+                                return Err(EmuException::CPUException(CPUException::GP));
+                            }
+
+                            if self.ac.size.op != access::AcsSize::BIT64 && abs as u32 > ((desc.limit_h as u32) << 16) + desc.limit_l as u32 {
+                                return Err(EmuException::CPUException(CPUException::GP));
+                            }
+
+                            let cache = self.ac.select_segdesc(SgReg::CS, cpl, Some(SegDescType::Code(desc)))?;
+                            self.ac.set_sgreg(SgReg::CS, (sel & 0xfff8) | cpl as u16, cache)?;
+                            self.ac.set_ip(ip)?;
+                        },
+                        Some(DescType::System(SysDescType::Task(gate))) => {
+                            if gate.DPL < cpl || gate.DPL < rpl { return Err(EmuException::CPUException(CPUException::GP)); }
+                            let desc = self.ac.select_taskgate(gate)?;
+                            self.ac.switch_task(desc)?;
+                        },
+                        Some(DescType::System(SysDescType::TSS(desc))) => {
+                            if desc.DPL < cpl || desc.DPL < rpl { return Err(EmuException::CPUException(CPUException::GP)); }
+                            self.ac.switch_task(desc)?;
+                        },
                         _ => {
                             return Err(EmuException::CPUException(CPUException::GP));
                         },
@@ -107,43 +74,76 @@ macro_rules! jmp_far {
 macro_rules! call_far {
     ( $type:ty ) => { paste::item! {
         pub fn [<call_far_ $type>](&mut self, sel: u16, abs: $type) -> Result<(), EmuException> {
+            let cs = self.ac.get_sgselector(SgReg::CS)?.to_u16() as $type;
+            let ip: $type = self.ac.get_ip()?;
+
             match self.ac.mode {
                 access::CpuMode::Real => {
                     if abs as u32 > self.ac.get_sgcache(SgReg::CS)?.limit {
                         return Err(EmuException::CPUException(CPUException::GP));
                     }
 
-                    self.ac.[<push_ $type>](self.ac.get_sgselector(SgReg::CS)?.to_u16() as $type)?;
-                    self.ac.[<push_ $type>](self.ac.get_ip()?)?;
-                    self.ac.set_segment_real(SgReg::CS, sel)?;
+                    self.ac.load_segment(SgReg::CS, sel)?;
                     self.ac.set_ip(abs)?;
+                    self.ac.[<push_ $type>](cs)?;
+                    self.ac.[<push_ $type>](ip)?;
                 },
                 access::CpuMode::Protected | access::CpuMode::Long => {
-                    let cpl  = self.get_cpl()?;
+                    let cpl  = self.ac.get_cpl()?;
                     let rpl = (sel & 3) as u8;
-                    let desc = self.ac.obtain_gl_descriptor(sel)?;
 
-                    match desc {
-                        Some(DescType::Segment(SegDescType::Code(cd))) => {
-                            if CodeDescFlag::from(&cd).contains(CodeDescFlag::C) {
-                                if cd.DPL > cpl {
+                    match self.ac.obtain_gl_descriptor(sel)? {
+                        Some(DescType::Segment(SegDescType::Code(cdesc))) => {
+                            if CodeDescFlag::from(&cdesc).contains(CodeDescFlag::C) {
+                                if cdesc.DPL > cpl {
                                     return Err(EmuException::CPUException(CPUException::GP));
                                 }
-                            } else if rpl > cpl || cd.DPL != cpl {
+                            } else if rpl > cpl || cdesc.DPL != cpl {
                                 return Err(EmuException::CPUException(CPUException::GP));
                             }
-                            if self.ac.size.op != access::AcsSize::BIT64 && abs as u32 > ((cd.limit_h as u32) << 16) + cd.limit_l as u32 {
+                            if self.ac.size.op != access::AcsSize::BIT64 && abs as u32 > ((cdesc.limit_h as u32) << 16) + cdesc.limit_l as u32 {
                                 return Err(EmuException::CPUException(CPUException::GP));
                             }
-                            self.ac.[<push_ $type>](self.ac.get_sgselector(SgReg::CS)?.to_u16() as $type)?;
-                            self.ac.[<push_ $type>](self.ac.get_ip()?)?;
-                            self.ac.set_segment_protected(SgReg::CS, (sel & 0xff8) | cpl as u16)?;
+
+                            let cache = self.ac.select_segdesc(SgReg::CS, cpl, Some(SegDescType::Code(cdesc)))?;
+
+                            self.ac.[<push_ $type>](cs)?;
+                            self.ac.[<push_ $type>](ip)?;
+                            self.ac.set_sgreg(SgReg::CS, (sel & 0xfff8) | cpl as u16, cache)?;
                             self.ac.set_ip(abs)?;
                         },
-                        Some(DescType::System(SysDescType::Call(_))) => { return Err(EmuException::NotImplementedFunction); },
-                        Some(DescType::System(SysDescType::Task(_))) => { return Err(EmuException::NotImplementedFunction); },
-                        Some(DescType::System(SysDescType::TSS(_))) => { return Err(EmuException::NotImplementedFunction); },
-                        _ => {
+                        Some(DescType::System(SysDescType::Call(gate))) => {
+                            if gate.DPL < cpl || gate.DPL < rpl { return Err(EmuException::CPUException(CPUException::GP)); }
+                            let new_ip = ((gate.offset_h as u32) << 16) + gate.offset_l as u32;
+                            let (sel, desc) = self.ac.select_callgate(gate)?;
+
+                            if desc.DPL > cpl { return Err(EmuException::CPUException(CPUException::GP)); }
+
+                            if !CodeDescFlag::from(&desc).contains(CodeDescFlag::C) && desc.DPL < cpl {
+                                return Err(EmuException::NotImplementedFunction);
+                            } else {
+                                if self.ac.size.op != access::AcsSize::BIT64 && new_ip as u32 > ((desc.limit_h as u32) << 16) + desc.limit_l as u32 {
+                                    return Err(EmuException::CPUException(CPUException::GP));
+                                }
+
+                                let cache = self.ac.select_segdesc(SgReg::CS, cpl, Some(SegDescType::Code(desc)))?;
+
+                                self.ac.[<push_ $type>](cs)?;
+                                self.ac.[<push_ $type>](ip)?;
+                                self.ac.set_sgreg(SgReg::CS, (sel & 0xfff8) | cpl as u16, cache)?;
+                                self.ac.set_ip(ip)?;
+                            }
+                        },
+                        Some(DescType::System(SysDescType::Task(gate))) => {
+                            if gate.DPL < cpl || gate.DPL < rpl { return Err(EmuException::CPUException(CPUException::GP)); }
+                            let desc = self.ac.select_taskgate(gate)?;
+                            self.ac.switch_task(desc)?;
+                        },
+                        Some(DescType::System(SysDescType::TSS(desc))) => {
+                            if desc.DPL < cpl || desc.DPL < rpl { return Err(EmuException::CPUException(CPUException::GP)); }
+                            self.ac.switch_task(desc)?;
+                        },
+                       _ => {
                             return Err(EmuException::CPUException(CPUException::GP));
                         },
                     }
@@ -154,11 +154,121 @@ macro_rules! call_far {
     } };
 }
 
-impl<'a> super::Exec<'a> {
-    ret_far!(u16);
-    ret_far!(u32);
-    ret_far!(u64);
+macro_rules! ret_far {
+    ( $type:ty ) => { paste::item! {
+        pub fn [<ret_far_ $type>](&mut self) -> Result<(), EmuException> {
+            let new_ip = self.ac.[<pop_ $type>]()?;
+            let new_cs = self.ac.[<pop_ $type>]()? as u16;
 
+            match self.ac.mode {
+                access::CpuMode::Real => {
+                    self.ac.load_segment(SgReg::CS, new_cs)?;
+                },
+                access::CpuMode::Protected | access::CpuMode::Long => {
+                    let cpl = self.ac.get_cpl()?;
+                    let rpl = (new_cs & 3) as u8;
+
+                    if rpl < cpl {
+                        return Err(EmuException::CPUException(CPUException::GP));
+                    }
+
+                    if let Some(DescType::Segment(SegDescType::Code(cdesc))) = self.ac.obtain_gl_descriptor(new_cs)? {
+                        if CodeDescFlag::from(&cdesc).contains(CodeDescFlag::C) && cdesc.DPL > rpl {
+                            return Err(EmuException::CPUException(CPUException::GP));
+                        }
+
+                        if self.ac.size.op != access::AcsSize::BIT64 && new_ip as u32 > ((cdesc.limit_h as u32) << 16) + cdesc.limit_l as u32 {
+                            return Err(EmuException::CPUException(CPUException::GP));
+                        }
+
+                        let cache = self.ac.select_segdesc(SgReg::CS, rpl, Some(SegDescType::Code(cdesc)))?;
+                        self.ac.set_sgreg(SgReg::CS, new_cs, cache)?;
+                    } else {
+                        return Err(EmuException::CPUException(CPUException::GP));
+                    }
+
+                    if rpl > cpl {
+                        let new_sp = self.ac.[<pop_ $type>]()?;
+                        let new_ss = self.ac.[<pop_ $type>]()? as u16;
+                        self.ac.set_gpreg(GpReg64::RSP, new_sp as u64)?;
+                        self.ac.load_segment(SgReg::SS, new_ss)?;
+
+                        for r in vec!(SgReg::ES, SgReg::FS, SgReg::GS, SgReg::DS).iter() {
+                            if rpl > self.ac.get_sgcache(*r)?.DPL {
+                                self.ac.set_sgreg(*r, 0, Default::default())?;
+                            }
+                        }
+                    }
+                },
+            }
+
+            self.ac.set_ip(new_ip)?;
+            self.update_opadsize()
+        }
+    } };
+}
+
+macro_rules! intr_ret {
+    ( $type:ty ) => { paste::item! {
+        pub fn [<intr_ret_ $type>](&mut self) -> Result<(), EmuException> {
+            let new_ip   = self.ac.[<pop_ $type>]()?;
+            let new_cs   = self.ac.[<pop_ $type>]()? as u16;
+            let new_flag = self.ac.[<pop_ $type>]()? as u64;
+            self.ac.core.rflags.from_u64(new_flag);
+
+            match self.ac.mode {
+                access::CpuMode::Real => {
+                    self.ac.load_segment(SgReg::CS, new_cs)?;
+                },
+                access::CpuMode::Protected | access::CpuMode::Long => {
+                    let cpl = self.ac.get_cpl()?;
+                    let rpl = (new_cs & 3) as u8;
+
+                    if self.ac.core.rflags.is_nesttask() {
+                        return Err(EmuException::NotImplementedFunction);
+                    }
+
+                    if rpl < cpl {
+                        return Err(EmuException::CPUException(CPUException::GP));
+                    }
+
+                    if let Some(DescType::Segment(SegDescType::Code(cdesc))) = self.ac.obtain_gl_descriptor(new_cs)? {
+                        if CodeDescFlag::from(&cdesc).contains(CodeDescFlag::C) && cdesc.DPL > rpl {
+                            return Err(EmuException::CPUException(CPUException::GP));
+                        }
+
+                        if self.ac.size.op != access::AcsSize::BIT64 && new_ip as u32 > ((cdesc.limit_h as u32) << 16) + cdesc.limit_l as u32 {
+                            return Err(EmuException::CPUException(CPUException::GP));
+                        }
+
+                        let cache = self.ac.select_segdesc(SgReg::CS, rpl, Some(SegDescType::Code(cdesc)))?;
+                        self.ac.set_sgreg(SgReg::CS, new_cs, cache)?;
+                    } else {
+                        return Err(EmuException::CPUException(CPUException::GP));
+                    }
+
+                    if rpl > cpl {
+                        let new_sp = self.ac.[<pop_ $type>]()?;
+                        let new_ss = self.ac.[<pop_ $type>]()? as u16;
+                        self.ac.set_gpreg(GpReg64::RSP, new_sp as u64)?;
+                        self.ac.load_segment(SgReg::SS, new_ss)?;
+
+                        for r in vec!(SgReg::ES, SgReg::FS, SgReg::GS, SgReg::DS).iter() {
+                            if rpl > self.ac.get_sgcache(*r)?.DPL {
+                                self.ac.set_sgreg(*r, 0, Default::default())?;
+                            }
+                        }
+                    }
+                },
+            }
+
+            self.ac.set_ip(new_ip)?;
+            self.update_opadsize()
+        }
+    } };
+}
+
+impl<'a> super::Exec<'a> {
     jmp_far!(u16);
     jmp_far!(u32);
     jmp_far!(u64);
@@ -167,18 +277,23 @@ impl<'a> super::Exec<'a> {
     call_far!(u32);
     call_far!(u64);
 
+    ret_far!(u16);
+    ret_far!(u32);
+    ret_far!(u64);
+
+    intr_ret!(u16);
+    intr_ret!(u32);
+    intr_ret!(u64);
+
     pub fn mov_to_sreg(&mut self, reg: SgReg, sel: u16) -> Result<(), EmuException> {
         if reg == SgReg::CS {
             return Err(EmuException::CPUException(CPUException::UD));
         }
-        match self.ac.mode {
-            access::CpuMode::Real =>
-                self.ac.set_segment_real(reg, sel)?,
-            access::CpuMode::Protected | access::CpuMode::Long =>
-                self.ac.set_segment_protected(reg, sel)?,
-        }
+        self.ac.load_segment(reg, sel)?;
 
-        if reg == SgReg::SS { self.update_stacksize()?; }
+        if reg == SgReg::SS {
+            self.update_stacksize()?;
+        }
         Ok(())
     }
 
@@ -224,9 +339,5 @@ impl<'a> super::Exec<'a> {
         } else {
             Err(EmuException::CPUException(CPUException::GP))
         }
-    }
-
-    pub fn get_cpl(&self) -> Result<u8, EmuException> {
-        Ok(self.ac.get_sgselector(SgReg::CS)?.RPL)
     }
 }

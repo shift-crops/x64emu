@@ -1,6 +1,7 @@
 use libc::c_void;
 use crate::emulator::*;
 use super::register::*;
+use crate::hardware::memory::MemDumpSize;
 
 #[derive(Clone, Copy)]
 enum MemAccessMode { Read, Write, Exec, Monitor }
@@ -82,14 +83,14 @@ impl super::Access {
         self.trans_v2p(MemAccessMode::Monitor, seg, vaddr)
     }
 
-    pub fn dump_code(&self) -> () {
+    pub fn dump_code(&self, unit: MemDumpSize) -> () {
         let addr = self.trans_v2p(MemAccessMode::Read, SgReg::CS, self.get_ip().unwrap()).unwrap();
-        self.mem.dump(addr as usize -0x10, 0x20);
+        self.mem.dump(addr as usize -0x10, 0x20, unit);
     }
 
-    pub fn dump_stack(&self) -> () {
+    pub fn dump_stack(&self, unit: MemDumpSize) -> () {
         let addr = self.trans_v2p(MemAccessMode::Read, SgReg::SS, self.get_gpreg(GpReg64::RSP).unwrap()).unwrap();
-        self.mem.dump(addr as usize, 0x40);
+        self.mem.dump(addr as usize, 0x40, unit);
     }
 }
 

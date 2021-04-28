@@ -142,7 +142,7 @@ impl super::OpcodeTrait for Opcode16 {
         // 0xcc : int3
         // 0xcd : int_imm8
             
-        //setop!(0xcf, iret,              OpFlags::NONE);
+        setop!(0xcf, iret,              OpFlags::NONE);
             
         /*
         // 0xe4 : in_al_imm8
@@ -333,6 +333,8 @@ impl Opcode16 {
 
     retf!(16);
 
+    iret!(16);
+
     call_rel!(16, imm16);
 
     jmp_rel!(16, imm16);
@@ -414,7 +416,7 @@ impl Opcode16 {
     fn lgdt_m16_24(exec: &mut exec::Exec) -> Result<(), EmuException> {
         let (sg, adr) = exec.get_m()?;
 
-        if exec.get_cpl()? > 0 {
+        if exec.ac.get_cpl()? > 0 {
             return Err(EmuException::CPUException(CPUException::GP));
         }
 
@@ -427,7 +429,7 @@ impl Opcode16 {
     fn lidt_m16_24(exec: &mut exec::Exec) -> Result<(), EmuException> {
         let (sg, adr) = exec.get_m()?;
 
-        if exec.get_cpl()? > 0 {
+        if exec.ac.get_cpl()? > 0 {
             return Err(EmuException::CPUException(CPUException::GP));
         }
 
