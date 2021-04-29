@@ -1,7 +1,6 @@
 use crate::emulator::access::register::*;
 use crate::emulator::instruction::exec;
 use crate::emulator::instruction::opcode::*;
-use crate::emulator::interrupt::Event;
 
 pub fn init_cmn_opcode(op: &mut super::OpcodeArr){
     macro_rules! setcmnop {
@@ -72,12 +71,12 @@ pub fn init_cmn_opcode(op: &mut super::OpcodeArr){
     /*
     setcmnop!(0xec, in_al_dx,      OpFlags::NONE);
     setcmnop!(0xee, out_dx_al,     OpFlags::NONE);
+    */
     setcmnop!(0xfa, cli,           OpFlags::NONE);
     setcmnop!(0xfb, sti,           OpFlags::NONE);
     setcmnop!(0xfc, cld,           OpFlags::NONE);
     setcmnop!(0xfd, std,           OpFlags::NONE);
     setcmnop!(0xf4, hlt,           OpFlags::NONE);
-    */
 
     setcmnop!(0x0f20, mov_r32_cr,  OpFlags::MODRM);
     setcmnop!(0x0f22, mov_cr_r32,  OpFlags::MODRM);
@@ -166,11 +165,18 @@ mov_dst_src!(8, opr8, imm8);
 
 mov_dst_src!(8, rm8, imm8);
 
-fn int3(_exec: &mut exec::Exec) -> Result<(), EmuException> { Err(EmuException::Interrupt(Event::Software(3))) }
-fn int_imm8(exec: &mut exec::Exec) -> Result<(), EmuException> { Err(EmuException::Interrupt(Event::Software(exec.get_imm8()?))) }
-fn into(_exec: &mut exec::Exec) -> Result<(), EmuException> { Err(EmuException::Interrupt(Event::Software(4))) }
+fn int3(_exec: &mut exec::Exec) -> Result<(), EmuException> { Err(EmuException::Interrupt(3)) }
+fn int_imm8(exec: &mut exec::Exec) -> Result<(), EmuException> { Err(EmuException::Interrupt(exec.get_imm8()?)) }
+fn into(_exec: &mut exec::Exec) -> Result<(), EmuException> { Err(EmuException::Interrupt(4)) }
 
 jmp_rel!(8, imm8);
+
+fn cli(exec: &mut exec::Exec) -> Result<(), EmuException> { exec.ac.core.rflags.set_interrupt(false); Ok(()) }
+fn sti(exec: &mut exec::Exec) -> Result<(), EmuException> { exec.ac.core.rflags.set_interrupt(true); Ok(()) }
+fn cld(exec: &mut exec::Exec) -> Result<(), EmuException> { exec.ac.core.rflags.set_direction(false); Ok(()) }
+fn std(exec: &mut exec::Exec) -> Result<(), EmuException> { exec.ac.core.rflags.set_direction(true); Ok(()) }
+
+fn hlt(_exec: &mut exec::Exec) -> Result<(), EmuException> { Err(EmuException::Halt) }
 
 fn mov_r32_cr(exec: &mut exec::Exec) -> Result<(), EmuException> { exec.cr_to_r32() }
 fn mov_cr_r32(exec: &mut exec::Exec) -> Result<(), EmuException> { exec.cr_from_r32() }

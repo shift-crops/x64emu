@@ -5,19 +5,23 @@ mod interrupt;
 use std::error;
 use thiserror::Error;
 use super::hardware;
+use super::device;
+use interrupt::IntrEvent;
 
 #[derive(Debug, Error)]
 pub enum EmuException {
+    #[error("CPU Exception {0:?}")]
+    CPUException(CPUException),
+    #[error("Interrupt {0:?}")]
+    Interrupt(u8),
+    #[error("Halt")]
+    Halt,
     #[error("Undefined Opecode")]
     UndefinedOpcode,
     #[error("Not Implemented Opecode")]
     NotImplementedOpcode,
     #[error("Not Implemented Function")]
     NotImplementedFunction,
-    #[error("CPU Exception {0:?}")]
-    CPUException(CPUException),
-    #[error("Interrupt {0:?}")]
-    Interrupt(interrupt::Event),
     #[error("Unexpected Error")]
     UnexpectedError,
 }
@@ -28,16 +32,12 @@ pub enum CPUException {
     DF = 8,           TS = 10, NP = 11, SS = 12, GP = 13, PF = 14,
     MF = 16, AC = 17, MC = 18, XF = 19, VE = 20,          SX = 30
 }
-impl From<CPUException> for interrupt::Event {
-    fn from(e: CPUException) -> Self {
-        Self::Hardware(e as u8)
-    }
-}
 
 pub struct Emulator {
     pub ac: access::Access,
     inst: instruction::Instruction,
     intrpt: interrupt::Interrupt,
+    halt: bool,
     pub breakpoints: Vec<u32>,
 }
 
@@ -50,52 +50,59 @@ pub enum Event {
 }
 
 impl Emulator {
-    pub fn new(hw: hardware::Hardware) -> Self {
+    pub fn new(hw: hardware::Hardware, dev: device::Device) -> Self {
         Emulator {
-            ac: access::Access::new(hw),
+            ac: access::Access::new(hw, dev),
             inst: instruction::Instruction::new(),
             intrpt: Default::default(),
+            halt: false,
             breakpoints: Vec::new(),
         }
     }
 
     pub fn run(&mut self) -> () {
         loop {
-            self.step();
+            self.step(false);
         }
     }
 
-    pub fn step(&mut self) -> Option<Event> {
-
-        debug!("IP : 0x{:016x}", self.ac.core.ip.get_rip());
-        if let Err(err) = self.inst.fetch_exec(&mut self.ac) {
-            match err {
-                EmuException::Interrupt(i)    => self.intrpt.enqueue(i),
-                EmuException::CPUException(e) => {
-                    debug!("CPUException {:?}", e);
-                    self.intrpt.enqueue(e.into())
-                },
-                _ => {
+    pub fn step(&mut self, debugged: bool) -> Option<Event> {
+        if !self.halt {
+            debug!("IP : 0x{:016x}", self.ac.core.ip.get_rip());
+            match self.inst.fetch_exec(&mut self.ac) {
+                Err(EmuException::Interrupt(i))    => self.intrpt.enqueue(IntrEvent::Software(i)),
+                Err(EmuException::CPUException(e)) => self.intrpt.enqueue(IntrEvent::Hardware(e as u8)),
+                Err(EmuException::Halt)            => self.halt = true,
+                Err(err) => {
                     self.ac.dump();
                     panic!("{}", err);
-                }
-            }
-        }
-
-        if let Err(err) = self.intrpt.handle(&mut self.ac) {
-            match err {
-                EmuException::CPUException(e) => self.intrpt.enqueue(e.into()),
-                _ => {
-                    self.ac.dump();
-                    panic!("{}", err)
                 },
+                _ => {},
             }
         }
 
-        if self.breakpoints.contains(&(self.ac.core.ip.get_eip())) {
-            return Some(Event::Break);
+        if let Some(ev) = self.ac.check_irq(self.halt && !debugged) {
+            debug!("Interrupt Occured : 0x{:02x}", ev);
+            self.intrpt.enqueue(IntrEvent::Hardware(ev));
+            self.halt = false;
         }
-        None
+
+        match self.intrpt.handle(&mut self.ac) {
+            Err(EmuException::CPUException(e)) => self.intrpt.enqueue(IntrEvent::Hardware(e as u8)),
+            Err(err) => {
+                self.ac.dump();
+                panic!("{}", err)
+            },
+            _ => {},
+        }
+
+        if debugged && self.breakpoints.contains(&(self.ac.core.ip.get_eip())) {
+            Some(Event::Break)
+        } else if self.halt {
+            Some(Event::Halted)
+        } else {
+            None
+        }
     }
 
     pub fn map_binary(&mut self, addr: usize, bin: &[u8]) -> Result<(), Box<dyn error::Error>> {

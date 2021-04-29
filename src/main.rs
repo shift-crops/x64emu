@@ -7,8 +7,9 @@ extern crate log;
 extern crate env_logger as logger;
 extern crate getopts;
 
-mod emulator;
 mod hardware;
+mod device;
+mod emulator;
 mod interface;
 
 use std::{env, process};
@@ -59,8 +60,9 @@ fn main() {
     logger::init();
     let args = parse_args();
 
-    let hw = hardware::Hardware::new(0x400*0x400);
-    let mut emu = emulator::Emulator::new(hw);
+    let hw  = hardware::Hardware::new(0x400*0x400);
+    let dev = device::Device::new();
+    let mut emu = emulator::Emulator::new(hw, dev);
 
     emu.map_binary(0xffff0, include_bytes!("bios/crt0.bin")).expect("Failed to map");
     emu.map_binary(0xf0000, include_bytes!("bios/bios.bin")).expect("Failed to map");

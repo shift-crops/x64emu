@@ -4,6 +4,7 @@ mod msr;
 pub mod descriptor;
 
 use crate::hardware;
+use crate::device;
 
 #[derive(Debug, PartialEq)]
 pub enum CpuMode { Real, Protected, Long }
@@ -28,19 +29,32 @@ pub struct Access {
     pub stsz: AcsSize,
     pub core: hardware::processor::Processor,
     pub mem: hardware::memory::Memory,
+    pub dev: device::Device,
     a20gate: bool,
 }
 
 impl Access {
-    pub fn new(hw: hardware::Hardware) -> Self {
+    pub fn new(hw: hardware::Hardware, dev: device::Device) -> Self {
         Self {
             mode: CpuMode::Real,
             size: Default::default(),
             stsz: Default::default(),
             core: hw.core,
             mem: hw.mem,
+            dev,
             a20gate: false,
         }
+    }
+
+    pub fn check_irq(&self, block: bool) -> Option<u8> {
+        if self.core.rflags.is_interrupt() {
+            if block {
+                return Some(self.dev.rx.recv().unwrap());
+            } else if let Ok(n) = self.dev.rx.try_recv() {
+                return Some(n);
+            }
+        }
+        None
     }
 
     pub fn dump(&self) -> () {

@@ -67,10 +67,12 @@ impl<'a> Exec<'a> {
 #[test]
 pub fn exec_test() {
     use crate::hardware;
+    use crate::device;
 
     let hw = hardware::Hardware::new(0x1000);
+    let dev = device::Device::new();
 
-    let mut ac = super::access::Access::new(hw);
+    let mut ac = super::access::Access::new(hw, dev);
     let parse: parse::ParseInstr = Default::default();
 
     let exe = Exec::new(&mut ac, &parse);

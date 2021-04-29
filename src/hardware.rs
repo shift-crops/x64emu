@@ -1,6 +1,5 @@
 pub mod processor;
 pub mod memory;
-pub mod device;
 
 pub struct Hardware {
     pub core: processor::Processor,

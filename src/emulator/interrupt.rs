@@ -5,30 +5,29 @@ use crate::emulator::access::register::*;
 use crate::emulator::access::descriptor::*;
 
 #[derive(Debug)]
-pub enum Event {
+pub enum IntrEvent {
     Hardware(u8),
     Software(u8),
 }
 
 #[derive(Default)]
-pub struct Interrupt(VecDeque<Event>);
+pub struct Interrupt(VecDeque<IntrEvent>);
 
 impl Interrupt {
-    pub fn enqueue(&mut self, e: Event) -> () {
+    pub fn enqueue(&mut self, e: IntrEvent) -> () {
         self.0.push_front(e);
     }
 
     pub fn handle(&mut self, ac: &mut Access) -> Result<(), EmuException> {
         if let Some(e) = self.0.pop_back(){
             let (n, hw) = match e {
-                Event::Hardware(n) => (n, true),
-                Event::Software(n) => (n, false),
+                IntrEvent::Hardware(n) => (n, true),
+                IntrEvent::Software(n) => (n, false),
             };
 
-            interrupt_vector(ac, n, hw)
-        } else {
-            Ok(())
+            interrupt_vector(ac, n, hw)?;
         }
+        Ok(())
     }
 }
 

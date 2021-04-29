@@ -188,8 +188,9 @@ impl super::Access {
 #[test]
 pub fn access_mem_test() {
     let hw = hardware::Hardware::new(0x1000);
+    let dev = device::Device::new();
 
-    let mut ac = access::Access::new(hw);
+    let mut ac = access::Access::new(hw, dev);
     ac.set_data32((SgReg::DS, 0x10), 0xdeadbeef).unwrap();
     assert_eq!(ac.get_data8((SgReg::DS, 0x10)).unwrap(), 0xef);
 

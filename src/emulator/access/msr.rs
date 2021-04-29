@@ -73,7 +73,8 @@ impl super::Access {
 #[test]
 pub fn access_msr_test() {
     let hw = hardware::Hardware::new(0x1000);
-    let mut ac = access::Access::new(hw);
+    let dev = device::Device::new();
+    let mut ac = access::Access::new(hw, dev);
 
     ac.core.msr.efer.LMA = 1;
     assert_eq!(ac.read_msr(MSRAddress::IA32_EFER as u32).unwrap(), 0x400);
@@ -87,7 +88,8 @@ pub fn access_msr_test() {
 #[should_panic]
 pub fn access_msr_test_panic() {
     let hw = hardware::Hardware::new(0x1000);
-    let mut ac = access::Access::new(hw);
+    let dev = device::Device::new();
+    let mut ac = access::Access::new(hw, dev);
 
     ac.write_msr(0xc0000103, 0xdeadbeef).unwrap();
 }

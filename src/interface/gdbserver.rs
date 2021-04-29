@@ -37,14 +37,14 @@ impl Target for emulator::Emulator {
 impl SingleThreadOps for emulator::Emulator {
     fn resume(&mut self, action: ResumeAction, check_gdb_interrupt: &mut dyn FnMut() -> bool,) -> Result<StopReason<u32>, Self::Error> {
         match action {
-            ResumeAction::Step => match self.step() {
+            ResumeAction::Step => match self.step(true) {
                 Some(e) => e,
                 None => return Ok(StopReason::DoneStep),
             },
             ResumeAction::Continue => {
                 let mut cycles = 0;
                 loop {
-                    if let Some(event) = self.step() {
+                    if let Some(event) = self.step(true) {
                         break event;
                     };
 
