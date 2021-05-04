@@ -46,7 +46,7 @@ impl<'a> Exec<'a> {
             (1, 1, 0)             => (access::AcsSize::BIT32, access::AcsSize::BIT64),
             _ => return Err(EmuException::CPUException(CPUException::GP)),
         };
-        ac.size = access::OpAdSize { op, ad };
+        ac.oasz = access::OpAdSize { op, ad };
         Ok(())
     }
 
@@ -70,8 +70,7 @@ pub fn exec_test() {
     use crate::device;
 
     let hw = hardware::Hardware::new(0x1000);
-    let dev = device::Device::new();
-
+    let dev = device::Device::new(std::sync::Arc::clone(&hw.mem));
     let mut ac = super::access::Access::new(hw, dev);
     let parse: parse::ParseInstr = Default::default();
 
@@ -82,7 +81,7 @@ pub fn exec_test() {
     assert_eq!(exe.ac.pop_u64().unwrap(), 0xcafebabe);
     assert_eq!(exe.ac.pop_u64().unwrap(), 0xdeadbeef);
 
-    let mut x = exe.ac.mem.as_mut_ptr(0xf20).unwrap() as *mut u64;
+    let mut x = exe.ac.mem.write().unwrap().as_mut_ptr(0xf20).unwrap() as *mut u64;
     unsafe {
         *x = 0x11223344;
         x = (x as usize + 8) as *mut u64;

@@ -3,6 +3,7 @@ mod memory;
 mod msr;
 pub mod descriptor;
 
+use std::sync::{Arc, RwLock};
 use crate::hardware;
 use crate::device;
 
@@ -25,10 +26,10 @@ pub struct OpAdSize {
 
 pub struct Access {
     pub mode: CpuMode,
-    pub size: OpAdSize,
+    pub oasz: OpAdSize,
     pub stsz: AcsSize,
     pub core: hardware::processor::Processor,
-    pub mem: hardware::memory::Memory,
+    pub mem: Arc<RwLock<hardware::memory::Memory>>,
     pub dev: device::Device,
     a20gate: bool,
 }
@@ -37,7 +38,7 @@ impl Access {
     pub fn new(hw: hardware::Hardware, dev: device::Device) -> Self {
         Self {
             mode: CpuMode::Real,
-            size: Default::default(),
+            oasz: Default::default(),
             stsz: Default::default(),
             core: hw.core,
             mem: hw.mem,
@@ -48,20 +49,17 @@ impl Access {
 
     pub fn check_irq(&self, block: bool) -> Option<u8> {
         if self.core.rflags.is_interrupt() {
-            if block {
-                return Some(self.dev.rx.recv().unwrap());
-            } else if let Ok(n) = self.dev.rx.try_recv() {
-                return Some(n);
-            }
+            self.dev.get_interrupt_req(block)
+        } else {
+            None
         }
-        None
     }
 
     pub fn dump(&self) -> () {
         println!("CPU Mode: {:?} mode\n", self.mode);
         self.core.dump();
 
-        let unit = match self.size.ad {
+        let unit = match self.oasz.ad {
             AcsSize::BIT16 => hardware::memory::MemDumpSize::Word,
             AcsSize::BIT32 => hardware::memory::MemDumpSize::DWord,
             AcsSize::BIT64 => hardware::memory::MemDumpSize::QWord

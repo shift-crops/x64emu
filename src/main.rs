@@ -61,7 +61,7 @@ fn main() {
     let args = parse_args();
 
     let hw  = hardware::Hardware::new(0x400*0x400);
-    let dev = device::Device::new();
+    let dev  = device::Device::new(std::sync::Arc::clone(&hw.mem));
     let mut emu = emulator::Emulator::new(hw, dev);
 
     emu.map_binary(0xffff0, include_bytes!("bios/crt0.bin")).expect("Failed to map");
@@ -69,7 +69,7 @@ fn main() {
 
     let img = if args.input.len() > 0 { args.input[0].clone() } else { "/tmp/test".to_string() };
     emu.load_binfile(0x7c00, img).expect("Failed to load binary");
-
+    
     if let Some(p) = args.gdbport {
         let conn: Box<dyn Connection<Error = std::io::Error>> = Box::new(gdbserver::wait_for_tcp(p).expect("wait error"));
         let mut debugger = GdbStub::new(conn);

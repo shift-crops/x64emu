@@ -16,7 +16,7 @@ impl Instruction {
         let mut parse: parse::ParseInstr = Default::default();
 
         parse.parse_prefix(ac)?;
-        let size = Instruction::opad_size(&ac.size, &parse.prefix);
+        let size = Instruction::opad_size(&ac.oasz, &parse.prefix);
 
         let op = self.0.get(size.op);
         parse.parse_opcode(ac)?;

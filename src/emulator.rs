@@ -41,7 +41,7 @@ pub struct Emulator {
     pub breakpoints: Vec<u32>,
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug)]
 pub enum Event {
     Halted,
     Break,
@@ -106,7 +106,7 @@ impl Emulator {
     }
 
     pub fn map_binary(&mut self, addr: usize, bin: &[u8]) -> Result<(), Box<dyn error::Error>> {
-        self.ac.mem.write_data(addr, bin.as_ptr() as *const _, bin.len())?;
+        self.ac.mem.write().unwrap().write_data(addr, bin.as_ptr() as *const _, bin.len())?;
 
         Ok(())
     }
@@ -118,7 +118,7 @@ impl Emulator {
         let mut file = File::open(path)?;
         let mut buf = Vec::new();
         let len = file.read_to_end(&mut buf)?;
-        self.ac.mem.write_data(addr, buf.as_ptr() as *const _, len)?;
+        self.ac.mem.write().unwrap().write_data(addr, buf.as_ptr() as *const _, len)?;
 
         Ok(())
     }

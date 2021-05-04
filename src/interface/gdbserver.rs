@@ -152,7 +152,7 @@ impl SingleThreadOps for emulator::Emulator {
 
     fn read_addrs(&mut self, start_addr: u32, data: &mut [u8]) -> TargetResult<(), Self> {
         if let Ok(paddr) = self.ac.addr_v2p(SgReg::DS, start_addr as u64) {
-            if let Ok(_) = self.ac.mem.read_data(data.as_mut_ptr() as *mut c_void, paddr as usize, data.len()) {
+            if let Ok(_) = self.ac.mem.read().unwrap().read_data(data.as_mut_ptr() as *mut c_void, paddr as usize, data.len()) {
                 return Ok(());
             }
         }
@@ -161,7 +161,7 @@ impl SingleThreadOps for emulator::Emulator {
 
     fn write_addrs(&mut self, start_addr: u32, data: &[u8]) -> TargetResult<(), Self> {
         if let Ok(paddr) = self.ac.addr_v2p(SgReg::DS, start_addr as u64) {
-            if let Ok(_) = self.ac.mem.write_data(paddr as usize, data.as_ptr() as *const c_void, data.len()) {
+            if let Ok(_) = self.ac.mem.write().unwrap().write_data(paddr as usize, data.as_ptr() as *const c_void, data.len()) {
                 return Ok(());
             }
         }

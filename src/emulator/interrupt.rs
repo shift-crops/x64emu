@@ -41,7 +41,7 @@ fn interrupt_vector(ac: &mut Access, ivec: u8, hw: bool) -> Result<(), EmuExcept
             if ivt_ofs > idtr.limit { return Err(EmuException::CPUException(CPUException::GP)); }
 
             let mut ivt: [u16;2] = [0; 2]; // [offset, segment]
-            ac.read_data_p(ivt.as_mut_ptr() as *mut _, idtr.base + ivt_ofs as u64, std::mem::size_of_val(&ivt))?;
+            ac.read_data_l(ivt.as_mut_ptr() as *mut _, idtr.base + ivt_ofs as u64, std::mem::size_of_val(&ivt))?;
 
             save_regs(ac, AcsSize::BIT16, false)?;
             ac.load_segment(SgReg::CS, ivt[1])?;

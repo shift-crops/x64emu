@@ -73,7 +73,7 @@ impl super::Access {
 #[test]
 pub fn access_msr_test() {
     let hw = hardware::Hardware::new(0x1000);
-    let dev = device::Device::new();
+    let dev = device::Device::new(std::sync::Arc::clone(&hw.mem));
     let mut ac = access::Access::new(hw, dev);
 
     ac.core.msr.efer.LMA = 1;
@@ -88,7 +88,7 @@ pub fn access_msr_test() {
 #[should_panic]
 pub fn access_msr_test_panic() {
     let hw = hardware::Hardware::new(0x1000);
-    let dev = device::Device::new();
+    let dev = device::Device::new(std::sync::Arc::clone(&hw.mem));
     let mut ac = access::Access::new(hw, dev);
 
     ac.write_msr(0xc0000103, 0xdeadbeef).unwrap();

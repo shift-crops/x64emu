@@ -24,7 +24,7 @@ macro_rules! jmp_far {
                             } else if rpl > cpl || desc.DPL != cpl {
                                 return Err(EmuException::CPUException(CPUException::GP));
                             }
-                            if self.ac.size.op != access::AcsSize::BIT64 && abs as u32 > ((desc.limit_h as u32) << 16) + desc.limit_l as u32 {
+                            if self.ac.oasz.op != access::AcsSize::BIT64 && abs as u32 > ((desc.limit_h as u32) << 16) + desc.limit_l as u32 {
                                 return Err(EmuException::CPUException(CPUException::GP));
                             }
 
@@ -43,7 +43,7 @@ macro_rules! jmp_far {
                                 return Err(EmuException::CPUException(CPUException::GP));
                             }
 
-                            if self.ac.size.op != access::AcsSize::BIT64 && abs as u32 > ((desc.limit_h as u32) << 16) + desc.limit_l as u32 {
+                            if self.ac.oasz.op != access::AcsSize::BIT64 && abs as u32 > ((desc.limit_h as u32) << 16) + desc.limit_l as u32 {
                                 return Err(EmuException::CPUException(CPUException::GP));
                             }
 
@@ -101,7 +101,7 @@ macro_rules! call_far {
                             } else if rpl > cpl || cdesc.DPL != cpl {
                                 return Err(EmuException::CPUException(CPUException::GP));
                             }
-                            if self.ac.size.op != access::AcsSize::BIT64 && abs as u32 > ((cdesc.limit_h as u32) << 16) + cdesc.limit_l as u32 {
+                            if self.ac.oasz.op != access::AcsSize::BIT64 && abs as u32 > ((cdesc.limit_h as u32) << 16) + cdesc.limit_l as u32 {
                                 return Err(EmuException::CPUException(CPUException::GP));
                             }
 
@@ -122,7 +122,7 @@ macro_rules! call_far {
                             if !CodeDescFlag::from(&desc).contains(CodeDescFlag::C) && desc.DPL < cpl {
                                 return Err(EmuException::NotImplementedFunction);
                             } else {
-                                if self.ac.size.op != access::AcsSize::BIT64 && new_ip as u32 > ((desc.limit_h as u32) << 16) + desc.limit_l as u32 {
+                                if self.ac.oasz.op != access::AcsSize::BIT64 && new_ip as u32 > ((desc.limit_h as u32) << 16) + desc.limit_l as u32 {
                                     return Err(EmuException::CPUException(CPUException::GP));
                                 }
 
@@ -177,7 +177,7 @@ macro_rules! ret_far {
                             return Err(EmuException::CPUException(CPUException::GP));
                         }
 
-                        if self.ac.size.op != access::AcsSize::BIT64 && new_ip as u32 > ((cdesc.limit_h as u32) << 16) + cdesc.limit_l as u32 {
+                        if self.ac.oasz.op != access::AcsSize::BIT64 && new_ip as u32 > ((cdesc.limit_h as u32) << 16) + cdesc.limit_l as u32 {
                             return Err(EmuException::CPUException(CPUException::GP));
                         }
 
@@ -237,7 +237,7 @@ macro_rules! intr_ret {
                             return Err(EmuException::CPUException(CPUException::GP));
                         }
 
-                        if self.ac.size.op != access::AcsSize::BIT64 && new_ip as u32 > ((cdesc.limit_h as u32) << 16) + cdesc.limit_l as u32 {
+                        if self.ac.oasz.op != access::AcsSize::BIT64 && new_ip as u32 > ((cdesc.limit_h as u32) << 16) + cdesc.limit_l as u32 {
                             return Err(EmuException::CPUException(CPUException::GP));
                         }
 
