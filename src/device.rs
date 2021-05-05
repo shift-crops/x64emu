@@ -5,7 +5,6 @@ use std::thread;
 use std::sync::{Arc, RwLock};
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, Sender};
-use std::collections::HashMap;
 
 use super::hardware::memory;
 
@@ -16,20 +15,77 @@ pub struct Device {
     memio_range: Vec<Range<u64>>
 }
 
+enum IOReqType { PortIO(u16), MemIO(u64) }
+enum IOReqRW { Read(usize), Write(Vec<u8>) }
+
 pub struct IORequest {
+    ty: IOReqType,
+    rw: IOReqRW,
 }
 
 pub struct IOResult {
+    data: Option<Vec<u8>>,
 }
 
 pub trait PortIO {
+    fn in8(&self, addr: u16) -> u8;
+    fn out8(&mut self, addr: u16, data: u8) -> ();
+
+    fn in_io(&self, addr: u16, len: usize) -> Vec<u8> {
+        let mut data = vec![0; len];
+        for i in 0..len {
+            data[i] = self.in8(addr+i as u16);
+        }
+        data
+    }
+
+    fn out_io(&mut self, addr: u16, data: Vec<u8>) -> () {
+        for i in 0..data.len() {
+            self.out8(addr+i as u16, data[i]);
+        }
+    }
 }
 
 pub trait MemoryIO {
+    fn read8(&self, ofs: u64) -> u8;
+    fn write8(&mut self, ofs: u64, data: u8) -> ();
+
+    fn read_io(&self, ofs: u64, len: usize) -> Vec<u8> {
+        let mut data = vec![0; len];
+        for i in 0..len {
+            data[i] = self.read8(ofs+i as u64);
+        }
+        data
+    }
+
+    fn write_io(&mut self, ofs: u64, data: Vec<u8>) -> () {
+        for i in 0..data.len() {
+            self.write8(ofs+i as u64, data[i]);
+        }
+    }
 }
 
-type PortIOMap<'a> = HashMap<u16, (u8, &'a mut dyn PortIO)>;
-type MemoryIOMap<'a> = HashMap<u64, (u64, &'a mut dyn MemoryIO)>;
+#[derive(Clone)]
+pub struct IReq {
+    irq_tx: Sender<u8>,
+    irq_no: u8
+}
+
+impl IReq {
+    pub fn new(tx: &Sender<u8>, n: u8) -> Self {
+        Self {
+            irq_tx: mpsc::Sender::clone(tx),
+            irq_no: n,
+        }
+    }
+
+    pub fn send_irq(&self) -> () {
+        self.irq_tx.send(self.irq_no).unwrap();
+    }
+}
+
+type PortIOMap<'a> = Vec<(Range<u16>, &'a mut dyn PortIO)>;
+type MemoryIOMap<'a> = Vec<(Range<u64>, &'a mut dyn MemoryIO)>;
 
 impl Device {
     pub fn new(mem: Arc<RwLock<memory::Memory>>) -> Self {
@@ -37,18 +93,64 @@ impl Device {
         let (res_tx, res_rx): (Sender<IOResult>, Receiver<IOResult>) = mpsc::channel();
         let (irq_tx, irq_rx): (Sender<u8>, Receiver<u8>) = mpsc::channel();
 
-        let mut port_io_map: PortIOMap = HashMap::new();
-        let mut memory_io_map: MemoryIOMap = HashMap::new();
-        let mut memio_range: Vec<Range<u64>> = vec!();
-
-        let mut tstdev = testdev::TestDev::new(mpsc::Sender::clone(&irq_tx), Arc::clone(&mem));
-        port_io_map.insert(0, (1, &mut tstdev));
-        memory_io_map.insert(0x1000, (0x10, &mut tstdev));
-        memio_range.push(0x1000..0x1000+0x10);
+        let mut memio_range: Vec<Range<u64>> = Vec::new();
+        memio_range.push(0x1000..0x1000+0x100);
 
         thread::spawn(move || {
+            let mut port_io_map: PortIOMap = Vec::new();
+            let mut memory_io_map: MemoryIOMap = Vec::new();
+
+            let mut tstdev = testdev::TestDev::new(IReq::new(&irq_tx, 0), Arc::clone(&mem));
+            port_io_map.push((0x10..0x10+1, &mut tstdev.pdev));
+            memory_io_map.push((0x1000..0x1000+0x100, &mut tstdev.mdev));
+
             loop {
-                req_rx.recv().unwrap();
+                let req = req_rx.recv().unwrap();
+                let res = match req.ty {
+                    IOReqType::PortIO(addr) => {
+                        let mut dev: Option<&mut dyn PortIO> = None;
+                        for (r, d) in port_io_map.iter_mut() {
+                            if r.contains(&addr) {
+                                dev = Some(*d);
+                                break;
+                            }
+                        }
+
+                        match (req.rw, dev) {
+                            (IOReqRW::Read(size), Some(d)) => {
+                                Some(d.in_io(addr, size))
+                            },
+                            (IOReqRW::Write(ref data), Some(d)) => {
+                                d.out_io(addr, data.to_vec());
+                                None
+                            },
+                            (_, None) => None,
+                        }
+                    },
+                    IOReqType::MemIO(addr) => {
+                        let mut dev: Option<&mut dyn MemoryIO> = None;
+                        let mut ofs = 0;
+                        for (r, d) in memory_io_map.iter_mut() {
+                            if r.contains(&addr) {
+                                dev = Some(*d);
+                                ofs = addr - r.start;
+                                break;
+                            }
+                        }
+
+                        match (req.rw, dev) {
+                            (IOReqRW::Read(size), Some(d)) => {
+                                Some(d.read_io(ofs, size))
+                            },
+                            (IOReqRW::Write(ref data), Some(d)) => {
+                                d.write_io(ofs, data.to_vec());
+                                None
+                            },
+                            (_, None) => None,
+                        }
+                    },
+                };
+                res_tx.send(IOResult{ data: res }).unwrap();
             }
         });
 
@@ -70,20 +172,55 @@ impl Device {
         }
     }
 
+    pub fn in_portio(&self, addr: u16, dst: &mut [u8]) -> () {
+        let req = IORequest {
+            ty: IOReqType::PortIO(addr),
+            rw: IOReqRW::Read(dst.len()),
+        };
+        self.io_req_tx.send(req).unwrap();
+
+        if let Some(data) = self.io_res_rx.recv().unwrap().data {
+            dst.copy_from_slice(&data);
+        }
+    }
+
+    pub fn out_portio(&self, addr: u16, src: &[u8]) -> () {
+        let req = IORequest {
+            ty: IOReqType::PortIO(addr),
+            rw: IOReqRW::Write(src.to_vec()),
+        };
+        self.io_req_tx.send(req).unwrap();
+        self.io_res_rx.recv().unwrap();
+    }
+
+    pub fn read_memio(&self, addr: u64, dst: &mut [u8]) -> () {
+        let req = IORequest {
+            ty: IOReqType::MemIO(addr),
+            rw: IOReqRW::Read(dst.len()),
+        };
+        self.io_req_tx.send(req).unwrap();
+
+        if let Some(data) = self.io_res_rx.recv().unwrap().data {
+            dst.copy_from_slice(&data);
+        }
+    }
+
+    pub fn write_memio(&self, addr: u64, src: &[u8]) -> () {
+        let req = IORequest {
+            ty: IOReqType::MemIO(addr),
+            rw: IOReqRW::Write(src.to_vec()),
+        };
+        self.io_req_tx.send(req).unwrap();
+        self.io_res_rx.recv().unwrap();
+    }
+
     pub fn check_memio(&self, addr: u64, length: u64) -> bool {
         for r in self.memio_range.iter() {
-            if r.contains(&addr) && r.contains(&(addr+length)) {
+            if r.start <= addr && addr+length-1 < r.end {
                 return true;
             }
         }
         false
     }
 
-    pub fn read_memio(&self, _addr: u64, _dst: &mut [u8]) -> () {
-        panic!("Not Implemented");
-    }
-
-    pub fn write_memio(&self, _addr: u64, _src: &[u8]) -> () {
-        panic!("Not Implemented");
-    }
 }

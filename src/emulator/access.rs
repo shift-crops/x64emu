@@ -2,6 +2,7 @@ pub mod register;
 mod memory;
 mod msr;
 pub mod descriptor;
+mod port;
 
 use std::sync::{Arc, RwLock};
 use crate::hardware;

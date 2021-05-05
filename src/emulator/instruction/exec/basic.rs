@@ -27,6 +27,10 @@ impl<'a> super::Exec<'a> {
         self.ac.set_gpreg(GpReg32::EAX, v)
     }
 
+    pub fn get_dx(&self) -> Result<u16, EmuException> {
+        self.ac.get_gpreg(GpReg16::DX)
+    }
+
     pub fn get_sreg(&mut self) -> Result<u16, EmuException> {
         Ok(self.ac.get_sgselector(SgReg::try_from(self.idata.modrm.reg as usize).unwrap())?.to_u16())
     }

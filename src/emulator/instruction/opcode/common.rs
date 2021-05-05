@@ -63,15 +63,11 @@ pub fn init_cmn_opcode(op: &mut super::OpcodeArr){
     setcmnop!(0xcc, int3,          OpFlags::NONE);
     setcmnop!(0xcd, int_imm8,      OpFlags::IMM8);
     setcmnop!(0xce, into,          OpFlags::NONE);
-    /*
     setcmnop!(0xe4, in_al_imm8,    OpFlags::IMM8);
     setcmnop!(0xe6, out_imm8_al,   OpFlags::IMM8);
-    */
     setcmnop!(0xeb, jmp_imm8,      OpFlags::IMM8);
-    /*
     setcmnop!(0xec, in_al_dx,      OpFlags::NONE);
     setcmnop!(0xee, out_dx_al,     OpFlags::NONE);
-    */
     setcmnop!(0xfa, cli,           OpFlags::NONE);
     setcmnop!(0xfb, sti,           OpFlags::NONE);
     setcmnop!(0xfc, cld,           OpFlags::NONE);
@@ -169,7 +165,13 @@ fn int3(_exec: &mut exec::Exec) -> Result<(), EmuException> { Err(EmuException::
 fn int_imm8(exec: &mut exec::Exec) -> Result<(), EmuException> { Err(EmuException::Interrupt(exec.get_imm8()?)) }
 fn into(_exec: &mut exec::Exec) -> Result<(), EmuException> { Err(EmuException::Interrupt(4)) }
 
+in_reg_port!(8, al, imm8);
+out_port_reg!(8, imm8, al);
+
 jmp_rel!(8, imm8);
+
+in_reg_port!(8, al, dx);
+out_port_reg!(8, dx, al);
 
 fn cli(exec: &mut exec::Exec) -> Result<(), EmuException> { exec.ac.core.rflags.set_interrupt(false); Ok(()) }
 fn sti(exec: &mut exec::Exec) -> Result<(), EmuException> { exec.ac.core.rflags.set_interrupt(true); Ok(()) }

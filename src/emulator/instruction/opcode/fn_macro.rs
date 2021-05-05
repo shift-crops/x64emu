@@ -324,6 +324,26 @@ macro_rules! iret {
     } };
 }
 
+macro_rules! in_reg_port {
+    ( $size:expr, $reg:ident, $port:ident ) => { paste::item! {
+        fn [<in_ $reg _ $port>](exec: &mut exec::Exec) -> Result<(), EmuException> {
+            let port = exec.[<get_ $port>]()? as u16;
+            let v = exec.ac.[<in_ $size>](port)?;
+            exec.[<set_ $reg>](v)
+        }
+    } };
+}
+
+macro_rules! out_port_reg {
+    ( $size:expr, $port:ident, $reg:ident ) => { paste::item! {
+        fn [<out_ $port _ $reg>](exec: &mut exec::Exec) -> Result<(), EmuException> {
+            let port = exec.[<get_ $port>]()? as u16;
+            let v = exec.[<get_ $reg>]()?;
+            exec.ac.[<out_ $size>](port, v)
+        }
+    } };
+}
+
 macro_rules! call_rel {
     ( $size:expr, $rel:ident ) => { paste::item! {
         fn [<call_ $rel>](exec: &mut exec::Exec) -> Result<(), EmuException> {

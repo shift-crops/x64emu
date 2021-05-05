@@ -110,7 +110,7 @@ impl super::Access {
             let mut data = vec![0; size as usize];
             self.dev.read_memio(paddr, &mut data);
             let mut dst = [0; 8];
-            dst.clone_from_slice(&data);
+            dst[..size as usize].copy_from_slice(&data);
             u64::from_be_bytes(dst)
         } else {
             let paddr = paddr as usize;

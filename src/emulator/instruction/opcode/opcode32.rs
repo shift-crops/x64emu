@@ -144,22 +144,18 @@ impl super::OpcodeTrait for Opcode32 {
             
         setop!(0xcf, iret,              OpFlags::NONE);
             
-        /*
         // 0xe4 : in_al_imm8
         setop!(0xe5, in_eax_imm8,        OpFlags::IMM8);
         // 0xe6 : out_imm8_al
         setop!(0xe7, out_imm8_eax,       OpFlags::IMM8);
-        */
         setop!(0xe8, call_imm32,        OpFlags::IMM32);
         setop!(0xe9, jmp_imm32,         OpFlags::IMM32);
         setop!(0xea, jmpf_ptr16_imm32,  OpFlags::PTR16 | OpFlags::IMM32);
         // 0xeb : jmp_imm8
         // 0xec : in_al_dx
-        /*
         setop!(0xed, in_eax_dx,          OpFlags::NONE);
         // 0xee : out_dx_al
         setop!(0xef, out_dx_eax,         OpFlags::NONE);
-        */
             
         setop!(0x0f80, jo_imm32,        OpFlags::IMM32);
         setop!(0x0f81, jno_imm32,       OpFlags::IMM32);
@@ -336,10 +332,13 @@ impl Opcode32 {
 
     iret!(32);
 
+    in_reg_port!(32, eax, imm8);
+    out_port_reg!(32, imm8, eax);
     call_rel!(32, imm32);
-
     jmp_rel!(32, imm32);
     jmpf_abs!(32, ptr16, imm32);
+    in_reg_port!(32, eax, dx);
+    out_port_reg!(32, dx, eax);
 
     jcc_rel!(32, o, imm32);
     jcc_rel!(32, b, imm32);

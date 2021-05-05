@@ -144,22 +144,18 @@ impl super::OpcodeTrait for Opcode16 {
             
         setop!(0xcf, iret,              OpFlags::NONE);
             
-        /*
         // 0xe4 : in_al_imm8
         setop!(0xe5, in_ax_imm8,        OpFlags::IMM8);
         // 0xe6 : out_imm8_al
         setop!(0xe7, out_imm8_ax,       OpFlags::IMM8);
-        */
         setop!(0xe8, call_imm16,        OpFlags::IMM16);
         setop!(0xe9, jmp_imm16,         OpFlags::IMM16);
         setop!(0xea, jmpf_ptr16_imm16,  OpFlags::PTR16 | OpFlags::IMM16);
         // 0xeb : jmp_imm8
         // 0xec : in_al_dx
-        /*
         setop!(0xed, in_ax_dx,          OpFlags::NONE);
         // 0xee : out_dx_al
         setop!(0xef, out_dx_ax,         OpFlags::NONE);
-        */
             
         setop!(0x0f80, jo_imm16,        OpFlags::IMM16);
         setop!(0x0f81, jno_imm16,       OpFlags::IMM16);
@@ -335,10 +331,13 @@ impl Opcode16 {
 
     iret!(16);
 
+    in_reg_port!(16, ax, imm8);
+    out_port_reg!(16, imm8, ax);
     call_rel!(16, imm16);
-
     jmp_rel!(16, imm16);
     jmpf_abs!(16, ptr16, imm16);
+    in_reg_port!(16, ax, dx);
+    out_port_reg!(16, dx, ax);
 
     jcc_rel!(16, o, imm16);
     jcc_rel!(16, b, imm16);
