@@ -329,6 +329,7 @@ macro_rules! in_reg_port {
         fn [<in_ $reg _ $port>](exec: &mut exec::Exec) -> Result<(), EmuException> {
             let port = exec.[<get_ $port>]()? as u16;
             let v = exec.ac.[<in_ $size>](port)?;
+            debug!("in: {:04x}", port);
             exec.[<set_ $reg>](v)
         }
     } };
@@ -339,6 +340,7 @@ macro_rules! out_port_reg {
         fn [<out_ $port _ $reg>](exec: &mut exec::Exec) -> Result<(), EmuException> {
             let port = exec.[<get_ $port>]()? as u16;
             let v = exec.[<get_ $reg>]()?;
+            debug!("out: {:04x}", port);
             exec.ac.[<out_ $size>](port, v)
         }
     } };

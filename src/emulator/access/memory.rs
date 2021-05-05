@@ -111,7 +111,7 @@ impl super::Access {
             self.dev.read_memio(paddr, &mut data);
             let mut dst = [0; 8];
             dst[..size as usize].copy_from_slice(&data);
-            u64::from_be_bytes(dst)
+            u64::from_le_bytes(dst)
         } else {
             let paddr = paddr as usize;
             match size {
@@ -127,7 +127,7 @@ impl super::Access {
     fn write_vaddr(&mut self, sg: SgReg, vaddr: u64, v: u64, size: MemAccessSize) -> Result<(), EmuException> {
         let paddr = self.trans_v2p(MemAccessMode::Write, sg, vaddr)?;
         if self.dev.check_memio(paddr, size as u64 - 1) {
-            self.dev.write_memio(paddr, &v.to_be_bytes()[..size as usize]);
+            self.dev.write_memio(paddr, &v.to_le_bytes()[..size as usize]);
         } else {
             let paddr = paddr as usize;
             match size {
