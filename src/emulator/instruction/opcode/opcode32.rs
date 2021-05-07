@@ -419,7 +419,7 @@ impl Opcode32 {
         let limit = exec.ac.get_data16((sg,adr))?;
         let base  = exec.ac.get_data32((sg,adr+2))?;
         debug!("lgdt: base = {:04x}, limit = {:02x}", base, limit);
-        exec.set_gdtr(base as u64, limit)
+        exec.ac.set_gdtr(base as u64, limit)
     }
 
     fn lidt_m16_32(exec: &mut exec::Exec) -> Result<(), EmuException> {
@@ -428,6 +428,6 @@ impl Opcode32 {
         let limit = exec.ac.get_data16((sg,adr))?;
         let base  = exec.ac.get_data32((sg,adr+2))?;
         debug!("lidt: base = {:04x}, limit = {:02x}", base, limit);
-        exec.set_idtr(base as u64, limit)
+        exec.ac.set_idtr(base as u64, limit)
     }
 }

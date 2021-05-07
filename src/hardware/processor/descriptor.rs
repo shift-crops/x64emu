@@ -6,7 +6,7 @@ pub struct DTRegisters {
     pub tr:   DescTblSel,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct DescTbl {
     pub base:  u64, 
     pub limit: u32, 

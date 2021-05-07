@@ -319,7 +319,7 @@ macro_rules! retf {
 macro_rules! iret {
     ( $size:expr ) => { paste::item! {
         fn iret(exec: &mut exec::Exec) -> Result<(), EmuException> {
-            exec.[<intr_ret_u $size>]()
+            exec.[<int_ret_u $size>]()
         }
     } };
 }

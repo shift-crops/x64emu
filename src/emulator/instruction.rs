@@ -3,7 +3,7 @@ mod opcode;
 mod exec;
 
 use super::access;
-use crate::emulator::EmuException;
+use crate::emulator::{EmuException, CPUException};
 
 pub struct Instruction(opcode::Opcode);
 
@@ -23,8 +23,7 @@ impl Instruction {
         parse.parse_oprand(ac, op.flag(parse.instr.opcode), size.ad)?;
 
         op.exec(&mut exec::Exec::new(ac, &parse))?;
-
-        Ok(())
+        if ac.core.rflags.is_trap() { Err(EmuException::CPUException(CPUException::DB)) } else { Ok(()) }
     }
 
     pub fn opad_size(size: &access::OpAdSize, pdata: &parse::PrefixData) -> access::OpAdSize {

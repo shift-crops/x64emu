@@ -98,64 +98,7 @@ impl Device {
         memio_range.push(0x1000..0x1000+0x100);
 
         thread::spawn(move || {
-            let mut port_io_map: PortIOMap = Vec::new();
-            let mut memory_io_map: MemoryIOMap = Vec::new();
-
-            let (mut tst_dma_ctl, mut tst_dma_adr) = testdma::TestDMA::new(IReq::new(&irq_tx, 1), Arc::clone(&mem));
-            port_io_map.push((0x10..0x10+1, &mut tst_dma_ctl));
-            memory_io_map.push((0x1000..0x1000+0x10, &mut tst_dma_adr));
-
-            let mut tst_timer = testtimer::TestTimer::new(IReq::new(&irq_tx, 2));
-            port_io_map.push((0x20..0x20+1, &mut tst_timer));
-
-            loop {
-                let req = req_rx.recv().unwrap();
-                let res = match req.ty {
-                    IOReqType::PortIO(addr) => {
-                        let mut dev: Option<&mut dyn PortIO> = None;
-                        for (r, d) in port_io_map.iter_mut() {
-                            if r.contains(&addr) {
-                                dev = Some(*d);
-                                break;
-                            }
-                        }
-
-                        match (req.rw, dev) {
-                            (IOReqRW::Read(size), Some(d)) => {
-                                Some(d.in_io(addr, size))
-                            },
-                            (IOReqRW::Write(ref data), Some(d)) => {
-                                d.out_io(addr, data.to_vec());
-                                None
-                            },
-                            (_, None) => None,
-                        }
-                    },
-                    IOReqType::MemIO(addr) => {
-                        let mut dev: Option<&mut dyn MemoryIO> = None;
-                        let mut ofs = 0;
-                        for (r, d) in memory_io_map.iter_mut() {
-                            if r.contains(&addr) {
-                                dev = Some(*d);
-                                ofs = addr - r.start;
-                                break;
-                            }
-                        }
-
-                        match (req.rw, dev) {
-                            (IOReqRW::Read(size), Some(d)) => {
-                                Some(d.read_io(ofs, size))
-                            },
-                            (IOReqRW::Write(ref data), Some(d)) => {
-                                d.write_io(ofs, data.to_vec());
-                                None
-                            },
-                            (_, None) => None,
-                        }
-                    },
-                };
-                res_tx.send(IOResult{ data: res }).unwrap();
-            }
+            Self::init_handler(mem, req_rx, res_tx, irq_tx);
         });
 
         Self {
@@ -163,6 +106,68 @@ impl Device {
             io_res_rx: res_rx,
             irq_rx: irq_rx,
             memio_range,
+        }
+    }
+
+    fn init_handler(mem: Arc<RwLock<memory::Memory>>, req_rx: Receiver<IORequest>, res_tx: Sender<IOResult>, irq_tx: Sender<u8>) -> () {
+        let mut port_io_map: PortIOMap = Vec::new();
+        let mut memory_io_map: MemoryIOMap = Vec::new();
+
+        let (mut tst_dma_ctl, mut tst_dma_adr) = testdma::TestDMA::new(IReq::new(&irq_tx, 1), Arc::clone(&mem));
+        let mut tst_timer = testtimer::TestTimer::new(IReq::new(&irq_tx, 2));
+
+        port_io_map.push((0x10..0x10+1, &mut tst_dma_ctl));
+        port_io_map.push((0x20..0x20+1, &mut tst_timer));
+
+        memory_io_map.push((0x1000..0x1000+0x10, &mut tst_dma_adr));
+
+        loop {
+            let req = req_rx.recv().unwrap();
+            let res = match req.ty {
+                IOReqType::PortIO(addr) => {
+                    let mut dev: Option<&mut dyn PortIO> = None;
+                    for (r, d) in port_io_map.iter_mut() {
+                        if r.contains(&addr) {
+                            dev = Some(*d);
+                            break;
+                        }
+                    }
+
+                    match (req.rw, dev) {
+                        (IOReqRW::Read(size), Some(d)) => {
+                            Some(d.in_io(addr, size))
+                        },
+                        (IOReqRW::Write(ref data), Some(d)) => {
+                            d.out_io(addr, data.to_vec());
+                            None
+                        },
+                        (_, None) => None,
+                    }
+                },
+                IOReqType::MemIO(addr) => {
+                    let mut dev: Option<&mut dyn MemoryIO> = None;
+                    let mut ofs = 0;
+                    for (r, d) in memory_io_map.iter_mut() {
+                        if r.contains(&addr) {
+                            dev = Some(*d);
+                            ofs = addr - r.start;
+                            break;
+                        }
+                    }
+
+                    match (req.rw, dev) {
+                        (IOReqRW::Read(size), Some(d)) => {
+                            Some(d.read_io(ofs, size))
+                        },
+                        (IOReqRW::Write(ref data), Some(d)) => {
+                            d.write_io(ofs, data.to_vec());
+                            None
+                        },
+                        (_, None) => None,
+                    }
+                },
+            };
+            res_tx.send(IOResult{ data: res }).unwrap();
         }
     }
 

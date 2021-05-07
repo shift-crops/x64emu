@@ -32,7 +32,7 @@ impl<'a> super::Exec<'a> {
     }
 
     pub fn get_sreg(&mut self) -> Result<u16, EmuException> {
-        Ok(self.ac.get_sgselector(SgReg::try_from(self.idata.modrm.reg as usize).unwrap())?.to_u16())
+        Ok(self.ac.get_sgreg(SgReg::try_from(self.idata.modrm.reg as usize).unwrap())?.0)
     }
 
     pub fn set_sreg(&mut self, v: u16) -> Result<(), EmuException> {

@@ -42,9 +42,9 @@ impl super::Access {
                 MSRAddress::CSTAR        => &self.core.msr.cstar,
                 MSRAddress::LSTAR        => &self.core.msr.lstar,
                 MSRAddress::FMASK        => &self.core.msr.fmask,
-                MSRAddress::FSBase       => self.get_sgcache(SgReg::FS).unwrap(),
-                MSRAddress::GSBase       => self.get_sgcache(SgReg::GS).unwrap(),
-                MSRAddress::KernelGSBase => self.get_sgcache(SgReg::KernelGS).unwrap(),
+                MSRAddress::FSBase       => &self.core.sgregs.get(SgReg::FS).cache,
+                MSRAddress::GSBase       => &self.core.sgregs.get(SgReg::GS).cache,
+                MSRAddress::KernelGSBase => &self.core.sgregs.get(SgReg::KernelGS).cache,
             };
             return Some(v);
         }
@@ -59,9 +59,9 @@ impl super::Access {
                 MSRAddress::CSTAR        => &mut self.core.msr.cstar,
                 MSRAddress::LSTAR        => &mut self.core.msr.lstar,
                 MSRAddress::FMASK        => &mut self.core.msr.fmask,
-                MSRAddress::FSBase       => self.get_sgcache_mut(SgReg::FS).unwrap(),
-                MSRAddress::GSBase       => self.get_sgcache_mut(SgReg::GS).unwrap(),
-                MSRAddress::KernelGSBase => self.get_sgcache_mut(SgReg::KernelGS).unwrap(),
+                MSRAddress::FSBase       => &mut self.core.sgregs.get_mut(SgReg::FS).cache,
+                MSRAddress::GSBase       => &mut self.core.sgregs.get_mut(SgReg::GS).cache,
+                MSRAddress::KernelGSBase => &mut self.core.sgregs.get_mut(SgReg::KernelGS).cache,
             };
             return Some(v);
         }

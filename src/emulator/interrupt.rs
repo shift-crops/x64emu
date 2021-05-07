@@ -40,16 +40,16 @@ fn interrupt_vector(ac: &mut Access, ivec: u8, hw: bool) -> Result<(), EmuExcept
 
             if ivt_ofs > idtr.limit { return Err(EmuException::CPUException(CPUException::GP)); }
 
-            let mut ivt: [u16;2] = [0; 2]; // [offset, segment]
-            ac.read_data_l(ivt.as_mut_ptr() as *mut _, idtr.base + ivt_ofs as u64, std::mem::size_of_val(&ivt))?;
+            let mut ivt: IVT = Default::default();
+            ac.read_l(&mut ivt as *mut IVT as *mut _, idtr.base + ivt_ofs as u64, std::mem::size_of_val(&ivt))?;
 
-            save_regs(ac, AcsSize::BIT16, false)?;
-            ac.load_segment(SgReg::CS, ivt[1])?;
-            ac.set_ip(ivt[0])?;
+            ac.save_regs(AcsSize::BIT16, None)?;
+            ac.load_segment(SgReg::CS, ivt.segment)?;
+            ac.set_ip(ivt.offset)?;
         },
         CpuMode::Protected | CpuMode::Long => {
             let cpl = ac.get_cpl()?;
-            match ac.obtain_i_descriptor(ivec)? {
+            match ac.obtain_i_desc(ivec)? {
                 Some(DescType::System(SysDescType::Intr(gate))) => {
                     let (new_ip, dpl) = (((gate.offset_h as u32) << 16) + gate.offset_l as u32, gate.DPL);
                     let gatesize = if gate.D == 0 { AcsSize::BIT16 } else if ac.mode == CpuMode::Long { AcsSize::BIT64 } else { AcsSize::BIT32 };
@@ -60,7 +60,7 @@ fn interrupt_vector(ac: &mut Access, ivec: u8, hw: bool) -> Result<(), EmuExcept
 
                     let cache = ac.select_segdesc(SgReg::CS, rpl, Some(SegDescType::Code(desc)))?;
 
-                    save_regs(ac, gatesize, cpl > rpl)?;
+                    ac.save_regs(gatesize, if rpl < cpl { Some(rpl) } else { None })?;
                     ac.core.rflags.set_interrupt(false);
                     ac.set_sgreg(SgReg::CS, sel, cache)?;
                     ac.set_ip(new_ip)?;
@@ -75,44 +75,19 @@ fn interrupt_vector(ac: &mut Access, ivec: u8, hw: bool) -> Result<(), EmuExcept
 
                     let cache = ac.select_segdesc(SgReg::CS, rpl, Some(SegDescType::Code(desc)))?;
 
-                    save_regs(ac, gatesize, cpl > rpl)?;
+                    ac.save_regs(gatesize, if rpl < cpl { Some(rpl) } else { None })?;
                     ac.set_sgreg(SgReg::CS, sel, cache)?;
                     ac.set_ip(new_ip)?;
                 },
                 Some(DescType::System(SysDescType::Task(gate))) => {
                     if gate.DPL < cpl { return Err(EmuException::CPUException(CPUException::GP)); }
+                    let tss_sel = gate.tss_sel;
                     let desc = ac.select_taskgate(gate)?;
-                    ac.switch_task(desc)?;
+                    ac.switch_task(TSMode::CallInt, tss_sel, desc)?;
                 },
                 _ => { return Err(EmuException::CPUException(CPUException::GP)); },
             }
         },
-    }
-    Ok(())
-}
-
-fn save_regs(ac: &mut Access, size: AcsSize, chpl: bool) -> Result<(), EmuException> {
-    let cs_sel = ac.get_sgselector(SgReg::CS)?.to_u16();
-
-    if chpl { return Err(EmuException::NotImplementedFunction); }
-
-    match (&ac.mode, size) {
-        (CpuMode::Real, AcsSize::BIT16) | (CpuMode::Protected, AcsSize::BIT16) => {
-            ac.push_u16(ac.get_rflags()? as u16)?;
-            ac.push_u16(cs_sel)?;
-            ac.push_u16(ac.get_ip()?)?;
-        },
-        (CpuMode::Protected, AcsSize::BIT32) => {
-            ac.push_u32(ac.get_rflags()? as u32)?;
-            ac.push_u32(cs_sel as u32)?;
-            ac.push_u32(ac.get_ip()?)?;
-        },
-        (CpuMode::Long, AcsSize::BIT64) => {
-            ac.push_u64(ac.get_rflags()?)?;
-            ac.push_u64(cs_sel as u64)?;
-            ac.push_u64(ac.get_ip()?)?;
-        },
-        _ => { return Err(EmuException::CPUException(CPUException::GP)); },
     }
     Ok(())
 }

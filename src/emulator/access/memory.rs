@@ -9,20 +9,20 @@ enum MemAccessMode { Read, Write, Exec, Monitor }
 enum MemAccessSize { Byte = 1, Word = 2, DWord = 4, QWord = 8 }
 
 impl super::Access {
-    pub fn get_data8(&self, target: (SgReg, u64)) -> Result<u8, EmuException> { Ok(self.read_vaddr(target.0, target.1, MemAccessSize::Byte)? as u8) }
-    pub fn get_data16(&self, target: (SgReg, u64)) -> Result<u16, EmuException> { Ok(self.read_vaddr(target.0, target.1, MemAccessSize::Word)? as u16) }
-    pub fn get_data32(&self, target: (SgReg, u64)) -> Result<u32, EmuException> { Ok(self.read_vaddr(target.0, target.1, MemAccessSize::DWord)? as u32) }
-    pub fn get_data64(&self, target: (SgReg, u64)) -> Result<u64, EmuException> { Ok(self.read_vaddr(target.0, target.1, MemAccessSize::QWord)?) }
+    pub fn get_data8(&self, target: (SgReg, u64)) -> Result<u8, EmuException> { Ok(self.get_data_size(target.0, target.1, MemAccessSize::Byte)? as u8) }
+    pub fn get_data16(&self, target: (SgReg, u64)) -> Result<u16, EmuException> { Ok(self.get_data_size(target.0, target.1, MemAccessSize::Word)? as u16) }
+    pub fn get_data32(&self, target: (SgReg, u64)) -> Result<u32, EmuException> { Ok(self.get_data_size(target.0, target.1, MemAccessSize::DWord)? as u32) }
+    pub fn get_data64(&self, target: (SgReg, u64)) -> Result<u64, EmuException> { Ok(self.get_data_size(target.0, target.1, MemAccessSize::QWord)?) }
 
-    pub fn set_data8(&mut self, target: (SgReg, u64), v: u8) -> Result<(), EmuException> { self.write_vaddr(target.0, target.1, v as u64, MemAccessSize::Byte)?; Ok(()) }
-    pub fn set_data16(&mut self, target: (SgReg, u64), v: u16) -> Result<(), EmuException> { self.write_vaddr(target.0, target.1, v as u64, MemAccessSize::Word)?; Ok(()) }
-    pub fn set_data32(&mut self, target: (SgReg, u64), v: u32) -> Result<(), EmuException> { self.write_vaddr(target.0, target.1, v as u64, MemAccessSize::DWord)?; Ok(()) }
-    pub fn set_data64(&mut self, target: (SgReg, u64), v: u64) -> Result<(), EmuException> { self.write_vaddr(target.0, target.1, v, MemAccessSize::QWord)?; Ok(()) }
+    pub fn set_data8(&mut self, target: (SgReg, u64), v: u8) -> Result<(), EmuException> { self.set_data_size(target.0, target.1, v as u64, MemAccessSize::Byte)?; Ok(()) }
+    pub fn set_data16(&mut self, target: (SgReg, u64), v: u16) -> Result<(), EmuException> { self.set_data_size(target.0, target.1, v as u64, MemAccessSize::Word)?; Ok(()) }
+    pub fn set_data32(&mut self, target: (SgReg, u64), v: u32) -> Result<(), EmuException> { self.set_data_size(target.0, target.1, v as u64, MemAccessSize::DWord)?; Ok(()) }
+    pub fn set_data64(&mut self, target: (SgReg, u64), v: u64) -> Result<(), EmuException> { self.set_data_size(target.0, target.1, v, MemAccessSize::QWord)?; Ok(()) }
 
-    pub fn get_code8(&self, index: u64) -> Result<u8, EmuException> { Ok(self.fetch_vaddr(index, MemAccessSize::Byte)? as u8) }
-    pub fn get_code16(&self, index: u64) -> Result<u16, EmuException> { Ok(self.fetch_vaddr(index, MemAccessSize::Word)? as u16) }
-    pub fn get_code32(&self, index: u64) -> Result<u32, EmuException> { Ok(self.fetch_vaddr(index, MemAccessSize::DWord)? as u32) }
-    pub fn get_code64(&self, index: u64) -> Result<u64, EmuException> { Ok(self.fetch_vaddr(index, MemAccessSize::QWord)?) }
+    pub fn get_code8(&self, index: u64) -> Result<u8, EmuException> { Ok(self.get_code_size(index, MemAccessSize::Byte)? as u8) }
+    pub fn get_code16(&self, index: u64) -> Result<u16, EmuException> { Ok(self.get_code_size(index, MemAccessSize::Word)? as u16) }
+    pub fn get_code32(&self, index: u64) -> Result<u32, EmuException> { Ok(self.get_code_size(index, MemAccessSize::DWord)? as u32) }
+    pub fn get_code64(&self, index: u64) -> Result<u64, EmuException> { Ok(self.get_code_size(index, MemAccessSize::QWord)?) }
 
     pub fn push_u16(&mut self, v: u16) -> Result<(), EmuException> {
         let sp = self.stack_update(-2)?;
@@ -54,20 +54,30 @@ impl super::Access {
         self.get_data64((SgReg::SS, rsp-8))
     }
 
-    pub fn read_data_l(&self, dst: *mut c_void, src_addr: u64, len: usize) -> Result<usize, EmuException> {
-        self.read_data_p(dst, self.trans_l2p(MemAccessMode::Read, src_addr)?, len)
+    pub fn read_p(&self, dst: *mut c_void, src_addr: u64, len: usize) -> Result<usize, EmuException> {
+        if let Ok(n) = self.mem.read().unwrap().read_data(dst, src_addr as usize, len) { return Ok(n); }
+        Err(EmuException::UnexpectedError)
     }
 
-    pub fn write_data_l(&mut self, dst_addr: u64, src: *const c_void, len: usize) -> Result<usize, EmuException> {
-        self.write_data_p(self.trans_l2p(MemAccessMode::Write, dst_addr)?, src, len)
+    pub fn write_p(&mut self, dst_addr: u64, src: *const c_void, len: usize) -> Result<usize, EmuException> {
+        if let Ok(n) = self.mem.write().unwrap().write_data(dst_addr as usize, src, len) { return Ok(n); }
+        Err(EmuException::UnexpectedError)
     }
 
-    pub fn read_data_v(&self, seg: SgReg, dst: *mut c_void, src_addr: u64, len: usize) -> Result<usize, EmuException> {
-        self.read_data_p(dst, self.trans_v2p(MemAccessMode::Read, seg, src_addr)?, len)
+    pub fn read_l(&self, dst: *mut c_void, src_addr: u64, len: usize) -> Result<usize, EmuException> {
+        self.read_p(dst, self.trans_l2p(MemAccessMode::Read, src_addr)?, len)
     }
 
-    pub fn write_data_v(&mut self, seg: SgReg, dst_addr: u64, src: *const c_void, len: usize) -> Result<usize, EmuException> {
-        self.write_data_p(self.trans_v2p(MemAccessMode::Write, seg, dst_addr)?, src, len)
+    pub fn write_l(&mut self, dst_addr: u64, src: *const c_void, len: usize) -> Result<usize, EmuException> {
+        self.write_p(self.trans_l2p(MemAccessMode::Write, dst_addr)?, src, len)
+    }
+
+    pub fn read_v(&self, seg: SgReg, dst: *mut c_void, src_addr: u64, len: usize) -> Result<usize, EmuException> {
+        self.read_p(dst, self.trans_v2p(MemAccessMode::Read, seg, src_addr)?, len)
+    }
+
+    pub fn write_v(&mut self, seg: SgReg, dst_addr: u64, src: *const c_void, len: usize) -> Result<usize, EmuException> {
+        self.write_p(self.trans_v2p(MemAccessMode::Write, seg, dst_addr)?, src, len)
     }
 
     pub fn addr_v2p(&mut self, seg: SgReg, vaddr: u64) -> Result<u64, EmuException> {
@@ -104,7 +114,7 @@ impl super::Access {
         Ok(sp)
     }
 
-    fn read_vaddr(&self, sg: SgReg, vaddr: u64, size: MemAccessSize) -> Result<u64, EmuException> {
+    fn get_data_size(&self, sg: SgReg, vaddr: u64, size: MemAccessSize) -> Result<u64, EmuException> {
         let paddr = self.trans_v2p(MemAccessMode::Read, sg, vaddr)?;
         let v = if self.dev.check_memio(paddr, size as u64 - 1) {
             let mut data = vec![0; size as usize];
@@ -124,7 +134,7 @@ impl super::Access {
         Ok(v)
     }
 
-    fn write_vaddr(&mut self, sg: SgReg, vaddr: u64, v: u64, size: MemAccessSize) -> Result<(), EmuException> {
+    fn set_data_size(&mut self, sg: SgReg, vaddr: u64, v: u64, size: MemAccessSize) -> Result<(), EmuException> {
         let paddr = self.trans_v2p(MemAccessMode::Write, sg, vaddr)?;
         if self.dev.check_memio(paddr, size as u64 - 1) {
             self.dev.write_memio(paddr, &v.to_le_bytes()[..size as usize]);
@@ -140,7 +150,7 @@ impl super::Access {
         Ok(())
     }
 
-    fn fetch_vaddr(&self, index: u64, size: MemAccessSize) -> Result<u64, EmuException> {
+    fn get_code_size(&self, index: u64, size: MemAccessSize) -> Result<u64, EmuException> {
         let ip: u64 = self.get_ip()?;
         let paddr = self.trans_v2p(MemAccessMode::Exec, SgReg::CS, ip + index)? as usize;
         let v = match size {
@@ -150,16 +160,6 @@ impl super::Access {
             MemAccessSize::QWord => self.mem.read().unwrap().read64(paddr),
         };
         Ok(v)
-    }
-
-    fn read_data_p(&self, dst: *mut c_void, src_addr: u64, len: usize) -> Result<usize, EmuException> {
-        if let Ok(n) = self.mem.read().unwrap().read_data(dst, src_addr as usize, len) { return Ok(n); }
-        Err(EmuException::UnexpectedError)
-    }
-
-    fn write_data_p(&mut self, dst_addr: u64, src: *const c_void, len: usize) -> Result<usize, EmuException> {
-        if let Ok(n) = self.mem.write().unwrap().write_data(dst_addr as usize, src, len) { return Ok(n); }
-        Err(EmuException::UnexpectedError)
     }
 
     fn trans_v2p(&self, acsmode: MemAccessMode, sg: SgReg, vaddr: u64) -> Result<u64, EmuException> {
@@ -172,9 +172,8 @@ impl super::Access {
     fn trans_v2l(&self, _acsmode: MemAccessMode, sg: SgReg, vaddr: u64) -> Result<u64, EmuException> {
         let long64 = self.mode == access::CpuMode::Long && self.oasz.ad == access::AcsSize::BIT64;
 
-        let cache = self.get_sgcache(sg)?;
+        let cache = self.get_sgreg(sg)?.1;
         let base  = if long64 && !(sg == SgReg::FS || sg == SgReg::GS) { 0 } else { cache.base };
-        let limit = (cache.limit as u64) << (if cache.G == 1 { 12 } else { 0 });
 
         match (&self.mode, &self.oasz.ad, sg) {
             (access::CpuMode::Long, access::AcsSize::BIT64, SgReg::CS) | (access::CpuMode::Protected, _, _) => {
@@ -186,7 +185,7 @@ impl super::Access {
                 }
                 */
 
-                if !long64 && vaddr > limit { return Err(EmuException::CPUException(CPUException::GP)); }
+                if !long64 && (vaddr >> 12*cache.G) > cache.limit as u64 { return Err(EmuException::CPUException(CPUException::GP)); }
             },
             _ => {}
         }

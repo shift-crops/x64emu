@@ -55,6 +55,10 @@ impl Access {
             None
         }
     }
+    
+    pub fn check_mode(&self, mode: CpuMode) -> bool {
+        self.mode == mode
+    }
 
     pub fn dump(&self) -> () {
         println!("CPU Mode: {:?} mode\n", self.mode);

@@ -68,6 +68,7 @@ pub fn init_cmn_opcode(op: &mut super::OpcodeArr){
     setcmnop!(0xeb, jmp_imm8,      OpFlags::IMM8);
     setcmnop!(0xec, in_al_dx,      OpFlags::NONE);
     setcmnop!(0xee, out_dx_al,     OpFlags::NONE);
+    setcmnop!(0xf1, icebp,         OpFlags::NONE);
     setcmnop!(0xfa, cli,           OpFlags::NONE);
     setcmnop!(0xfb, sti,           OpFlags::NONE);
     setcmnop!(0xfc, cld,           OpFlags::NONE);
@@ -161,9 +162,9 @@ mov_dst_src!(8, opr8, imm8);
 
 mov_dst_src!(8, rm8, imm8);
 
-fn int3(_exec: &mut exec::Exec) -> Result<(), EmuException> { Err(EmuException::Interrupt(3)) }
+fn int3(_exec: &mut exec::Exec) -> Result<(), EmuException> { Err(EmuException::CPUException(CPUException::BP)) }
 fn int_imm8(exec: &mut exec::Exec) -> Result<(), EmuException> { Err(EmuException::Interrupt(exec.get_imm8()?)) }
-fn into(_exec: &mut exec::Exec) -> Result<(), EmuException> { Err(EmuException::Interrupt(4)) }
+fn into(_exec: &mut exec::Exec) -> Result<(), EmuException> { Err(EmuException::CPUException(CPUException::OF)) }
 
 in_reg_port!(8, al, imm8);
 out_port_reg!(8, imm8, al);
@@ -172,6 +173,8 @@ jmp_rel!(8, imm8);
 
 in_reg_port!(8, al, dx);
 out_port_reg!(8, dx, al);
+
+fn icebp(_exec: &mut exec::Exec) -> Result<(), EmuException> { Err(EmuException::CPUException(CPUException::DB)) }
 
 fn cli(exec: &mut exec::Exec) -> Result<(), EmuException> { exec.ac.core.rflags.set_interrupt(false); Ok(()) }
 fn sti(exec: &mut exec::Exec) -> Result<(), EmuException> { exec.ac.core.rflags.set_interrupt(true); Ok(()) }
@@ -226,11 +229,19 @@ fn code_0f00(exec: &mut exec::Exec) -> Result<(), EmuException> {
 }
 
 fn lldt_rm16(exec: &mut exec::Exec) -> Result<(), EmuException> {
+    if exec.ac.check_mode(access::CpuMode::Real) {
+        return Err(EmuException::CPUException(CPUException::UD));
+    }
+
     let sel = exec.get_rm16()?;
-    exec.set_ldtr(sel)
+    exec.ac.set_ldtr(sel)
 }
 
 fn ltr_rm16(exec: &mut exec::Exec) -> Result<(), EmuException> {
+    if exec.ac.check_mode(access::CpuMode::Real) {
+        return Err(EmuException::CPUException(CPUException::UD));
+    }
+
     let sel = exec.get_rm16()?;
-    exec.set_tr(sel)
+    exec.ac.set_tr(sel)
 }

@@ -14,7 +14,7 @@ impl InstructionPointer {
     pub fn set_eip(&mut self, v: u32) -> () { self.0 = v as u64; }
     pub fn set_rip(&mut self, v: u64) -> () { self.0 = v; }
 
-    pub fn update_ip(&mut self, v: i16) -> () { self.0 = (self.0 as i16).wrapping_add(v) as u64; }
-    pub fn update_eip(&mut self, v: i32) -> () { self.0 = (self.0 as i32).wrapping_add(v) as u64; }
+    pub fn update_ip(&mut self, v: i16) -> () { self.0 = (self.0 as i16).wrapping_add(v) as u16 as u64; }
+    pub fn update_eip(&mut self, v: i32) -> () { self.0 = (self.0 as i32).wrapping_add(v) as u32 as u64; }
     pub fn update_rip(&mut self, v: i64) -> () { self.0 = (self.0 as i64).wrapping_add(v) as u64; }
 }
