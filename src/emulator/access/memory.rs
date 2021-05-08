@@ -56,12 +56,12 @@ impl super::Access {
 
     pub fn read_p(&self, dst: *mut c_void, src_addr: u64, len: usize) -> Result<usize, EmuException> {
         if let Ok(n) = self.mem.read().unwrap().read_data(dst, src_addr as usize, len) { return Ok(n); }
-        Err(EmuException::UnexpectedError)
+        panic!("{:?}", EmuException::UnexpectedError);
     }
 
     pub fn write_p(&mut self, dst_addr: u64, src: *const c_void, len: usize) -> Result<usize, EmuException> {
         if let Ok(n) = self.mem.write().unwrap().write_data(dst_addr as usize, src, len) { return Ok(n); }
-        Err(EmuException::UnexpectedError)
+        panic!("{:?}", EmuException::UnexpectedError);
     }
 
     pub fn read_l(&self, dst: *mut c_void, src_addr: u64, len: usize) -> Result<usize, EmuException> {

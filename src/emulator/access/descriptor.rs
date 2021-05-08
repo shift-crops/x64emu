@@ -80,6 +80,7 @@ impl From<SegDesc> for SgDescCache {
 pub struct TSSDesc {
     #[packed_field(bits="0:15")]   pub limit_l: u16,
     #[packed_field(bits="16:39")]  pub base_l:  u32,
+    #[packed_field(bits="40")]     Type0: ReservedOnes<packed_bits::Bits1>,
     #[packed_field(bits="41")]     pub B:       u8,
     #[packed_field(bits="43")]     pub D:       u8,
     #[packed_field(bits="45:46")]  pub DPL:     u8,
@@ -102,6 +103,7 @@ impl From<TSSDesc> for DescTbl {
 pub struct LDTDesc {
     #[packed_field(bits="0:15")]   pub limit_l: u16,
     #[packed_field(bits="16:39")]  pub base_l:  u32,
+    #[packed_field(bits="40:42")]  Type:    u8,
     #[packed_field(bits="47")]     pub P:       u8,
     #[packed_field(bits="48:51")]  pub limit_h: u8,
     #[packed_field(bits="56:95")]  pub base_h:  u64,
@@ -122,6 +124,7 @@ pub struct CallGateDesc {
     #[packed_field(bits="0:15")]   pub offset_l:u16,
     #[packed_field(bits="16:31")]  pub selector:u16,
     #[packed_field(bits="32:39")]  pub pc:      u8,
+    #[packed_field(bits="40:42")]  Type:    u8,
     #[packed_field(bits="45:46")]  pub DPL:     u8,
     #[packed_field(bits="47")]     pub P:       u8,
     #[packed_field(bits="48:63")]  pub offset_h:u16,
@@ -131,6 +134,7 @@ pub struct CallGateDesc {
 #[packed_struct(bit_numbering="lsb0", size_bytes="16", endian="msb")]
 pub struct TaskGateDesc {
     #[packed_field(bits="16:31")]  pub tss_sel: u16,
+    #[packed_field(bits="40:42")]  Type:    u8,
     #[packed_field(bits="45:46")]  pub DPL:     u8,
     #[packed_field(bits="47")]     pub P:       u8,
 }
@@ -140,6 +144,7 @@ pub struct TaskGateDesc {
 pub struct IntrTrapGateDesc {
     #[packed_field(bits="0:15")]   pub offset_l:u16,
     #[packed_field(bits="16:31")]  pub selector:u16,
+    #[packed_field(bits="40:42")]  Type:    u8,
     #[packed_field(bits="43")]     pub D:       u8,
     #[packed_field(bits="45:46")]  pub DPL:     u8,
     #[packed_field(bits="47")]     pub P:       u8,
@@ -284,8 +289,8 @@ impl super::Access {
 
     fn obtain_descriptor(&self, desc_addr: u64) -> Result<Option<DescType>, EmuException> {
         let mut raw: [u8;16] = [0;16];
-        let dsize = if let (access::CpuMode::Long, access::AcsSize::BIT64) = (&self.mode, &self.oasz.ad) { 16 } else { 8 };
-        self.read_l(raw.as_mut_ptr() as *mut _, desc_addr, dsize)?;
+        let desc_size = if let (access::CpuMode::Long, access::AcsSize::BIT64) = (&self.mode, &self.oasz.ad) { 16 } else { 8 };
+        self.read_l(raw.as_mut_ptr() as *mut _, desc_addr, desc_size)?;
         raw.reverse();
 
         Ok(classify_descriptor(&raw))
@@ -301,20 +306,21 @@ impl super::Access {
     }
 
     fn install_descriptor(&mut self, desc_addr: u64, desc: DescType) -> Result<(), EmuException> {
-        let mut raw = match desc {
+        let desc_size = if let (access::CpuMode::Long, access::AcsSize::BIT64) = (&self.mode, &self.oasz.ad) { 16 } else { 8 };
+        let (mut raw, desc_size) = match desc {
             DescType::System(sysdsc) => {
                 match sysdsc {
-                    SysDescType::TSS(d) => TSSDesc::pack(&d),
-                    SysDescType::LDT(d) => LDTDesc::pack(&d),
-                    SysDescType::Call(d) => CallGateDesc::pack(&d),
-                    SysDescType::Task(d) => TaskGateDesc::pack(&d),
-                    SysDescType::Intr(d) | SysDescType::Trap(d) => IntrTrapGateDesc::pack(&d),
+                    SysDescType::TSS(d) => (TSSDesc::pack(&d).unwrap(), desc_size),
+                    SysDescType::LDT(d) => (LDTDesc::pack(&d).unwrap(), desc_size),
+                    SysDescType::Call(d) => (CallGateDesc::pack(&d).unwrap(), 8),
+                    SysDescType::Task(d) => (TaskGateDesc::pack(&d).unwrap(), 8),
+                    SysDescType::Intr(d) | SysDescType::Trap(d) => (IntrTrapGateDesc::pack(&d).unwrap(), 8),
                 }
             },
-            DescType::Segment(SegDescType::Code(d)) | DescType::Segment(SegDescType::Data(d)) => SegDesc::pack(&d),
-        }.unwrap();
+            DescType::Segment(SegDescType::Code(d)) | DescType::Segment(SegDescType::Data(d)) => (SegDesc::pack(&d).unwrap(), 8),
+        };
         raw.reverse();
-        self.write_l(desc_addr, raw.as_ptr() as *const _, std::mem::size_of_val(&raw))?;
+        self.write_l(desc_addr, raw.as_ptr() as *const _, desc_size)?;
 
         Ok(())
     }
@@ -425,7 +431,7 @@ impl super::Access {
                         0 => { (tss.ss0, tss.sp0) },
                         1 => { (tss.ss1, tss.sp1) },
                         2 => { (tss.ss2, tss.sp2) },
-                        _ => { return Err(EmuException::UnexpectedError); }
+                        _ => { panic!("{:?}", EmuException::UnexpectedError); }
                     };
                     self.load_segment(SgReg::SS, ss)?;
                     self.set_gpreg(GpReg16::SP, sp)?;
@@ -443,7 +449,7 @@ impl super::Access {
                         0 => { (tss.ss0, tss.esp0) },
                         1 => { (tss.ss1, tss.esp1) },
                         2 => { (tss.ss2, tss.esp2) },
-                        _ => { return Err(EmuException::UnexpectedError); }
+                        _ => { panic!("{:?}", EmuException::UnexpectedError); }
                     };
                     self.load_segment(SgReg::SS, ss)?;
                     self.set_gpreg(GpReg32::ESP, esp)?;
@@ -603,7 +609,7 @@ impl super::Access {
                 return Err(EmuException::NotImplementedFunction);
             },
             (access::CpuMode::Long, 0) => { return Err(EmuException::CPUException(CPUException::TS)); },
-            _ => { return Err(EmuException::UnexpectedError); },
+            _ => { panic!("{:?}", EmuException::UnexpectedError); },
         }
 
         match &mode {
@@ -638,12 +644,12 @@ impl super::Access {
         }
     }
 
-    fn set_busy_tssdesc(&mut self, sel: u16, busy: bool) -> Result<(), EmuException> {
+    pub fn set_busy_tssdesc(&mut self, sel: u16, busy: bool) -> Result<(), EmuException> {
         if let Some(DescType::System(SysDescType::TSS(mut tssdesc))) = self.obtain_g_desc(sel)? {
             tssdesc.B = busy as u8;
             self.install_g_desc(sel, DescType::System(SysDescType::TSS(tssdesc)))
         } else {
-            Err(EmuException::UnexpectedError)
+            panic!("{:?}", EmuException::UnexpectedError);
         }
     }
 }

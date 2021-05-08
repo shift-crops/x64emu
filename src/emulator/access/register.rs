@@ -151,6 +151,7 @@ impl super::Access {
             let tr = &mut self.core.dtregs.tr;
             tr.cache       = DescTbl::from(tssd);
             tr.selector    = sel;
+            self.set_busy_tssdesc(sel, true)?;
             Ok(())
         } else {
             Err(EmuException::CPUException(CPUException::GP))

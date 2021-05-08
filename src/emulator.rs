@@ -73,8 +73,8 @@ impl Emulator {
                 Err(EmuException::Interrupt(i))    => self.intrpt.enqueue(IntrEvent::Software(i)),
                 Err(EmuException::CPUException(CPUException::BP)) => self.ac.dump(),
                 Err(EmuException::CPUException(e)) => {
-                    //debug!("CPUException : {:?}", e);
                     panic!("CPUException : {:?}", e);
+                    //debug!("CPUException : {:?}", e);
                     //self.intrpt.enqueue(IntrEvent::Hardware(e as u8))
                 },
                 Err(EmuException::Halt)            => self.halt = true,

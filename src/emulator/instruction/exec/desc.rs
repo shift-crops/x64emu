@@ -213,6 +213,8 @@ macro_rules! ret_far {
 macro_rules! int_ret {
     ( $type:ty ) => { paste::item! {
         pub fn [<int_ret_ $type>](&mut self) -> Result<(), EmuException> {
+            let old_flag = self.ac.core.rflags;
+
             let new_ip   = self.ac.[<pop_ $type>]()?;
             let new_cs   = self.ac.[<pop_ $type>]()? as u16;
             let new_flag = self.ac.[<pop_ $type>]()? as u64;
@@ -226,7 +228,7 @@ macro_rules! int_ret {
                     let cpl = self.ac.get_cpl()?;
                     let rpl = (new_cs & 3) as u8;
 
-                    if self.ac.core.rflags.is_nesttask() {
+                    if old_flag.is_nesttask() {
                         return self.ac.restore_task();
                     }
 
