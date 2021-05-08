@@ -15,11 +15,15 @@ pub struct Interrupt(VecDeque<IntrEvent>);
 
 impl Interrupt {
     pub fn enqueue(&mut self, e: IntrEvent) -> () {
+        self.0.push_back(e);
+    }
+
+    pub fn enqueue_top(&mut self, e: IntrEvent) -> () {
         self.0.push_front(e);
     }
 
     pub fn handle(&mut self, ac: &mut Access) -> Result<(), EmuException> {
-        if let Some(e) = self.0.pop_back(){
+        if let Some(e) = self.0.pop_front(){
             let (n, hw) = match e {
                 IntrEvent::Hardware(n) => (n, true),
                 IntrEvent::Software(n) => (n, false),

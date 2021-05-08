@@ -70,12 +70,12 @@ impl Emulator {
         if !self.halt {
             debug!("IP : 0x{:016x}", self.ac.core.ip.get_rip());
             match self.inst.fetch_exec(&mut self.ac) {
-                Err(EmuException::Interrupt(i))    => self.intrpt.enqueue(IntrEvent::Software(i)),
+                Err(EmuException::Interrupt(i))    => self.intrpt.enqueue_top(IntrEvent::Software(i)),
                 Err(EmuException::CPUException(CPUException::BP)) => self.ac.dump(),
                 Err(EmuException::CPUException(e)) => {
                     panic!("CPUException : {:?}", e);
                     //debug!("CPUException : {:?}", e);
-                    //self.intrpt.enqueue(IntrEvent::Hardware(e as u8))
+                    //self.intrpt.enqueue_top(IntrEvent::Hardware(e as u8))
                 },
                 Err(EmuException::Halt)            => self.halt = true,
                 Err(err) => {
@@ -93,7 +93,7 @@ impl Emulator {
         }
 
         match self.intrpt.handle(&mut self.ac) {
-            Err(EmuException::CPUException(e)) => self.intrpt.enqueue(IntrEvent::Hardware(e as u8)),
+            Err(EmuException::CPUException(e)) => self.intrpt.enqueue_top(IntrEvent::Hardware(e as u8)),
             Err(err) => {
                 self.ac.dump();
                 panic!("{}", err)

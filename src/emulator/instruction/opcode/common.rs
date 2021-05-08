@@ -96,7 +96,7 @@ pub fn init_cmn_opcode(op: &mut super::OpcodeArr){
 
     setcmnop!(0x80, code_80,       OpFlags::MODRM | OpFlags::IMM8);
     //setcmnop!(0x82, code_82,       OpFlags::MODRM | OpFlags::IMM8);
-    //setcmnop!(0xc0, code_c0,       OpFlags::MODRM | OpFlags::IMM8);
+    setcmnop!(0xc0, code_c0,       OpFlags::MODRM | OpFlags::IMM8);
     //setcmnop!(0xf6, code_f6,       OpFlags::MODRM);
     setcmnop!(0x0f00, code_0f00,   OpFlags::MODRM);
 }
@@ -218,6 +218,34 @@ and_dst_src!(8, rm8, imm8);
 sub_dst_src!(8, rm8, imm8);
 xor_dst_src!(8, rm8, imm8);
 cmp_dst_src!(8, rm8, imm8);
+
+fn code_c0(exec: &mut exec::Exec) -> Result<(), EmuException> {
+    match exec.idata.modrm.reg as u8 {
+        /*
+        0 => rol_rm8_imm8(exec)?,
+        1 => ror_rm8_imm8(exec)?,
+        2 => rcl_rm8_imm8(exec)?,
+        3 => rcr_rm8_imm8(exec)?,
+        */
+        4 => shl_rm8_imm8(exec)?,
+        5 => shr_rm8_imm8(exec)?,
+        6 => sal_rm8_imm8(exec)?,
+        7 => sar_rm8_imm8(exec)?,
+        _ => { return Err(EmuException::UnexpectedError); },
+    }
+    Ok(())
+}
+
+/*
+rol_dst_src!(8, rm8, imm8);
+ror_dst_src!(8, rm8, imm8);
+rcl_dst_src!(8, rm8, imm8);
+rcr_dst_src!(8, rm8, imm8);
+*/
+shl_dst_src!(8, rm8, imm8);
+shr_dst_src!(8, rm8, imm8);
+sal_dst_src!(8, rm8, imm8);
+sar_dst_src!(8, rm8, imm8);
 
 fn code_0f00(exec: &mut exec::Exec) -> Result<(), EmuException> {
     match exec.idata.modrm.reg as u16 {

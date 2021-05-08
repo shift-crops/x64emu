@@ -424,3 +424,51 @@ macro_rules! movsx_dst_src {
         }
     } };
 }
+
+macro_rules! shl_dst_src {
+    ( $size:expr, $dst:ident, $src:ident ) => { paste::item! {
+        fn [<shl_ $dst _ $src>](exec: &mut exec::Exec) -> Result<(), EmuException> {
+            let dst: u!($size) = exec.[<get_ $dst>]()? as u!($size);
+            let src: u32 = exec.[<get_ $src>]()? as u32;
+            debug!("shl: {:02x}, {:02x}", dst, src);
+            exec.update_rflags_shl(dst, src)?;
+            exec.[<set_ $dst>](dst.wrapping_shl(src))
+        }
+    } };
+}
+
+macro_rules! shr_dst_src {
+    ( $size:expr, $dst:ident, $src:ident ) => { paste::item! {
+        fn [<shr_ $dst _ $src>](exec: &mut exec::Exec) -> Result<(), EmuException> {
+            let dst: u!($size) = exec.[<get_ $dst>]()? as u!($size);
+            let src: u32 = exec.[<get_ $src>]()? as u32;
+            debug!("shr: {:02x}, {:02x}", dst, src);
+            exec.update_rflags_shr(dst, src)?;
+            exec.[<set_ $dst>](dst.wrapping_shr(src))
+        }
+    } };
+}
+
+macro_rules! sal_dst_src {
+    ( $size:expr, $dst:ident, $src:ident ) => { paste::item! {
+        fn [<sal_ $dst _ $src>](exec: &mut exec::Exec) -> Result<(), EmuException> {
+            let dst: i!($size) = exec.[<get_ $dst>]()? as i!($size);
+            let src: u32 = exec.[<get_ $src>]()? as u32;
+            debug!("sal: {:02x}, {:02x}", dst, src);
+            exec.update_rflags_shl(dst as u!($size), src)?;
+            exec.[<set_ $dst>](dst.wrapping_shl(src) as u!($size))
+        }
+    } };
+}
+
+macro_rules! sar_dst_src {
+    ( $size:expr, $dst:ident, $src:ident ) => { paste::item! {
+        fn [<sar_ $dst _ $src>](exec: &mut exec::Exec) -> Result<(), EmuException> {
+            let dst: i!($size) = exec.[<get_ $dst>]()? as i!($size);
+            let src: u32 = exec.[<get_ $src>]()? as u32;
+            debug!("sar: {:02x}, {:02x}", dst, src);
+            exec.update_rflags_sar(dst, src)?;
+            exec.[<set_ $dst>](dst.wrapping_shr(src) as u!($size))
+        }
+    } };
+}
