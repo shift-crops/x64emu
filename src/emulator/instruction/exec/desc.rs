@@ -18,13 +18,13 @@ macro_rules! jmp_far {
                         Some(DescType::Segment(SegDescType::Code(desc))) => {
                             if CodeDescFlag::from(&desc).contains(CodeDescFlag::C) {
                                 if desc.DPL > cpl {
-                                    return Err(EmuException::CPUException(CPUException::GP));
+                                    return Err(EmuException::CPUException(CPUException::GP(None)));
                                 }
                             } else if rpl > cpl || desc.DPL != cpl {
-                                return Err(EmuException::CPUException(CPUException::GP));
+                                return Err(EmuException::CPUException(CPUException::GP(None)));
                             }
                             if self.ac.oasz.op != access::AcsSize::BIT64 && abs as u32 > ((desc.limit_h as u32) << 16) + desc.limit_l as u32 {
-                                return Err(EmuException::CPUException(CPUException::GP));
+                                return Err(EmuException::CPUException(CPUException::GP(None)));
                             }
 
                             let cache = self.ac.select_segdesc(SgReg::CS, cpl, Some(SegDescType::Code(desc)))?;
@@ -32,18 +32,18 @@ macro_rules! jmp_far {
                             self.ac.set_ip(abs)?;
                         },
                         Some(DescType::System(SysDescType::Call(gate))) => {
-                            if gate.DPL < cpl || gate.DPL < rpl { return Err(EmuException::CPUException(CPUException::GP)); }
+                            if gate.DPL < cpl || gate.DPL < rpl { return Err(EmuException::CPUException(CPUException::GP(None))); }
                             let ip = ((gate.offset_h as u32) << 16) + gate.offset_l as u32;
                             let (sel, desc) = self.ac.select_callgate(gate)?;
 
                             if CodeDescFlag::from(&desc).contains(CodeDescFlag::C) {
-                                if desc.DPL > cpl { return Err(EmuException::CPUException(CPUException::GP)); }
+                                if desc.DPL > cpl { return Err(EmuException::CPUException(CPUException::GP(None))); }
                             } else if desc.DPL != cpl {
-                                return Err(EmuException::CPUException(CPUException::GP));
+                                return Err(EmuException::CPUException(CPUException::GP(None)));
                             }
 
                             if self.ac.oasz.op != access::AcsSize::BIT64 && abs as u32 > ((desc.limit_h as u32) << 16) + desc.limit_l as u32 {
-                                return Err(EmuException::CPUException(CPUException::GP));
+                                return Err(EmuException::CPUException(CPUException::GP(None)));
                             }
 
                             let cache = self.ac.select_segdesc(SgReg::CS, cpl, Some(SegDescType::Code(desc)))?;
@@ -51,17 +51,17 @@ macro_rules! jmp_far {
                             self.ac.set_ip(ip)?;
                         },
                         Some(DescType::System(SysDescType::Task(gate))) => {
-                            if gate.DPL < cpl || gate.DPL < rpl { return Err(EmuException::CPUException(CPUException::GP)); }
+                            if gate.DPL < cpl || gate.DPL < rpl { return Err(EmuException::CPUException(CPUException::GP(None))); }
                             let tss_sel = gate.tss_sel;
                             let desc = self.ac.select_taskgate(gate)?;
                             self.ac.switch_task(TSMode::Jmp, tss_sel, desc)?;
                         },
                         Some(DescType::System(SysDescType::TSS(desc))) => {
-                            if desc.DPL < cpl || desc.DPL < rpl { return Err(EmuException::CPUException(CPUException::GP)); }
+                            if desc.DPL < cpl || desc.DPL < rpl { return Err(EmuException::CPUException(CPUException::GP(None))); }
                             self.ac.switch_task(TSMode::Jmp, sel, desc)?;
                         },
                         _ => {
-                            return Err(EmuException::CPUException(CPUException::GP));
+                            return Err(EmuException::CPUException(CPUException::GP(None)));
                         },
                     }
                 },
@@ -81,7 +81,7 @@ macro_rules! call_far {
             match self.ac.mode {
                 access::CpuMode::Real => {
                     if abs as u32 > cs.1.limit {
-                        return Err(EmuException::CPUException(CPUException::GP));
+                        return Err(EmuException::CPUException(CPUException::GP(None)));
                     }
 
                     self.ac.load_segment(SgReg::CS, sel)?;
@@ -97,13 +97,13 @@ macro_rules! call_far {
                         Some(DescType::Segment(SegDescType::Code(cdesc))) => {
                             if CodeDescFlag::from(&cdesc).contains(CodeDescFlag::C) {
                                 if cdesc.DPL > cpl {
-                                    return Err(EmuException::CPUException(CPUException::GP));
+                                    return Err(EmuException::CPUException(CPUException::GP(None)));
                                 }
                             } else if rpl > cpl || cdesc.DPL != cpl {
-                                return Err(EmuException::CPUException(CPUException::GP));
+                                return Err(EmuException::CPUException(CPUException::GP(None)));
                             }
                             if self.ac.oasz.op != access::AcsSize::BIT64 && abs as u32 > ((cdesc.limit_h as u32) << 16) + cdesc.limit_l as u32 {
-                                return Err(EmuException::CPUException(CPUException::GP));
+                                return Err(EmuException::CPUException(CPUException::GP(None)));
                             }
 
                             let cache = self.ac.select_segdesc(SgReg::CS, cpl, Some(SegDescType::Code(cdesc)))?;
@@ -114,17 +114,17 @@ macro_rules! call_far {
                             self.ac.set_ip(abs)?;
                         },
                         Some(DescType::System(SysDescType::Call(gate))) => {
-                            if gate.DPL < cpl || gate.DPL < rpl { return Err(EmuException::CPUException(CPUException::GP)); }
+                            if gate.DPL < cpl || gate.DPL < rpl { return Err(EmuException::CPUException(CPUException::GP(None))); }
                             let new_ip = ((gate.offset_h as u32) << 16) + gate.offset_l as u32;
                             let (sel, desc) = self.ac.select_callgate(gate)?;
 
-                            if desc.DPL > cpl { return Err(EmuException::CPUException(CPUException::GP)); }
+                            if desc.DPL > cpl { return Err(EmuException::CPUException(CPUException::GP(None))); }
 
                             if !CodeDescFlag::from(&desc).contains(CodeDescFlag::C) && desc.DPL < cpl {
                                 return Err(EmuException::NotImplementedFunction);
                             } else {
                                 if self.ac.oasz.op != access::AcsSize::BIT64 && new_ip as u32 > ((desc.limit_h as u32) << 16) + desc.limit_l as u32 {
-                                    return Err(EmuException::CPUException(CPUException::GP));
+                                    return Err(EmuException::CPUException(CPUException::GP(None)));
                                 }
 
                                 let cache = self.ac.select_segdesc(SgReg::CS, cpl, Some(SegDescType::Code(desc)))?;
@@ -136,17 +136,17 @@ macro_rules! call_far {
                             }
                         },
                         Some(DescType::System(SysDescType::Task(gate))) => {
-                            if gate.DPL < cpl || gate.DPL < rpl { return Err(EmuException::CPUException(CPUException::GP)); }
+                            if gate.DPL < cpl || gate.DPL < rpl { return Err(EmuException::CPUException(CPUException::GP(None))); }
                             let tss_sel = gate.tss_sel;
                             let desc = self.ac.select_taskgate(gate)?;
                             self.ac.switch_task(TSMode::CallInt, tss_sel, desc)?;
                         },
                         Some(DescType::System(SysDescType::TSS(desc))) => {
-                            if desc.DPL < cpl || desc.DPL < rpl { return Err(EmuException::CPUException(CPUException::GP)); }
+                            if desc.DPL < cpl || desc.DPL < rpl { return Err(EmuException::CPUException(CPUException::GP(None))); }
                             self.ac.switch_task(TSMode::CallInt, sel, desc)?;
                         },
                         _ => {
-                            return Err(EmuException::CPUException(CPUException::GP));
+                            return Err(EmuException::CPUException(CPUException::GP(None)));
                         },
                     }
                 },
@@ -171,22 +171,22 @@ macro_rules! ret_far {
                     let rpl = (new_cs & 3) as u8;
 
                     if rpl < cpl {
-                        return Err(EmuException::CPUException(CPUException::GP));
+                        return Err(EmuException::CPUException(CPUException::GP(None)));
                     }
 
                     if let Some(DescType::Segment(SegDescType::Code(cdesc))) = self.ac.obtain_gl_desc(new_cs)? {
                         if CodeDescFlag::from(&cdesc).contains(CodeDescFlag::C) && cdesc.DPL > rpl {
-                            return Err(EmuException::CPUException(CPUException::GP));
+                            return Err(EmuException::CPUException(CPUException::GP(None)));
                         }
 
                         if self.ac.oasz.op != access::AcsSize::BIT64 && new_ip as u32 > ((cdesc.limit_h as u32) << 16) + cdesc.limit_l as u32 {
-                            return Err(EmuException::CPUException(CPUException::GP));
+                            return Err(EmuException::CPUException(CPUException::GP(None)));
                         }
 
                         let cache = self.ac.select_segdesc(SgReg::CS, rpl, Some(SegDescType::Code(cdesc)))?;
                         self.ac.set_sgreg(SgReg::CS, new_cs, cache)?;
                     } else {
-                        return Err(EmuException::CPUException(CPUException::GP));
+                        return Err(EmuException::CPUException(CPUException::GP(None)));
                     }
 
                     if rpl > cpl {
@@ -233,22 +233,22 @@ macro_rules! int_ret {
                     let rpl = (new_cs & 3) as u8;
 
                     if rpl < cpl {
-                        return Err(EmuException::CPUException(CPUException::GP));
+                        return Err(EmuException::CPUException(CPUException::GP(None)));
                     }
 
                     if let Some(DescType::Segment(SegDescType::Code(cdesc))) = self.ac.obtain_gl_desc(new_cs)? {
                         if CodeDescFlag::from(&cdesc).contains(CodeDescFlag::C) && cdesc.DPL > rpl {
-                            return Err(EmuException::CPUException(CPUException::GP));
+                            return Err(EmuException::CPUException(CPUException::GP(None)));
                         }
 
                         if self.ac.oasz.op != access::AcsSize::BIT64 && new_ip as u32 > ((cdesc.limit_h as u32) << 16) + cdesc.limit_l as u32 {
-                            return Err(EmuException::CPUException(CPUException::GP));
+                            return Err(EmuException::CPUException(CPUException::GP(None)));
                         }
 
                         let cache = self.ac.select_segdesc(SgReg::CS, rpl, Some(SegDescType::Code(cdesc)))?;
                         self.ac.set_sgreg(SgReg::CS, new_cs, cache)?;
                     } else {
-                        return Err(EmuException::CPUException(CPUException::GP));
+                        return Err(EmuException::CPUException(CPUException::GP(None)));
                     }
 
                     if rpl > cpl {

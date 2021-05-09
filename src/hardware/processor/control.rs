@@ -88,7 +88,7 @@ pub struct CR4 {
     #[packed_field(bits="1")]  PVI: u8,
     #[packed_field(bits="2")]  TSD: u8,
     #[packed_field(bits="3")]  DE:  u8,
-    #[packed_field(bits="4")]  PSE: u8,
+    #[packed_field(bits="4")]  pub PSE: u8,
     #[packed_field(bits="5")]  pub PAE: u8,
     #[packed_field(bits="6")]  MCE: u8,
     #[packed_field(bits="7")]  PGE: u8,

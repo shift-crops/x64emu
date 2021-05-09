@@ -266,7 +266,7 @@ impl super::Access {
         if dt_index == 0 { return Ok(None); }
 
         let (dt_base, dt_limit) = if selector.TI == 1 { &core.dtregs.ldtr.cache } else { &core.dtregs.gdtr }.get();
-        if dt_index > dt_limit { return Err(EmuException::CPUException(CPUException::GP)) }
+        if dt_index > dt_limit { return Err(EmuException::CPUException(CPUException::GP(Some(sel)))) }
         self.obtain_descriptor(dt_base + dt_index as u64)
     }
 
@@ -276,14 +276,14 @@ impl super::Access {
         if dt_index == 0 { return Ok(None); }
 
         let (dt_base, dt_limit) = self.core.dtregs.gdtr.get();
-        if dt_index > dt_limit { return Err(EmuException::CPUException(CPUException::GP)) }
+        if dt_index > dt_limit { return Err(EmuException::CPUException(CPUException::GP(Some(sel)))) }
         self.obtain_descriptor(dt_base + dt_index as u64)
     }
 
     pub fn obtain_i_desc(&self, idx: u8) -> Result<Option<DescType>, EmuException> {
         let dt_index = (idx as u32) << 3;
         let (dt_base, dt_limit) = self.core.dtregs.idtr.get();
-        if dt_index > dt_limit { return Err(EmuException::CPUException(CPUException::GP)) }
+        if dt_index > dt_limit { return Err(EmuException::CPUException(CPUException::GP(None))) }
         self.obtain_descriptor(dt_base + dt_index as u64)
     }
 
@@ -301,7 +301,7 @@ impl super::Access {
         let dt_index = (selector.IDX as u32) << 3;
 
         let (dt_base, dt_limit) = self.core.dtregs.gdtr.get();
-        if dt_index > dt_limit { return Err(EmuException::CPUException(CPUException::GP)) }
+        if dt_index > dt_limit { return Err(EmuException::CPUException(CPUException::GP(Some(sel)))) }
         self.install_descriptor(dt_base + dt_index as u64, desc)
     }
 
@@ -336,11 +336,17 @@ impl super::Access {
             access::CpuMode::Protected | access::CpuMode::Long => {
                 let rpl = (sel&3) as u8;
                 let desc = match self.obtain_gl_desc(sel)? {
-                    Some(DescType::System(_)) => { return Err(EmuException::CPUException(CPUException::GP)) },
+                    Some(DescType::System(_)) => { return Err(EmuException::CPUException(CPUException::GP(Some(sel)))) },
                     Some(DescType::Segment(segdsc)) => Some(segdsc),
                     None => None,
                 };
-                self.select_segdesc(reg, rpl, desc)?
+
+                match self.select_segdesc(reg, rpl, desc) {
+                    Ok(c) => c,
+                    Err(EmuException::CPUException(CPUException::GP(None))) => {return Err(EmuException::CPUException(CPUException::GP(Some(sel)))); },
+                    Err(EmuException::CPUException(CPUException::SS(None))) => {return Err(EmuException::CPUException(CPUException::SS(Some(sel)))); },
+                    Err(e) => {return Err(e); },
+                }
             },
         };
         self.set_sgreg(reg, sel, cache)
@@ -352,7 +358,7 @@ impl super::Access {
         let segdesc = match (reg, desc) {
             (SgReg::CS, None) | (SgReg::CS, Some(SegDescType::Data(_))) |
             (SgReg::SS, None) | (SgReg::SS, Some(SegDescType::Code(_))) => {
-                return Err(EmuException::CPUException(CPUException::GP));
+                return Err(EmuException::CPUException(CPUException::GP(Some(0))));
             },
             (SgReg::CS, Some(SegDescType::Code(cdesc))) => {
                 if cdesc.P == 0 { return Err(EmuException::CPUException(CPUException::NP)); }
@@ -360,9 +366,9 @@ impl super::Access {
             },
             (SgReg::SS, Some(SegDescType::Data(ddesc))) => {
                 if cpl != rpl || cpl != ddesc.DPL || !DataDescFlag::from(&ddesc).contains(DataDescFlag::W) {
-                    return Err(EmuException::CPUException(CPUException::GP));
+                    return Err(EmuException::CPUException(CPUException::GP(None)));
                 } else if ddesc.P == 0 {
-                    return Err(EmuException::CPUException(CPUException::SS));
+                    return Err(EmuException::CPUException(CPUException::SS(None)));
                 }
                 ddesc
             },
@@ -372,7 +378,7 @@ impl super::Access {
             },
             (_, Some(SegDescType::Code(cdesc))) => {
                 if !CodeDescFlag::from(&cdesc).contains(CodeDescFlag::R) {
-                    return Err(EmuException::CPUException(CPUException::GP));
+                    return Err(EmuException::CPUException(CPUException::GP(None)));
                 }
                 if cdesc.P == 0 { return Err(EmuException::CPUException(CPUException::NP)); }
                 cdesc
@@ -388,17 +394,17 @@ impl super::Access {
 
         match self.obtain_gl_desc(desc.selector)? {
             Some(DescType::Segment(SegDescType::Code(cdesc))) => Ok((desc.selector, cdesc)),
-            _ => Err(EmuException::CPUException(CPUException::GP)),
+            _ => Err(EmuException::CPUException(CPUException::GP(Some(desc.selector)))),
         }
     }
 
     pub fn select_taskgate(&mut self, desc: TaskGateDesc) -> Result<TSSDesc, EmuException> {
         if desc.P == 0 { return Err(EmuException::CPUException(CPUException::NP)); }
-        if SgDescSelector::new(desc.tss_sel).TI == 1 { return Err(EmuException::CPUException(CPUException::GP)); }
+        if SgDescSelector::new(desc.tss_sel).TI == 1 { return Err(EmuException::CPUException(CPUException::GP(Some(desc.tss_sel)))); }
 
         match self.obtain_g_desc(desc.tss_sel)? {
             Some(DescType::System(SysDescType::TSS(tssdesc))) => Ok(tssdesc),
-            _ => Err(EmuException::CPUException(CPUException::GP)),
+            _ => Err(EmuException::CPUException(CPUException::GP(Some(desc.tss_sel)))),
         }
     }
 
@@ -407,7 +413,7 @@ impl super::Access {
 
         match self.obtain_gl_desc(desc.selector)? {
             Some(DescType::Segment(SegDescType::Code(cdesc))) => Ok((desc.selector, cdesc)),
-            _ => Err(EmuException::CPUException(CPUException::GP)),
+            _ => Err(EmuException::CPUException(CPUException::GP(Some(desc.selector)))),
         }
     }
 
@@ -480,7 +486,7 @@ impl super::Access {
                 self.push_u64(cs_sel as u64)?;
                 self.push_u64(self.get_ip()?)?;
             },
-            _ => { return Err(EmuException::CPUException(CPUException::GP)); },
+            _ => { return Err(EmuException::CPUException(CPUException::GP(None))); },
         }
         Ok(())
     }
@@ -491,7 +497,7 @@ impl super::Access {
 
         if desc.P == 0 { return Err(EmuException::CPUException(CPUException::NP)); }
         match (&mode, desc.B) {
-            (TSMode::Jmp, 1) | (TSMode::CallInt, 1) => { return Err(EmuException::CPUException(CPUException::GP)) },
+            (TSMode::Jmp, 1) | (TSMode::CallInt, 1) => { return Err(EmuException::CPUException(CPUException::GP(Some(new_sel)))) },
             (TSMode::Iret, 0)                       => { return Err(EmuException::CPUException(CPUException::TS)) },
             _ => {},
         }

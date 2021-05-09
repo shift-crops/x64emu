@@ -445,7 +445,7 @@ impl Opcode16 {
         let (sg, adr) = exec.get_m()?;
 
         if exec.ac.get_cpl()? > 0 {
-            return Err(EmuException::CPUException(CPUException::GP));
+            return Err(EmuException::CPUException(CPUException::GP(None)));
         }
 
         let limit = exec.ac.get_data16((sg,adr))?;
@@ -458,7 +458,7 @@ impl Opcode16 {
         let (sg, adr) = exec.get_m()?;
 
         if exec.ac.get_cpl()? > 0 {
-            return Err(EmuException::CPUException(CPUException::GP));
+            return Err(EmuException::CPUException(CPUException::GP(None)));
         }
 
         let limit = exec.ac.get_data16((sg,adr))?;

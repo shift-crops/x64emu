@@ -23,7 +23,7 @@ impl super::Access {
         if let Some(msr) = self.get_msr(addr) {
             return Ok(msr.to_u64());
         }
-        Err(EmuException::CPUException(CPUException::GP))
+        Err(EmuException::CPUException(CPUException::GP(None)))
     }
 
     pub fn write_msr(&mut self, addr: u32, val: u64) -> Result<(), EmuException> {
@@ -31,7 +31,7 @@ impl super::Access {
             msr.from_u64(val);
             return Ok(());
         }
-        Err(EmuException::CPUException(CPUException::GP))
+        Err(EmuException::CPUException(CPUException::GP(None)))
     }
 
     fn get_msr(&self, addr: u32) -> Option<&dyn MSRAccess> {

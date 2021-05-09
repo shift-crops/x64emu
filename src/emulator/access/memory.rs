@@ -1,5 +1,6 @@
 #![allow(non_snake_case)]
 
+use std::collections::BTreeMap;
 use libc::c_void;
 use packed_struct::prelude::*;
 use crate::emulator::*;
@@ -9,75 +10,101 @@ use crate::hardware::memory::MemDumpSize;
 #[derive(Debug, Default, PackedStruct)]
 #[packed_struct(bit_numbering="lsb0", size_bytes="8", endian="msb")]
 pub struct PML5E {
-    #[packed_field(bits="0")]  P:   u8,
-    #[packed_field(bits="1")]  RW:  u8,
-    #[packed_field(bits="2")]  US:  u8,
-    #[packed_field(bits="3")]  PWT: u8,
-    #[packed_field(bits="4")]  PCD: u8,
-    #[packed_field(bits="5")]  A:   u8,
+    #[packed_field(bits="0")]  P:   bool,
+    #[packed_field(bits="1")]  RW:  bool,
+    #[packed_field(bits="2")]  US:  bool,
+    #[packed_field(bits="3")]  PWT: bool,
+    #[packed_field(bits="4")]  PCD: bool,
+    #[packed_field(bits="5")]  A:   bool,
     #[packed_field(bits="12:39")] pml4_base: u32,
-    #[packed_field(bits="63")] XD:  u8,
+    #[packed_field(bits="63")] XD:  bool,
 }
 
 #[derive(Debug, Default, PackedStruct)]
 #[packed_struct(bit_numbering="lsb0", size_bytes="8", endian="msb")]
 pub struct PML4E {
-    #[packed_field(bits="0")]  P:   u8,
-    #[packed_field(bits="1")]  RW:  u8,
-    #[packed_field(bits="2")]  US:  u8,
-    #[packed_field(bits="3")]  PWT: u8,
-    #[packed_field(bits="4")]  PCD: u8,
-    #[packed_field(bits="5")]  A:   u8,
+    #[packed_field(bits="0")]  P:   bool,
+    #[packed_field(bits="1")]  RW:  bool,
+    #[packed_field(bits="2")]  US:  bool,
+    #[packed_field(bits="3")]  PWT: bool,
+    #[packed_field(bits="4")]  PCD: bool,
+    #[packed_field(bits="5")]  A:   bool,
     #[packed_field(bits="12:39")] pdpt_base: u32,
-    #[packed_field(bits="63")] XD:  u8,
+    #[packed_field(bits="63")] XD:  bool,
 }
 
 #[derive(Debug, Default, PackedStruct)]
 #[packed_struct(bit_numbering="lsb0", size_bytes="8", endian="msb")]
 pub struct PDPTE {
-    #[packed_field(bits="0")]  P:   u8,
-    #[packed_field(bits="1")]  RW:  u8,
-    #[packed_field(bits="2")]  US:  u8,
-    #[packed_field(bits="3")]  PWT: u8,
-    #[packed_field(bits="4")]  PCD: u8,
-    #[packed_field(bits="5")]  A:   u8,
-    #[packed_field(bits="6")]  D:   u8,
-    #[packed_field(bits="7")]  PS:  u8,
-    #[packed_field(bits="8")]  G:   u8,
+    #[packed_field(bits="0")]  P:   bool,
+    #[packed_field(bits="1")]  RW:  bool,
+    #[packed_field(bits="2")]  US:  bool,
+    #[packed_field(bits="3")]  PWT: bool,
+    #[packed_field(bits="4")]  PCD: bool,
+    #[packed_field(bits="5")]  A:   bool,
+    #[packed_field(bits="6")]  D:   bool,
+    #[packed_field(bits="7")]  PS:  bool,
+    #[packed_field(bits="8")]  G:   bool,
     #[packed_field(bits="12:39")] pdt_base: u32,
-    #[packed_field(bits="63")] XD:  u8,
+    #[packed_field(bits="63")] XD:  bool,
 }
 
 #[derive(Debug, Default, PackedStruct)]
 #[packed_struct(bit_numbering="lsb0", size_bytes="8", endian="msb")]
 pub struct PDE {
-    #[packed_field(bits="0")]  P:   u8,
-    #[packed_field(bits="1")]  RW:  u8,
-    #[packed_field(bits="2")]  US:  u8,
-    #[packed_field(bits="3")]  PWT: u8,
-    #[packed_field(bits="4")]  PCD: u8,
-    #[packed_field(bits="5")]  A:   u8,
-    #[packed_field(bits="6")]  D:   u8,
-    #[packed_field(bits="7")]  PS:  u8,
-    #[packed_field(bits="8")]  G:   u8,
+    #[packed_field(bits="0")]  P:   bool,
+    #[packed_field(bits="1")]  RW:  bool,
+    #[packed_field(bits="2")]  US:  bool,
+    #[packed_field(bits="3")]  PWT: bool,
+    #[packed_field(bits="4")]  PCD: bool,
+    #[packed_field(bits="5")]  A:   bool,
+    #[packed_field(bits="6")]  D:   bool,
+    #[packed_field(bits="7")]  PS:  bool,
+    #[packed_field(bits="8")]  G:   bool,
     #[packed_field(bits="12:39")] pt_base: u32,
-    #[packed_field(bits="63")] XD:  u8,
+    #[packed_field(bits="63")] XD:  bool,
 }
 
 #[derive(Debug, Default, PackedStruct)]
 #[packed_struct(bit_numbering="lsb0", size_bytes="8", endian="msb")]
 pub struct PTE {
-    #[packed_field(bits="0")]  P:   u8,
-    #[packed_field(bits="1")]  RW:  u8,
-    #[packed_field(bits="2")]  US:  u8,
-    #[packed_field(bits="3")]  PWT: u8,
-    #[packed_field(bits="4")]  PCD: u8,
-    #[packed_field(bits="5")]  A:   u8,
-    #[packed_field(bits="6")]  D:   u8,
-    #[packed_field(bits="7")]  PS:  u8,
-    #[packed_field(bits="8")]  G:   u8,
+    #[packed_field(bits="0")]  P:   bool,
+    #[packed_field(bits="1")]  RW:  bool,
+    #[packed_field(bits="2")]  US:  bool,
+    #[packed_field(bits="3")]  PWT: bool,
+    #[packed_field(bits="4")]  PCD: bool,
+    #[packed_field(bits="5")]  A:   bool,
+    #[packed_field(bits="6")]  D:   bool,
+    #[packed_field(bits="7")]  PS:  bool,
+    #[packed_field(bits="8")]  G:   bool,
     #[packed_field(bits="12:39")] page_base: u32,
-    #[packed_field(bits="63")] XD:  u8,
+    #[packed_field(bits="63")] XD:  bool,
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+pub struct PageCache {
+    RW:  bool,
+    US:  bool,
+    PWT: bool,
+    PCD: bool,
+    G:   bool,
+    base: u32,
+    XD:  bool,
+}
+impl From<&PDPTE> for PageCache {
+    fn from(e: &PDPTE) -> Self {
+        Self { RW: e.RW, US: e.US, PWT: e.PWT, PCD: e.PCD, G: e.G, base: e.pdt_base, XD: e.XD, }
+    }
+}
+impl From<&PDE> for PageCache {
+    fn from(e: &PDE) -> Self {
+        Self { RW: e.RW, US: e.US, PWT: e.PWT, PCD: e.PCD, G: e.G, base: e.pt_base, XD: e.XD, }
+    }
+}
+impl From<&PTE> for PageCache {
+    fn from(e: &PTE) -> Self {
+        Self { RW: e.RW, US: e.US, PWT: e.PWT, PCD: e.PCD, G: e.G, base: e.page_base, XD: e.XD, }
+    }
 }
 
 #[derive(Debug, Default, PackedStruct)]
@@ -110,7 +137,7 @@ pub struct LAddrIa32e {
 
 #[derive(Debug, Default)]
 struct PagingStructIndex {
-    bitlen: usize,
+    legacy: bool,
     pml5: Option<u64>,
     pml4: Option<u64>,
     pdpt: Option<u64>,
@@ -119,21 +146,66 @@ struct PagingStructIndex {
 }
 impl From<&LAddrLegacy> for PagingStructIndex {
     fn from(l: &LAddrLegacy) -> Self {
-        Self { bitlen: 10, pml5: None, pml4: None, pdpt: None, pd: l.pd_ofs as u64, pt: l.pt_ofs as u64 }
+        Self { legacy: true, pml5: None, pml4: None, pdpt: None, pd: l.pd_ofs as u64, pt: l.pt_ofs as u64 }
     }
 }
 impl From<&LAddrPAE> for PagingStructIndex {
     fn from(l: &LAddrPAE) -> Self {
-        Self { bitlen: 9, pml5: None, pml4: None, pdpt: Some(l.pdpt_ofs as u64), pd: l.pd_ofs as u64, pt: l.pt_ofs as u64 }
+        Self { legacy: false, pml5: None, pml4: None, pdpt: Some(l.pdpt_ofs as u64), pd: l.pd_ofs as u64, pt: l.pt_ofs as u64 }
     }
 }
 impl From<&LAddrIa32e> for PagingStructIndex {
     fn from(l: &LAddrIa32e) -> Self {
-        Self { bitlen: 9, pml5: Some(l.pml5_ofs as u64), pml4: Some(l.pml4_ofs as u64), pdpt: Some(l.pdpt_ofs as u64), pd: l.pd_ofs as u64, pt: l.pt_ofs as u64 }
+        Self { legacy: false, pml5: Some(l.pml5_ofs as u64), pml4: Some(l.pml4_ofs as u64), pdpt: Some(l.pdpt_ofs as u64), pd: l.pd_ofs as u64, pt: l.pt_ofs as u64 }
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
+enum PageType {
+    Page1GB(PageCache), Page4MB(PageCache), Page2MB(PageCache), Page4KB(PageCache)
+}
+
+#[derive(Default)]
+pub struct TLB {
+    p1gb: BTreeMap<u64, PageCache>,
+    p4mb: BTreeMap<u64, PageCache>,
+    p2mb: BTreeMap<u64, PageCache>,
+    p4kb: BTreeMap<u64, PageCache>,
+}
+
+impl TLB {
+    pub fn flush(&mut self) -> () {
+        self.p1gb.clear();
+        self.p4mb.clear();
+        self.p2mb.clear();
+        self.p4kb.clear();
+    }
+
+    fn add_cache(&mut self, vpn: u64, cache: PageType) -> () {
+        match cache {
+            PageType::Page1GB(tbl) => { if !tbl.PCD { self.p1gb.insert(vpn >> 18, tbl); } },
+            PageType::Page4MB(tbl) => { if !tbl.PCD { self.p4mb.insert(vpn >> 10, tbl); } },
+            PageType::Page2MB(tbl) => { if !tbl.PCD { self.p2mb.insert(vpn >> 9, tbl); } },
+            PageType::Page4KB(tbl) => { if !tbl.PCD { self.p4kb.insert(vpn, tbl); } },
+        }
+    }
+
+    fn find_cache(&self, vpn: u64) -> Option<PageType> {
+        if let Some(tbl) = self.p1gb.get(&(vpn >> 18)) {
+            Some(PageType::Page1GB(*tbl))
+        } else if let Some(tbl) = self.p4mb.get(&(vpn >> 10)){
+            Some(PageType::Page4MB(*tbl))
+        } else if let Some(tbl) = self.p2mb.get(&(vpn >> 9)){
+            Some(PageType::Page2MB(*tbl))
+        } else if let Some(tbl) = self.p4kb.get(&vpn){
+            Some(PageType::Page4KB(*tbl))
+        } else {
+            None
+        }
+    }
+}
+
+#[derive(Clone, Copy, PartialEq)]
 enum MemAccessMode { Read, Write, Exec, Monitor }
 #[derive(Clone, Copy)]
 enum MemAccessSize { Byte = 1, Word = 2, DWord = 4, QWord = 8 }
@@ -315,7 +387,7 @@ impl super::Access {
                 }
                 */
 
-                if !long64 && (vaddr >> 12*cache.G) > cache.limit as u64 { return Err(EmuException::CPUException(CPUException::GP)); }
+                if !long64 && (vaddr >> 12*cache.G) > cache.limit as u64 { return Err(EmuException::CPUException(CPUException::GP(None))); }
             },
             _ => {}
         }
@@ -324,46 +396,67 @@ impl super::Access {
     }
 
     fn trans_l2p(&self, acs: MemAccessMode, laddr: u64) -> Result<u64, EmuException> {
-        if let Some(md) = &self.pgmd {
-            let (psidx, offset) = match md {
-                super::PagingMode::Legacy => {
-                    let l = LAddrLegacy::unpack(&(laddr as u32).to_be_bytes()).unwrap();
-                    (PagingStructIndex::from(&l), l.p_ofs)
-                },
-                super::PagingMode::LegacyPAE => {
-                    let l = LAddrPAE::unpack(&(laddr as u32).to_be_bytes()).unwrap();
-                    (PagingStructIndex::from(&l), l.p_ofs)
-                },
-                super::PagingMode::Ia32e4Lv => {
-                    let l = LAddrIa32e::unpack(&laddr.to_be_bytes()).unwrap();
-                    let mut psi = PagingStructIndex::from(&l);
-                    psi.pml5 = None;
-                    (psi, l.p_ofs)
-                },
-                super::PagingMode::Ia32e5Lv => {
-                    let l = LAddrIa32e::unpack(&laddr.to_be_bytes()).unwrap();
-                    (PagingStructIndex::from(&l), l.p_ofs)
-                },
+        let paddr = if let Some(md) = &self.pgmd {
+            let vpn = laddr >> 12;
+            let mut tlb = self.tlb.borrow_mut();
+
+            let ptype = if let Some(ty) = tlb.find_cache(vpn) {
+                match ty {
+                    PageType::Page1GB(e) | PageType::Page4MB(e) | PageType::Page2MB(e) | PageType::Page4KB(e) => {
+                        if (acs == MemAccessMode::Write && !e.RW) || (self.get_cpl()? > 2 && !e.US ){
+                            return Err(EmuException::CPUException(CPUException::PF(laddr)));
+                        }
+                    },
+                }
+                ty
+            } else {
+                let psidx = match md {
+                    super::PagingMode::Legacy => {
+                        PagingStructIndex::from(&LAddrLegacy::unpack(&(laddr as u32).to_be_bytes()).unwrap())
+                    },
+                    super::PagingMode::LegacyPAE => {
+                        PagingStructIndex::from(&LAddrPAE::unpack(&(laddr as u32).to_be_bytes()).unwrap())
+                    },
+                    super::PagingMode::Ia32e4Lv => {
+                        let l = LAddrIa32e::unpack(&laddr.to_be_bytes()).unwrap();
+                        let mut psi = PagingStructIndex::from(&l);
+                        psi.pml5 = None;
+                        psi
+                    },
+                    super::PagingMode::Ia32e5Lv => {
+                        PagingStructIndex::from(&LAddrIa32e::unpack(&laddr.to_be_bytes()).unwrap())
+                    },
+                };
+
+                if let Some(p) = self.page_walk(acs, &md, psidx) {
+                    debug!("{:x?}", p);
+                    tlb.add_cache(vpn, p);
+                    p
+                } else {
+                    return Err(EmuException::CPUException(CPUException::PF(laddr)));
+                }
             };
 
-            let page_paddr = self.page_walk(acs, &md, psidx)?;
-            Ok(page_paddr + offset as u64)
-        } else {
-            Ok(laddr)
-        }
+            match ptype {
+                PageType::Page1GB(tbl) => { ((tbl.base as u64) << 30) + (laddr & ((1<<30)-1)) },
+                PageType::Page4MB(tbl) => { ((tbl.base as u64) << 22) + (laddr & ((1<<22)-1)) },
+                PageType::Page2MB(tbl) => { ((tbl.base as u64) << 21) + (laddr & ((1<<21)-1)) },
+                PageType::Page4KB(tbl) => { ((tbl.base as u64) << 12) + (laddr & ((1<<12)-1)) },
+            }
+        } else { laddr };
+        //println!("{:x} -> {:x}", laddr, paddr);
+        Ok(paddr)
    }
 
-    fn page_walk(&self, acs: MemAccessMode, pmd: &super::PagingMode, psidx: PagingStructIndex) -> Result<u64, EmuException> {
+    fn page_walk(&self, acs: MemAccessMode, pmd: &super::PagingMode, psidx: PagingStructIndex) -> Option<PageType> {
+        let cpl = self.get_cpl().ok()?;
         let cr3 = &self.core.cregs.3;
-        let table_size = match pmd {
-            super::PagingMode::Legacy => 4,
-            _ => 8,
-        };
+        let table_size = if let super::PagingMode::Legacy = pmd { 4 } else { 8 };
 
         let pml5e: Option<PML5E> = if let Some(idx) = psidx.pml5 {
             let pml5_base = cr3.get_pagedir_base();
             let mut raw: [u8; 8] = [0; 8];
-            self.read_p(raw.as_mut_ptr() as *mut _, pml5_base + idx*8, 8)?;
+            self.read_p(raw.as_mut_ptr() as *mut _, pml5_base + idx*8, 8).ok()?;
             raw.reverse();
             Some(PML5E::unpack(&raw).unwrap())
         } else { None };
@@ -371,12 +464,15 @@ impl super::Access {
         let pml4e: Option<PML4E> = if let Some(idx) = psidx.pml4 {
             let pml4_base = match pml5e {
                 Some(e) => {
+                    if !e.P || (acs == MemAccessMode::Write && !e.RW) || (cpl > 2 && !e.US ){
+                        return None;
+                    }
                     (e.pml4_base as u64) << 12
                 },
                 None => cr3.get_pagedir_base(),
             };
             let mut raw: [u8; 8] = [0; 8];
-            self.read_p(raw.as_mut_ptr() as *mut _, pml4_base + idx*8, 8)?;
+            self.read_p(raw.as_mut_ptr() as *mut _, pml4_base + idx*8, 8).ok()?;
             raw.reverse();
             Some(PML4E::unpack(&raw).unwrap())
         } else { None };
@@ -384,51 +480,61 @@ impl super::Access {
         let pdpte: Option<PDPTE> = if let Some(idx) = psidx.pdpt {
             let pdpt_base = match pml4e {
                 Some(e) => {
+                    if !e.P || (acs == MemAccessMode::Write && !e.RW) || (cpl > 2 && !e.US ){
+                        return None;
+                    }
                     (e.pdpt_base as u64) << 12
                 },
                 None => cr3.get_pagedir_base(),
             };
             let mut raw: [u8; 8] = [0; 8];
-            self.read_p(raw.as_mut_ptr() as *mut _, pdpt_base + idx*table_size, table_size as usize)?;
+            self.read_p(raw.as_mut_ptr() as *mut _, pdpt_base + idx*table_size, table_size as usize).ok()?;
             raw.reverse();
             Some(PDPTE::unpack(&raw).unwrap())
         } else { None };
 
         let pd_base = match pdpte {
             Some(e) => {
-                match e.PS {
-                    0 => {
-                        (e.pdt_base as u64) << 12
-                    },
-                    1 => {
-                        return Ok( (((((e.pdt_base as u64) << psidx.bitlen) + psidx.pd) << psidx.bitlen) + psidx.pt) << 12 );
-                    },
-                    _ => { panic!("{:?}", EmuException::UnexpectedError); },
+                if e.PS {
+                    return Some(PageType::Page1GB(PageCache::from(&e)));
+                } else {
+                    if !e.P || (acs == MemAccessMode::Write && !e.RW) || (cpl > 2 && !e.US ){
+                        return None;
+                    }
+                    (e.pdt_base as u64) << 12
                 }
             },
             None => cr3.get_pagedir_base(),
         };
         let mut raw: [u8; 8] = [0; 8];
-        self.read_p(raw.as_mut_ptr() as *mut _, pd_base + psidx.pd*table_size, table_size as usize)?;
+        self.read_p(raw.as_mut_ptr() as *mut _, pd_base + psidx.pd*table_size, table_size as usize).ok()?;
         raw.reverse();
         let pde = PDE::unpack(&raw).unwrap();
 
-        let pt_base = match pde.PS {
-            0 => {
+        let pt_base = match (psidx.legacy, self.core.cregs.4.PSE, pde.PS) {
+            (true, 1, true) => {
+                return Some(PageType::Page4MB(PageCache::from(&pde)));
+            },
+            (false, _, true) => {
+                return Some(PageType::Page2MB(PageCache::from(&pde)));
+            },
+            _ => {
+                if !pde.P || (acs == MemAccessMode::Write && !pde.RW) || (cpl > 2 && !pde.US ){
+                    return None;
+                }
                 (pde.pt_base as u64) << 12
             },
-            1 => {
-                return Ok( (((pde.pt_base as u64) << psidx.bitlen) + psidx.pt) << 12 );
-            },
-            _ => { panic!("{:?}", EmuException::UnexpectedError); },
         };
         let mut raw: [u8; 8] = [0; 8];
-        self.read_p(raw.as_mut_ptr() as *mut _, pt_base + psidx.pt*table_size, table_size as usize)?;
+        self.read_p(raw.as_mut_ptr() as *mut _, pt_base + psidx.pt*table_size, table_size as usize).ok()?;
         raw.reverse();
         let pte = PTE::unpack(&raw).unwrap();
 
-        //println!("{:x?}", pte);
-        Ok((pte.page_base as u64) << 12)
+        if !pte.P || (acs == MemAccessMode::Write && !pte.RW) || (cpl > 2 && !pte.US ){
+            return None;
+        }
+
+        Some(PageType::Page4KB(PageCache::from(&pte)))
     }
 }
 

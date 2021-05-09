@@ -42,7 +42,7 @@ fn interrupt_vector(ac: &mut Access, ivec: u8, hw: bool) -> Result<(), EmuExcept
         CpuMode::Real => {
             let ivt_ofs = (ivec as u32) << 2;
 
-            if ivt_ofs > idtr.limit { return Err(EmuException::CPUException(CPUException::GP)); }
+            if ivt_ofs > idtr.limit { return Err(EmuException::CPUException(CPUException::GP(None))); }
 
             let mut ivt: IVT = Default::default();
             ac.read_l(&mut ivt as *mut IVT as *mut _, idtr.base + ivt_ofs as u64, std::mem::size_of_val(&ivt))?;
@@ -60,7 +60,7 @@ fn interrupt_vector(ac: &mut Access, ivec: u8, hw: bool) -> Result<(), EmuExcept
 
                     let (sel, desc) = ac.select_intrtrapgate(gate)?;
                     let rpl = (sel & 3) as u8;
-                    if (cpl < rpl) || (!hw && cpl > dpl) { return Err(EmuException::CPUException(CPUException::GP)); }
+                    if (cpl < rpl) || (!hw && cpl > dpl) { return Err(EmuException::CPUException(CPUException::GP(None))); }
 
                     let cache = ac.select_segdesc(SgReg::CS, rpl, Some(SegDescType::Code(desc)))?;
 
@@ -75,7 +75,7 @@ fn interrupt_vector(ac: &mut Access, ivec: u8, hw: bool) -> Result<(), EmuExcept
 
                     let (sel, desc) = ac.select_intrtrapgate(gate)?;
                     let rpl = (sel & 3) as u8;
-                    if (cpl < rpl) || (!hw && cpl > dpl) { return Err(EmuException::CPUException(CPUException::GP)); }
+                    if (cpl < rpl) || (!hw && cpl > dpl) { return Err(EmuException::CPUException(CPUException::GP(None))); }
 
                     let cache = ac.select_segdesc(SgReg::CS, rpl, Some(SegDescType::Code(desc)))?;
 
@@ -84,12 +84,12 @@ fn interrupt_vector(ac: &mut Access, ivec: u8, hw: bool) -> Result<(), EmuExcept
                     ac.set_ip(new_ip)?;
                 },
                 Some(DescType::System(SysDescType::Task(gate))) => {
-                    if gate.DPL < cpl { return Err(EmuException::CPUException(CPUException::GP)); }
+                    if gate.DPL < cpl { return Err(EmuException::CPUException(CPUException::GP(None))); }
                     let tss_sel = gate.tss_sel;
                     let desc = ac.select_taskgate(gate)?;
                     ac.switch_task(TSMode::CallInt, tss_sel, desc)?;
                 },
-                _ => { return Err(EmuException::CPUException(CPUException::GP)); },
+                _ => { return Err(EmuException::CPUException(CPUException::GP(None))); },
             }
         },
     }

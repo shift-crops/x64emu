@@ -4,6 +4,7 @@ mod msr;
 pub mod descriptor;
 mod port;
 
+use std::cell::RefCell;
 use std::sync::{Arc, RwLock};
 use crate::hardware;
 use crate::device;
@@ -26,30 +27,32 @@ pub struct OpAdSize {
     pub ad: AcsSize,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 pub enum PagingMode { Legacy, LegacyPAE, Ia32e4Lv, Ia32e5Lv }
 
 pub struct Access {
-    pub mode: CpuMode,
-    pub oasz: OpAdSize,
-    pub stsz: AcsSize,
-    pub pgmd: Option<PagingMode>,
     pub core: hardware::processor::Processor,
     pub mem: Arc<RwLock<hardware::memory::Memory>>,
     pub dev: device::Device,
+    pub mode: CpuMode,
+    pub oasz: OpAdSize,
+    stsz: AcsSize,
+    pgmd: Option<PagingMode>,
+    tlb: RefCell<memory::TLB>,
     a20gate: bool,
 }
 
 impl Access {
     pub fn new(hw: hardware::Hardware, dev: device::Device) -> Self {
         Self {
+            core: hw.core,
+            mem: hw.mem,
+            dev,
             mode: CpuMode::Real,
             oasz: Default::default(),
             stsz: Default::default(),
             pgmd: None,
-            core: hw.core,
-            mem: hw.mem,
-            dev,
+            tlb: Default::default(),
             a20gate: false,
         }
     }
@@ -62,7 +65,7 @@ impl Access {
             (0, 0) => CpuMode::Real,
             (0, 1) => CpuMode::Protected,
             (1, 1) => CpuMode::Long,
-            _ => return Err(EmuException::CPUException(CPUException::GP)),
+            _ => return Err(EmuException::CPUException(CPUException::GP(None))),
         };
 
         Ok(())
@@ -76,20 +79,20 @@ impl Access {
             (1, 0, 0) | (0, _, 0) => (AcsSize::BIT16, AcsSize::BIT16),
             (1, 0, 1) | (0, _, 1) => (AcsSize::BIT32, AcsSize::BIT32),
             (1, 1, 0)             => (AcsSize::BIT32, AcsSize::BIT64),
-            _ => return Err(EmuException::CPUException(CPUException::GP)),
+            _ => return Err(EmuException::CPUException(CPUException::GP(None))),
         };
         self.oasz = OpAdSize { op, ad };
         Ok(())
     }
 
     pub fn update_stacksize(&mut self) -> Result<(), EmuException> {
-        let ss = &self.core.sgregs.get(register::SgReg::SS).cache;
+        let ss = &self.core.sgregs.get(register::SgReg::SS);
 
-        self.stsz = match (ss.L, ss.DB) {
+        self.stsz = match (ss.cache.L, ss.cache.DB) {
             (0, 0) => AcsSize::BIT16,
             (0, 1) => AcsSize::BIT32,
             (1, 0) => AcsSize::BIT64,
-            _ => return Err(EmuException::CPUException(CPUException::SS)),
+            _ => return Err(EmuException::CPUException(CPUException::SS(Some(ss.selector.to_u16())))),
         };
         Ok(())
     }
@@ -100,7 +103,7 @@ impl Access {
         let cr4 = &self.core.cregs.4;
 
         if cr4.PAE == 0 && efer.LMA == 1 {
-            return Err(EmuException::CPUException(CPUException::GP));
+            return Err(EmuException::CPUException(CPUException::GP(None)));
         }
 
         self.pgmd = match (&self.mode, cr0.PG, cr4.PAE, cr4.LA57) {
@@ -109,7 +112,7 @@ impl Access {
             (CpuMode::Protected, 1, 1, _)           => Some(PagingMode::LegacyPAE),
             (CpuMode::Long, 1, 1, 0)                => Some(PagingMode::Ia32e4Lv),
             (CpuMode::Long, 1, 1, 1)                => Some(PagingMode::Ia32e5Lv),
-            _ => return Err(EmuException::CPUException(CPUException::GP)),
+            _ => return Err(EmuException::CPUException(CPUException::GP(None))),
         };
         efer.LMA = if let Some(PagingMode::Ia32e4Lv) | Some(PagingMode::Ia32e5Lv) = &self.pgmd { 1 } else { 0 };
 

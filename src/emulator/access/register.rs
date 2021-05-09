@@ -87,17 +87,42 @@ impl IpAccess<u64, i64> for super::Access {
     fn update_ip(&mut self, v: i64) -> Result<(), EmuException> { self.core.ip.update_rip(v); Ok(()) }
 }
 
-impl super::Access {
-    pub fn get_rflags(&self) -> Result<u64, EmuException> { Ok(self.core.rflags.to_u64()) }
-    pub fn set_rflags(&mut self, v: u64) -> Result<(), EmuException> { self.core.rflags.from_u64(v); Ok(()) }
+pub trait CregAccess<T> {
+    fn get_creg(&self, r: usize) -> Result<T, EmuException>;
+    fn set_creg(&mut self, r: usize, v: T) -> Result<(), EmuException>;
+}
 
-    pub fn get_creg(&self, r: usize) -> Result<u32, EmuException> {
+impl CregAccess<u32> for super::Access {
+    fn get_creg(&self, r: usize) -> Result<u32, EmuException> {
         if let Some(cr) = self.core.cregs.get(r) { Ok(cr.to_u32()) } else { Err(EmuException::NotImplementedFunction) }
     }
 
-    pub fn set_creg(&mut self, r: usize, v: u32) -> Result<(), EmuException> {
-        if let Some(cr) = self.core.cregs.get_mut(r) { cr.from_u32(v); Ok(()) } else { Err(EmuException::UnexpectedError) }
+    fn set_creg(&mut self, r: usize, v: u32) -> Result<(), EmuException> {
+        if let Some(cr) = self.core.cregs.get_mut(r) {
+            cr.from_u32(v);
+            if r == 3 { self.tlb.borrow_mut().flush(); }
+            Ok(())
+        } else { Err(EmuException::UnexpectedError) }
     }
+}
+
+impl CregAccess<u64> for super::Access {
+    fn get_creg(&self, r: usize) -> Result<u64, EmuException> {
+        if let Some(cr) = self.core.cregs.get(r) { Ok(cr.to_u64()) } else { Err(EmuException::NotImplementedFunction) }
+    }
+
+    fn set_creg(&mut self, r: usize, v: u64) -> Result<(), EmuException> {
+        if let Some(cr) = self.core.cregs.get_mut(r) {
+            cr.from_u64(v);
+            if r == 3 { self.tlb.borrow_mut().flush(); }
+            Ok(())
+        } else { Err(EmuException::UnexpectedError) }
+    }
+}
+
+impl super::Access {
+    pub fn get_rflags(&self) -> Result<u64, EmuException> { Ok(self.core.rflags.to_u64()) }
+    pub fn set_rflags(&mut self, v: u64) -> Result<(), EmuException> { self.core.rflags.from_u64(v); Ok(()) }
 
     pub fn get_sgreg(&self, r: SgReg) -> Result<(u16, segment::SgDescCache), EmuException> {
         let sg = self.core.sgregs.get(r);
@@ -132,7 +157,7 @@ impl super::Access {
 
     pub fn set_ldtr(&mut self, sel: u16) -> Result<(), EmuException> {
         if let Some(DescType::System(SysDescType::LDT(ldtd))) = self.obtain_g_desc(sel)? {
-            if self.get_cpl()? > 0 { return Err(EmuException::CPUException(CPUException::GP)); }
+            if self.get_cpl()? > 0 { return Err(EmuException::CPUException(CPUException::GP(None))); }
             if ldtd.P == 0 { return Err(EmuException::CPUException(CPUException::NP)); }
 
             let ldtr = &mut self.core.dtregs.ldtr;
@@ -140,7 +165,7 @@ impl super::Access {
             ldtr.selector    = sel;
             Ok(())
         } else {
-            Err(EmuException::CPUException(CPUException::GP))
+            Err(EmuException::CPUException(CPUException::GP(None)))
         }
     }
 
@@ -154,7 +179,7 @@ impl super::Access {
             self.set_busy_tssdesc(sel, true)?;
             Ok(())
         } else {
-            Err(EmuException::CPUException(CPUException::GP))
+            Err(EmuException::CPUException(CPUException::GP(None)))
         }
     }
 }

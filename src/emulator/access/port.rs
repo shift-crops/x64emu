@@ -4,7 +4,7 @@ impl super::Access {
     pub fn in_8(&self, addr: u16) -> Result<u8, EmuException> {
         match self.mode {
             access::CpuMode::Long | access::CpuMode::Protected => {
-                if self.get_cpl()? > self.core.rflags.get_iopl() { return Err(EmuException::CPUException(CPUException::GP)) }
+                if self.get_cpl()? > self.core.rflags.get_iopl() { return Err(EmuException::CPUException(CPUException::GP(None))) }
             },
             _ => {},
         }
@@ -16,7 +16,7 @@ impl super::Access {
     pub fn out_8(&mut self, addr: u16, v: u8) -> Result<(), EmuException> {
         match self.mode {
             access::CpuMode::Long | access::CpuMode::Protected => {
-                if self.get_cpl()? > self.core.rflags.get_iopl() { return Err(EmuException::CPUException(CPUException::GP)) }
+                if self.get_cpl()? > self.core.rflags.get_iopl() { return Err(EmuException::CPUException(CPUException::GP(None))) }
             },
             _ => {},
         }
@@ -27,7 +27,7 @@ impl super::Access {
     pub fn in_16(&self, addr: u16) -> Result<u16, EmuException> {
         match self.mode {
             access::CpuMode::Long | access::CpuMode::Protected => {
-                if self.get_cpl()? > self.core.rflags.get_iopl() { return Err(EmuException::CPUException(CPUException::GP)) }
+                if self.get_cpl()? > self.core.rflags.get_iopl() { return Err(EmuException::CPUException(CPUException::GP(None))) }
             },
             _ => {},
         }
@@ -39,7 +39,7 @@ impl super::Access {
     pub fn out_16(&mut self, addr: u16, v: u16) -> Result<(), EmuException> {
         match self.mode {
             access::CpuMode::Long | access::CpuMode::Protected => {
-                if self.get_cpl()? > self.core.rflags.get_iopl() { return Err(EmuException::CPUException(CPUException::GP)) }
+                if self.get_cpl()? > self.core.rflags.get_iopl() { return Err(EmuException::CPUException(CPUException::GP(None))) }
             },
             _ => {},
         }
@@ -50,7 +50,7 @@ impl super::Access {
     pub fn in_32(&self, addr: u16) -> Result<u32, EmuException> {
         match self.mode {
             access::CpuMode::Long | access::CpuMode::Protected => {
-                if self.get_cpl()? > self.core.rflags.get_iopl() { return Err(EmuException::CPUException(CPUException::GP)) }
+                if self.get_cpl()? > self.core.rflags.get_iopl() { return Err(EmuException::CPUException(CPUException::GP(None))) }
             },
             _ => {},
         }
@@ -62,7 +62,7 @@ impl super::Access {
     pub fn out_32(&mut self, addr: u16, v: u32) -> Result<(), EmuException> {
         match self.mode {
             access::CpuMode::Long | access::CpuMode::Protected => {
-                if self.get_cpl()? > self.core.rflags.get_iopl() { return Err(EmuException::CPUException(CPUException::GP)) }
+                if self.get_cpl()? > self.core.rflags.get_iopl() { return Err(EmuException::CPUException(CPUException::GP(None))) }
             },
             _ => {},
         }
