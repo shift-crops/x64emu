@@ -37,14 +37,14 @@ impl Target for emulator::Emulator {
 impl SingleThreadOps for emulator::Emulator {
     fn resume(&mut self, action: ResumeAction, check_gdb_interrupt: &mut dyn FnMut() -> bool,) -> Result<StopReason<u32>, Self::Error> {
         match action {
-            ResumeAction::Step => match self.step() {
+            ResumeAction::Step => match self.step(true) {
                 Some(e) => e,
                 None => return Ok(StopReason::DoneStep),
             },
             ResumeAction::Continue => {
                 let mut cycles = 0;
                 loop {
-                    if let Some(event) = self.step() {
+                    if let Some(event) = self.step(true) {
                         break event;
                     };
 
@@ -152,7 +152,7 @@ impl SingleThreadOps for emulator::Emulator {
 
     fn read_addrs(&mut self, start_addr: u32, data: &mut [u8]) -> TargetResult<(), Self> {
         if let Ok(paddr) = self.ac.addr_v2p(SgReg::DS, start_addr as u64) {
-            if let Ok(_) = self.ac.mem.read_data(data.as_mut_ptr() as *mut c_void, paddr as usize, data.len()) {
+            if let Ok(_) = self.ac.mem.read().unwrap().read_data(data.as_mut_ptr() as *mut c_void, paddr as usize, data.len()) {
                 return Ok(());
             }
         }
@@ -161,7 +161,7 @@ impl SingleThreadOps for emulator::Emulator {
 
     fn write_addrs(&mut self, start_addr: u32, data: &[u8]) -> TargetResult<(), Self> {
         if let Ok(paddr) = self.ac.addr_v2p(SgReg::DS, start_addr as u64) {
-            if let Ok(_) = self.ac.mem.write_data(paddr as usize, data.as_ptr() as *const c_void, data.len()) {
+            if let Ok(_) = self.ac.mem.write().unwrap().write_data(paddr as usize, data.as_ptr() as *const c_void, data.len()) {
                 return Ok(());
             }
         }

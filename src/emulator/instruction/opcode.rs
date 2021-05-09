@@ -7,7 +7,7 @@ mod opcode64;
 
 use super::exec;
 use super::access;
-use crate::emulator::EmuException;
+use crate::emulator::{EmuException, CPUException};
 
 bitflags! {
     pub struct OpFlags: u8 {

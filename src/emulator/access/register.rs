@@ -1,8 +1,10 @@
 use std::convert::TryFrom;
 use num_enum::TryFromPrimitive;
+use super::descriptor::*;
 use crate::emulator::*;
 use crate::hardware::processor::general;
 use crate::hardware::processor::segment;
+use crate::hardware::processor::descriptor::DescTbl;
 
 pub type GpReg64 = general::GpReg64;
 pub type GpReg32 = general::GpReg32;
@@ -85,21 +87,99 @@ impl IpAccess<u64, i64> for super::Access {
     fn update_ip(&mut self, v: i64) -> Result<(), EmuException> { self.core.ip.update_rip(v); Ok(()) }
 }
 
+pub trait CregAccess<T> {
+    fn get_creg(&self, r: usize) -> Result<T, EmuException>;
+    fn set_creg(&mut self, r: usize, v: T) -> Result<(), EmuException>;
+}
+
+impl CregAccess<u32> for super::Access {
+    fn get_creg(&self, r: usize) -> Result<u32, EmuException> {
+        if let Some(cr) = self.core.cregs.get(r) { Ok(cr.to_u32()) } else { Err(EmuException::NotImplementedFunction) }
+    }
+
+    fn set_creg(&mut self, r: usize, v: u32) -> Result<(), EmuException> {
+        if let Some(cr) = self.core.cregs.get_mut(r) {
+            cr.from_u32(v);
+            if r == 3 { self.tlb.borrow_mut().flush(); }
+            Ok(())
+        } else { Err(EmuException::UnexpectedError) }
+    }
+}
+
+impl CregAccess<u64> for super::Access {
+    fn get_creg(&self, r: usize) -> Result<u64, EmuException> {
+        if let Some(cr) = self.core.cregs.get(r) { Ok(cr.to_u64()) } else { Err(EmuException::NotImplementedFunction) }
+    }
+
+    fn set_creg(&mut self, r: usize, v: u64) -> Result<(), EmuException> {
+        if let Some(cr) = self.core.cregs.get_mut(r) {
+            cr.from_u64(v);
+            if r == 3 { self.tlb.borrow_mut().flush(); }
+            Ok(())
+        } else { Err(EmuException::UnexpectedError) }
+    }
+}
+
 impl super::Access {
-    pub fn get_sgselector(&self, r: SgReg) -> Result<&segment::SgDescSelector, EmuException> { Ok(&self.core.sgregs.get(r).selector) }
-    pub fn get_sgcache(&self, r: SgReg) -> Result<&segment::SgDescCache, EmuException> { Ok(&self.core.sgregs.get(r).cache) }
-
-    pub fn get_sgselector_mut(&mut self, r: SgReg) -> Result<&mut segment::SgDescSelector, EmuException> { Ok(&mut self.core.sgregs.get_mut(r).selector) }
-    pub fn get_sgcache_mut(&mut self, r: SgReg) -> Result<&mut segment::SgDescCache, EmuException> { Ok(&mut self.core.sgregs.get_mut(r).cache) }
-
     pub fn get_rflags(&self) -> Result<u64, EmuException> { Ok(self.core.rflags.to_u64()) }
     pub fn set_rflags(&mut self, v: u64) -> Result<(), EmuException> { self.core.rflags.from_u64(v); Ok(()) }
 
-    pub fn get_cregs(&self, r: usize) -> Result<u32, EmuException> {
-        if let Some(cr) = self.core.cregs.get(r) { Ok(cr.to_u32()) } else { Err(EmuException::NotImplementedOpcode) }
+    pub fn get_sgreg(&self, r: SgReg) -> Result<(u16, segment::SgDescCache), EmuException> {
+        let sg = self.core.sgregs.get(r);
+        Ok((sg.selector.to_u16(), sg.cache))
     }
 
-    pub fn set_cregs(&mut self, r: usize, v: u32) -> Result<(), EmuException> {
-        if let Some(cr) = self.core.cregs.get_mut(r) { cr.from_u32(v); Ok(()) } else { Err(EmuException::UnexpectedError) }
+    pub fn set_sgreg(&mut self, r: SgReg, sel: u16, desc: segment::SgDescCache) -> Result<(), EmuException> {
+        let sg = self.core.sgregs.get_mut(r);
+        sg.selector.from_u16(sel);
+        sg.cache = desc;
+        Ok(())
+    }
+
+    pub fn get_gdtr(&self) -> Result<(u64, u32), EmuException> { let gdtr = &self.core.dtregs.gdtr; Ok((gdtr.base, gdtr.limit)) }
+    pub fn get_idtr(&self) -> Result<(u64, u32), EmuException> { let idtr = &self.core.dtregs.idtr; Ok((idtr.base, idtr.limit)) }
+    pub fn get_ldtr(&self) -> Result<u16, EmuException> { Ok(self.core.dtregs.ldtr.selector) }
+    pub fn get_tr(&self) -> Result<u16, EmuException> { Ok(self.core.dtregs.tr.selector) }
+
+    pub fn set_gdtr(&mut self, base: u64, limit: u16) -> Result<(), EmuException> {
+        let gdtr = &mut self.core.dtregs.gdtr;
+        gdtr.base = base;
+        gdtr.limit = limit as u32;
+        Ok(())
+    }
+
+    pub fn set_idtr(&mut self, base: u64, limit: u16) -> Result<(), EmuException> {
+        let idtr = &mut self.core.dtregs.idtr;
+        idtr.base = base;
+        idtr.limit = limit as u32;
+        Ok(())
+    }
+
+    pub fn set_ldtr(&mut self, sel: u16) -> Result<(), EmuException> {
+        if let Some(DescType::System(SysDescType::LDT(ldtd))) = self.obtain_g_desc(sel)? {
+            if self.get_cpl()? > 0 { return Err(EmuException::CPUException(CPUException::GP(None))); }
+            if ldtd.P == 0 { return Err(EmuException::CPUException(CPUException::NP)); }
+
+            let ldtr = &mut self.core.dtregs.ldtr;
+            ldtr.cache       = DescTbl::from(ldtd);
+            ldtr.selector    = sel;
+            Ok(())
+        } else {
+            Err(EmuException::CPUException(CPUException::GP(None)))
+        }
+    }
+
+    pub fn set_tr(&mut self, sel: u16) -> Result<(), EmuException> {
+        if let Some(DescType::System(SysDescType::TSS(tssd))) = self.obtain_g_desc(sel)? {
+            if tssd.P == 0 { return Err(EmuException::CPUException(CPUException::NP)); }
+
+            let tr = &mut self.core.dtregs.tr;
+            tr.cache       = DescTbl::from(tssd);
+            tr.selector    = sel;
+            self.set_busy_tssdesc(sel, true)?;
+            Ok(())
+        } else {
+            Err(EmuException::CPUException(CPUException::GP(None)))
+        }
     }
 }

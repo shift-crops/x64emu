@@ -8,6 +8,9 @@ pub enum MemoryError {
     OutOfRange(usize),
 }
 
+#[derive(Clone, Copy)]
+pub enum MemDumpSize { Word, DWord, QWord }
+
 pub struct Memory(Vec<u8>);
 
 impl Memory {
@@ -59,13 +62,20 @@ impl Memory {
         }
     }
 
-    pub fn dump(&self, addr: usize, len: usize) -> () {
+    pub fn dump(&self, addr: usize, len: usize, unit: MemDumpSize) -> () {
         let addr = addr & !0xf;
         let n  = (len+0xf) / 0x10;
 
         println!("Memory Dump");
         for i in 0..n {
-            println!("{:016x}: 0x{:016x} 0x{:016x}", addr+0x10*i, self.read64(addr+0x10*i), self.read64(addr+0x10*i+8));
+            match unit {
+                MemDumpSize::Word => println!("{:016x}: 0x{:04x} 0x{:04x}  0x{:04x} 0x{:04x}  0x{:04x} 0x{:04x}  0x{:04x} 0x{:04x}", addr+0x10*i
+                                        , self.read16(addr+0x10*i), self.read16(addr+0x10*i+0x2), self.read16(addr+0x10*i+0x4), self.read16(addr+0x10*i+0x6)
+                                        , self.read16(addr+0x10*i+0x8), self.read16(addr+0x10*i+0xa), self.read16(addr+0x10*i+0xc), self.read16(addr+0x10*i+0xe)),
+                MemDumpSize::DWord => println!("{:016x}: 0x{:08x} 0x{:08x}  0x{:08x} 0x{:08x}", addr+0x10*i
+                                        , self.read32(addr+0x10*i), self.read32(addr+0x10*i+0x4), self.read32(addr+0x10*i+0x8), self.read32(addr+0x10*i+0xc)),
+                MemDumpSize::QWord => println!("{:016x}: 0x{:016x} 0x{:016x}", addr+0x10*i, self.read64(addr+0x10*i), self.read64(addr+0x10*i+8)),
+            }
         }
         println!("");
     }

@@ -199,8 +199,8 @@ impl<'a> super::Exec<'a> {
         self.ac.set_data64((SgReg::DS, self.idata.moffs), v)
     }
 
-    pub fn get_m(&self) -> Result<u64, EmuException> {
-        Ok(Self::addr_modrm(self)?.1)
+    pub fn get_m(&self) -> Result<(SgReg, u64), EmuException> {
+        Ok(Self::addr_modrm(self)?)
     }
 
     fn addr_modrm(&self) -> Result<(SgReg, u64), EmuException> {
@@ -248,7 +248,7 @@ impl<'a> super::Exec<'a> {
                     _      => (None, get_gpreg!(self, GpReg32, rm as usize)? as u64),
                 };
                 segment = sgad.0;
-                addr += sgad.1;
+                addr += sgad.1 as u32 as u64;
             },
             access::AcsSize::BIT64 => {
                 let b = self.pdata.rex.b;
@@ -272,7 +272,7 @@ impl<'a> super::Exec<'a> {
             },
         }
 
-        Ok((self.select_segment(segment.unwrap_or(SgReg::DS))?, addr))
+        Ok((self.pdata.segment.or(segment).unwrap_or(SgReg::DS), addr))
     }
 
     fn addr_sib(&self) -> Result<(Option<SgReg>, u64), EmuException> {
@@ -283,7 +283,7 @@ impl<'a> super::Exec<'a> {
             (4..=5, _, 0) => (Some(SgReg::SS), get_gpreg!(self, GpReg64, sib.base)?),
             _ => (None, get_gpreg!(self, GpReg64, (rex.b<<3) + sib.base)?),
         };
-        let idx = get_gpreg!(self, GpReg64, (rex.x<<3) + sib.index)?;
+        let idx = if sib.index == 4 { 0 } else { get_gpreg!(self, GpReg64, (rex.x<<3) + sib.index)? };
 
         Ok((seg, base + idx * (1<<sib.scale)))
     }

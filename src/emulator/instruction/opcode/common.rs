@@ -60,22 +60,20 @@ pub fn init_cmn_opcode(op: &mut super::OpcodeArr){
         setcmnop!(0xb0+i, mov_opr8_imm8, OpFlags::IMM8);
     }
     setcmnop!(0xc6, mov_rm8_imm8,  OpFlags::MODRM | OpFlags::IMM8);
-    /*
     setcmnop!(0xcc, int3,          OpFlags::NONE);
     setcmnop!(0xcd, int_imm8,      OpFlags::IMM8);
+    setcmnop!(0xce, into,          OpFlags::NONE);
     setcmnop!(0xe4, in_al_imm8,    OpFlags::IMM8);
     setcmnop!(0xe6, out_imm8_al,   OpFlags::IMM8);
-    */
     setcmnop!(0xeb, jmp_imm8,      OpFlags::IMM8);
-    /*
     setcmnop!(0xec, in_al_dx,      OpFlags::NONE);
     setcmnop!(0xee, out_dx_al,     OpFlags::NONE);
+    setcmnop!(0xf1, icebp,         OpFlags::NONE);
     setcmnop!(0xfa, cli,           OpFlags::NONE);
     setcmnop!(0xfb, sti,           OpFlags::NONE);
     setcmnop!(0xfc, cld,           OpFlags::NONE);
     setcmnop!(0xfd, std,           OpFlags::NONE);
     setcmnop!(0xf4, hlt,           OpFlags::NONE);
-    */
 
     setcmnop!(0x0f20, mov_r32_cr,  OpFlags::MODRM);
     setcmnop!(0x0f22, mov_cr_r32,  OpFlags::MODRM);
@@ -98,84 +96,104 @@ pub fn init_cmn_opcode(op: &mut super::OpcodeArr){
 
     setcmnop!(0x80, code_80,       OpFlags::MODRM | OpFlags::IMM8);
     //setcmnop!(0x82, code_82,       OpFlags::MODRM | OpFlags::IMM8);
-    //setcmnop!(0xc0, code_c0,       OpFlags::MODRM | OpFlags::IMM8);
+    setcmnop!(0xc0, code_c0,       OpFlags::MODRM | OpFlags::IMM8);
     //setcmnop!(0xf6, code_f6,       OpFlags::MODRM);
+    setcmnop!(0x0f00, code_0f00,   OpFlags::MODRM);
 }
 
-add_dst_src!(u8, rm8, r8);
-add_dst_src!(u8, r8, rm8);
-add_dst_src!(u8, al, imm8);
+add_dst_src!(8, rm8, r8);
+add_dst_src!(8, r8, rm8);
+add_dst_src!(8, al, imm8);
 
-or_dst_src!(u8, rm8, r8);
-or_dst_src!(u8, r8, rm8);
-or_dst_src!(u8, al, imm8);
+or_dst_src!(8, rm8, r8);
+or_dst_src!(8, r8, rm8);
+or_dst_src!(8, al, imm8);
 
-adc_dst_src!(u8, rm8, r8);
-adc_dst_src!(u8, r8, rm8);
-adc_dst_src!(u8, al, imm8);
+adc_dst_src!(8, rm8, r8);
+adc_dst_src!(8, r8, rm8);
+adc_dst_src!(8, al, imm8);
 
-sbb_dst_src!(u8, rm8, r8);
-sbb_dst_src!(u8, r8, rm8);
-sbb_dst_src!(u8, al, imm8);
+sbb_dst_src!(8, rm8, r8);
+sbb_dst_src!(8, r8, rm8);
+sbb_dst_src!(8, al, imm8);
 
-and_dst_src!(u8, rm8, r8);
-and_dst_src!(u8, r8, rm8);
-and_dst_src!(u8, al, imm8);
+and_dst_src!(8, rm8, r8);
+and_dst_src!(8, r8, rm8);
+and_dst_src!(8, al, imm8);
 
-sub_dst_src!(u8, rm8, r8);
-sub_dst_src!(u8, r8, rm8);
-sub_dst_src!(u8, al, imm8);
+sub_dst_src!(8, rm8, r8);
+sub_dst_src!(8, r8, rm8);
+sub_dst_src!(8, al, imm8);
 
-xor_dst_src!(u8, rm8, r8);
-xor_dst_src!(u8, r8, rm8);
-xor_dst_src!(u8, al, imm8);
+xor_dst_src!(8, rm8, r8);
+xor_dst_src!(8, r8, rm8);
+xor_dst_src!(8, al, imm8);
 
-cmp_dst_src!(u8, rm8, r8);
-cmp_dst_src!(u8, r8, rm8);
-cmp_dst_src!(u8, al, imm8);
+cmp_dst_src!(8, rm8, r8);
+cmp_dst_src!(8, r8, rm8);
+cmp_dst_src!(8, al, imm8);
 
-jcc_rel!(i8, o, imm8);
-jcc_rel!(i8, b, imm8);
-jcc_rel!(i8, z, imm8);
-jcc_rel!(i8, be, imm8);
-jcc_rel!(i8, s, imm8);
-jcc_rel!(i8, p, imm8);
-jcc_rel!(i8, l, imm8);
-jcc_rel!(i8, le, imm8);
+jcc_rel!(8, o, imm8);
+jcc_rel!(8, b, imm8);
+jcc_rel!(8, z, imm8);
+jcc_rel!(8, be, imm8);
+jcc_rel!(8, s, imm8);
+jcc_rel!(8, p, imm8);
+jcc_rel!(8, l, imm8);
+jcc_rel!(8, le, imm8);
 
-test_dst_src!(u8, rm8, r8);
+test_dst_src!(8, rm8, r8);
 
-xchg_dst_src!(u8, r8, rm8);
+xchg_dst_src!(8, r8, rm8);
 
-mov_dst_src!(u8, rm8, r8);
-mov_dst_src!(u8, r8, rm8);
+mov_dst_src!(8, rm8, r8);
+mov_dst_src!(8, r8, rm8);
 
-mov_dst_src!(u16, sreg, rm16);
+mov_dst_src!(16, sreg, rm16);
 
 fn nop(_exec: &mut exec::Exec) -> Result<(), EmuException> { Ok(()) }
 
-mov_dst_src!(u8, al, moffs8);
-mov_dst_src!(u8, moffs8, al);
+mov_dst_src!(8, al, moffs8);
+mov_dst_src!(8, moffs8, al);
 
-test_dst_src!(u8, al, imm8);
+test_dst_src!(8, al, imm8);
 
-mov_dst_src!(u8, opr8, imm8);
+mov_dst_src!(8, opr8, imm8);
 
-mov_dst_src!(u8, rm8, imm8);
+mov_dst_src!(8, rm8, imm8);
 
-jmp_rel!(i8, imm8);
+fn int3(_exec: &mut exec::Exec) -> Result<(), EmuException> { Err(EmuException::CPUException(CPUException::BP)) }
+fn int_imm8(exec: &mut exec::Exec) -> Result<(), EmuException> { Err(EmuException::Interrupt(exec.get_imm8()?)) }
+fn into(_exec: &mut exec::Exec) -> Result<(), EmuException> { Err(EmuException::CPUException(CPUException::OF)) }
+
+in_reg_port!(8, al, imm8);
+out_port_reg!(8, imm8, al);
+
+jmp_rel!(8, imm8);
+
+in_reg_port!(8, al, dx);
+out_port_reg!(8, dx, al);
+
+fn icebp(_exec: &mut exec::Exec) -> Result<(), EmuException> { Err(EmuException::CPUException(CPUException::DB)) }
+
+fn cli(exec: &mut exec::Exec) -> Result<(), EmuException> { exec.ac.core.rflags.set_interrupt(false); Ok(()) }
+fn sti(exec: &mut exec::Exec) -> Result<(), EmuException> { exec.ac.core.rflags.set_interrupt(true); Ok(()) }
+fn cld(exec: &mut exec::Exec) -> Result<(), EmuException> { exec.ac.core.rflags.set_direction(false); Ok(()) }
+fn std(exec: &mut exec::Exec) -> Result<(), EmuException> { exec.ac.core.rflags.set_direction(true); Ok(()) }
+
+fn hlt(_exec: &mut exec::Exec) -> Result<(), EmuException> { Err(EmuException::Halt) }
 
 fn mov_r32_cr(exec: &mut exec::Exec) -> Result<(), EmuException> { exec.cr_to_r32() }
 fn mov_cr_r32(exec: &mut exec::Exec) -> Result<(), EmuException> { exec.cr_from_r32() }
 
-setcc_dst!(u8, o, rm8);
-setcc_dst!(u8, b, rm8);
-setcc_dst!(u8, z, rm8);
-setcc_dst!(u8, be, rm8);
-setcc_dst!(u8, s, rm8);
-setcc_dst!(u8, p, rm8);
-setcc_dst!(u8, l, rm8);
-setcc_dst!(u8, le, rm8);
+setcc_dst!(8, o, rm8);
+setcc_dst!(8, b, rm8);
+setcc_dst!(8, z, rm8);
+setcc_dst!(8, be, rm8);
+setcc_dst!(8, s, rm8);
+setcc_dst!(8, p, rm8);
+setcc_dst!(8, l, rm8);
+setcc_dst!(8, le, rm8);
 
 fn code_80(exec: &mut exec::Exec) -> Result<(), EmuException> {
     match exec.idata.modrm.reg as u8 {
@@ -192,11 +210,66 @@ fn code_80(exec: &mut exec::Exec) -> Result<(), EmuException> {
     Ok(())
 }
 
-add_dst_src!(u8, rm8, imm8);
-or_dst_src!(u8, rm8, imm8);
-adc_dst_src!(u8, rm8, imm8);
-sbb_dst_src!(u8, rm8, imm8);
-and_dst_src!(u8, rm8, imm8);
-sub_dst_src!(u8, rm8, imm8);
-xor_dst_src!(u8, rm8, imm8);
-cmp_dst_src!(u8, rm8, imm8);
+add_dst_src!(8, rm8, imm8);
+or_dst_src!(8, rm8, imm8);
+adc_dst_src!(8, rm8, imm8);
+sbb_dst_src!(8, rm8, imm8);
+and_dst_src!(8, rm8, imm8);
+sub_dst_src!(8, rm8, imm8);
+xor_dst_src!(8, rm8, imm8);
+cmp_dst_src!(8, rm8, imm8);
+
+fn code_c0(exec: &mut exec::Exec) -> Result<(), EmuException> {
+    match exec.idata.modrm.reg as u8 {
+        /*
+        0 => rol_rm8_imm8(exec)?,
+        1 => ror_rm8_imm8(exec)?,
+        2 => rcl_rm8_imm8(exec)?,
+        3 => rcr_rm8_imm8(exec)?,
+        */
+        4 => shl_rm8_imm8(exec)?,
+        5 => shr_rm8_imm8(exec)?,
+        6 => sal_rm8_imm8(exec)?,
+        7 => sar_rm8_imm8(exec)?,
+        _ => { return Err(EmuException::UnexpectedError); },
+    }
+    Ok(())
+}
+
+/*
+rol_dst_src!(8, rm8, imm8);
+ror_dst_src!(8, rm8, imm8);
+rcl_dst_src!(8, rm8, imm8);
+rcr_dst_src!(8, rm8, imm8);
+*/
+shl_dst_src!(8, rm8, imm8);
+shr_dst_src!(8, rm8, imm8);
+sal_dst_src!(8, rm8, imm8);
+sar_dst_src!(8, rm8, imm8);
+
+fn code_0f00(exec: &mut exec::Exec) -> Result<(), EmuException> {
+    match exec.idata.modrm.reg as u16 {
+        2 => lldt_rm16(exec)?,
+        3 => ltr_rm16(exec)?,
+        _ => { return Err(EmuException::NotImplementedOpcode); },
+    }
+    Ok(())
+}
+
+fn lldt_rm16(exec: &mut exec::Exec) -> Result<(), EmuException> {
+    if exec.ac.test_cpumode(access::CpuMode::Real) {
+        return Err(EmuException::CPUException(CPUException::UD));
+    }
+
+    let sel = exec.get_rm16()?;
+    exec.ac.set_ldtr(sel)
+}
+
+fn ltr_rm16(exec: &mut exec::Exec) -> Result<(), EmuException> {
+    if exec.ac.test_cpumode(access::CpuMode::Real) {
+        return Err(EmuException::CPUException(CPUException::UD));
+    }
+
+    let sel = exec.get_rm16()?;
+    exec.ac.set_tr(sel)
+}

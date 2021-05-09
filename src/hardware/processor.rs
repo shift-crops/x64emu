@@ -84,6 +84,7 @@ impl Processor {
         println!("");
 
         println!("{:x?}", self.cregs.0);
+        println!("{:x?}", self.cregs.2);
         println!("{:x?}", self.cregs.3);
         println!("{:x?}", self.cregs.4);
         println!("");

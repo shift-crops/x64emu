@@ -34,6 +34,10 @@ impl Default for SgDescCache {
 }
 
 impl SgDescSelector {
+    pub fn new(v: u16) -> Self {
+        Self::unpack(&v.to_be_bytes()).unwrap()
+    }
+
     pub fn to_u16(&self) -> u16 {
         u16::from_be_bytes(self.pack().unwrap())
     }

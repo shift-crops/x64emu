@@ -1,17 +1,18 @@
 pub mod processor;
 pub mod memory;
-pub mod device;
+
+use std::sync::{Arc, RwLock};
 
 pub struct Hardware {
     pub core: processor::Processor,
-    pub mem: memory::Memory,
+    pub mem: Arc<RwLock<memory::Memory>>,
 }
 
 impl Hardware {
     pub fn new(size: usize) -> Self {
         Self {
             core: processor::Processor::new(),
-            mem: memory::Memory::new(size),
+            mem: Arc::new(RwLock::new(memory::Memory::new(size))),
         }
     }
 }

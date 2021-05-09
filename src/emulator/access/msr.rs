@@ -23,7 +23,7 @@ impl super::Access {
         if let Some(msr) = self.get_msr(addr) {
             return Ok(msr.to_u64());
         }
-        Err(EmuException::CPUException(CPUException::GP))
+        Err(EmuException::CPUException(CPUException::GP(None)))
     }
 
     pub fn write_msr(&mut self, addr: u32, val: u64) -> Result<(), EmuException> {
@@ -31,7 +31,7 @@ impl super::Access {
             msr.from_u64(val);
             return Ok(());
         }
-        Err(EmuException::CPUException(CPUException::GP))
+        Err(EmuException::CPUException(CPUException::GP(None)))
     }
 
     fn get_msr(&self, addr: u32) -> Option<&dyn MSRAccess> {
@@ -42,9 +42,9 @@ impl super::Access {
                 MSRAddress::CSTAR        => &self.core.msr.cstar,
                 MSRAddress::LSTAR        => &self.core.msr.lstar,
                 MSRAddress::FMASK        => &self.core.msr.fmask,
-                MSRAddress::FSBase       => self.get_sgcache(SgReg::FS).unwrap(),
-                MSRAddress::GSBase       => self.get_sgcache(SgReg::GS).unwrap(),
-                MSRAddress::KernelGSBase => self.get_sgcache(SgReg::KernelGS).unwrap(),
+                MSRAddress::FSBase       => &self.core.sgregs.get(SgReg::FS).cache,
+                MSRAddress::GSBase       => &self.core.sgregs.get(SgReg::GS).cache,
+                MSRAddress::KernelGSBase => &self.core.sgregs.get(SgReg::KernelGS).cache,
             };
             return Some(v);
         }
@@ -59,9 +59,9 @@ impl super::Access {
                 MSRAddress::CSTAR        => &mut self.core.msr.cstar,
                 MSRAddress::LSTAR        => &mut self.core.msr.lstar,
                 MSRAddress::FMASK        => &mut self.core.msr.fmask,
-                MSRAddress::FSBase       => self.get_sgcache_mut(SgReg::FS).unwrap(),
-                MSRAddress::GSBase       => self.get_sgcache_mut(SgReg::GS).unwrap(),
-                MSRAddress::KernelGSBase => self.get_sgcache_mut(SgReg::KernelGS).unwrap(),
+                MSRAddress::FSBase       => &mut self.core.sgregs.get_mut(SgReg::FS).cache,
+                MSRAddress::GSBase       => &mut self.core.sgregs.get_mut(SgReg::GS).cache,
+                MSRAddress::KernelGSBase => &mut self.core.sgregs.get_mut(SgReg::KernelGS).cache,
             };
             return Some(v);
         }
@@ -73,7 +73,8 @@ impl super::Access {
 #[test]
 pub fn access_msr_test() {
     let hw = hardware::Hardware::new(0x1000);
-    let mut ac = access::Access::new(hw);
+    let dev = device::Device::new(std::sync::Arc::clone(&hw.mem));
+    let mut ac = access::Access::new(hw, dev);
 
     ac.core.msr.efer.LMA = 1;
     assert_eq!(ac.read_msr(MSRAddress::IA32_EFER as u32).unwrap(), 0x400);
@@ -87,7 +88,8 @@ pub fn access_msr_test() {
 #[should_panic]
 pub fn access_msr_test_panic() {
     let hw = hardware::Hardware::new(0x1000);
-    let mut ac = access::Access::new(hw);
+    let dev = device::Device::new(std::sync::Arc::clone(&hw.mem));
+    let mut ac = access::Access::new(hw, dev);
 
     ac.write_msr(0xc0000103, 0xdeadbeef).unwrap();
 }

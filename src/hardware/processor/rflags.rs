@@ -35,17 +35,23 @@ impl RFlags {
     pub fn is_parity(&self) -> bool { self.PF != 0 }
     pub fn is_zero(&self) -> bool { self.ZF != 0 }
     pub fn is_sign(&self) -> bool { self.SF != 0 }
-    pub fn is_overflow(&self) -> bool { self.OF != 0 }
+    pub fn is_trap(&self) -> bool { self.TF != 0 }
     pub fn is_interrupt(&self) -> bool { self.IF != 0 }
     pub fn is_direction(&self) -> bool { self.DF != 0 }
+    pub fn is_overflow(&self) -> bool { self.OF != 0 }
+    pub fn is_nesttask(&self) -> bool { self.NT != 0 }
+    pub fn get_iopl(&self) -> u8 { self.IOPL }
 
     pub fn set_carry(&mut self, f: bool) -> () { self.CF = f as u8; }
     pub fn set_parity(&mut self, f: bool) -> () { self.PF = f as u8; }
     pub fn set_zero(&mut self, f: bool) -> () { self.ZF = f as u8; }
     pub fn set_sign(&mut self, f: bool) -> () { self.SF = f as u8; }
-    pub fn set_overflow(&mut self, f: bool) -> () { self.OF = f as u8; }
+    pub fn set_trap(&mut self, f: bool) -> () { self.TF = f as u8; }
     pub fn set_interrupt(&mut self, f: bool) -> () { self.IF = f as u8; }
     pub fn set_direction(&mut self, f: bool) -> () { self.DF = f as u8; }
+    pub fn set_overflow(&mut self, f: bool) -> () { self.OF = f as u8; }
+    pub fn set_nesttask(&mut self, f: bool) -> () { self.NT = f as u8; }
+    pub fn set_iopl(&mut self, pl: u8) -> () { self.IOPL = pl; }
 }
 
 #[cfg(test)]
