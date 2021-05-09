@@ -1,4 +1,3 @@
-#![allow(non_snake_case)]
 use packed_struct::prelude::*;
 
 #[derive(Debug, Default)]
@@ -113,7 +112,7 @@ impl CRAccess for CR4 {
 
 #[cfg(test)]
 #[test]
-pub fn cr_test() {
+fn cr_test() {
     let mut cr: CRegisters = Default::default();
 
     cr.0.from_u32(0x50001);

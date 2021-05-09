@@ -1,6 +1,3 @@
-#![allow(non_camel_case_types)]
-#![allow(non_snake_case)]
-
 use packed_struct::prelude::*;
 
 #[derive(Default)]
@@ -91,7 +88,7 @@ impl MSRAccess for FMASK {
 
 #[cfg(test)]
 #[test]
-pub fn msr_test() {
+fn msr_test() {
     let mut msr: ModelSpecific = Default::default();
 
     msr.efer.from_u64(0x401);

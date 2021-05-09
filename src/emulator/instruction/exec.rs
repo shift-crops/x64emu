@@ -9,20 +9,20 @@ use super::parse;
 use crate::emulator::*;
 
 pub struct Exec<'a> {
-    pub ac: &'a mut access::Access,
-    pub idata: &'a parse::InstrData,
+    pub(super) ac: &'a mut access::Access,
+    pub(super) idata: &'a parse::InstrData,
     pdata: &'a parse::PrefixData,
 }
 
 impl<'a> Exec<'a> {
-    pub fn new(ac: &'a mut access::Access, parse: &'a parse::ParseInstr) -> Self {
+    pub(super) fn new(ac: &'a mut access::Access, parse: &'a parse::ParseInstr) -> Self {
         Self { ac, idata: &parse.instr, pdata: &parse.prefix, }
     }
 }
 
 #[cfg(test)]
 #[test]
-pub fn exec_test() {
+fn exec_test() {
     use crate::hardware;
     use crate::device;
     use crate::emulator::access::register::*;

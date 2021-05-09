@@ -10,7 +10,7 @@ use super::access;
 use crate::emulator::{EmuException, CPUException};
 
 bitflags! {
-    pub struct OpFlags: u8 {
+    pub(super) struct OpFlags: u8 {
         const NONE  = 0b00000000;
         const MODRM = 0b00000001;
         const IMM   = 0b00000010;
@@ -42,7 +42,7 @@ impl Default for OpcodeType {
 const MAX_OPCODE: usize = 0x200;
 type OpcodeArr = [OpcodeType; MAX_OPCODE];
 
-pub struct Opcode {
+pub(super) struct Opcode {
     op16: opcode16::Opcode16,
     op32: opcode32::Opcode32,
     op64: opcode64::Opcode64,
@@ -73,7 +73,7 @@ impl Opcode {
     }
 }
 
-pub trait OpcodeTrait {
+pub(super) trait OpcodeTrait {
     fn init_opcode(&mut self) -> ();
     fn exec(&self, arg: &mut exec::Exec) -> Result<(), EmuException>;
     fn flag(&self, opcode: u16) -> OpFlags;

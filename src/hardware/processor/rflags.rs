@@ -1,4 +1,3 @@
-#![allow(non_snake_case)]
 use packed_struct::prelude::*;
 
 #[derive(Debug, Default, Clone, Copy, PackedStruct)]
@@ -56,7 +55,7 @@ impl RFlags {
 
 #[cfg(test)]
 #[test]
-pub fn rflags_test() {
+fn rflags_test() {
     let mut flag: RFlags = Default::default();
 
     flag.from_u64(0);

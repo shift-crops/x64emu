@@ -19,16 +19,16 @@ pub struct Device {
 enum IOReqType { PortIO(u16), MemIO(u64) }
 enum IOReqRW { Read(usize), Write(Vec<u8>) }
 
-pub struct IORequest {
+struct IORequest {
     ty: IOReqType,
     rw: IOReqRW,
 }
 
-pub struct IOResult {
+struct IOResult {
     data: Option<Vec<u8>>,
 }
 
-pub trait PortIO {
+trait PortIO {
     fn in8(&self, addr: u16) -> u8;
     fn out8(&mut self, addr: u16, data: u8) -> ();
 
@@ -47,7 +47,7 @@ pub trait PortIO {
     }
 }
 
-pub trait MemoryIO {
+trait MemoryIO {
     fn read8(&self, ofs: u64) -> u8;
     fn write8(&mut self, ofs: u64, data: u8) -> ();
 
@@ -73,14 +73,14 @@ pub struct IReq {
 }
 
 impl IReq {
-    pub fn new(tx: &Sender<u8>, n: u8) -> Self {
+    fn new(tx: &Sender<u8>, n: u8) -> Self {
         Self {
             irq_tx: mpsc::Sender::clone(tx),
             irq_no: n,
         }
     }
 
-    pub fn send_irq(&self) -> () {
+    fn send_irq(&self) -> () {
         self.irq_tx.send(self.irq_no).unwrap();
     }
 }

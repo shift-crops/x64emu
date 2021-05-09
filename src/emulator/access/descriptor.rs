@@ -1,5 +1,3 @@
-#![allow(non_snake_case)]
-
 use std::convert::TryFrom;
 use num_enum::TryFromPrimitive;
 use packed_struct::prelude::*;
@@ -9,7 +7,7 @@ use crate::hardware::processor::segment::{SgDescSelector, SgDescCache};
 use crate::hardware::processor::descriptor::{DescTbl, DescTblSel};
 
 #[derive(TryFromPrimitive)] #[repr(u8)]
-pub enum SysTypes { TSSAvl=1, LDT=2, TSSBsy=3, Call=4, Task=5, Intr=6, Trap=7 }
+enum SysTypes { TSSAvl=1, LDT=2, TSSBsy=3, Call=4, Task=5, Intr=6, Trap=7 }
 
 #[derive(Debug)]
 pub enum DescType { System(SysDescType), Segment(SegDescType) }
@@ -41,7 +39,7 @@ pub struct SegDesc {
     #[packed_field(bits="56:63")]  pub base_h:  u8,
 }
 
-bitflags! { pub struct DataDescFlag: u8 {
+bitflags! { pub(in crate::emulator) struct DataDescFlag: u8 {
     const A   = 0b00000001;
     const W   = 0b00000010;
     const E   = 0b00000100;
@@ -50,7 +48,7 @@ impl From<&SegDesc> for DataDescFlag {
     fn from(desc: &SegDesc) -> Self { Self { bits: desc.Type } }
 }
 
-bitflags! { pub struct CodeDescFlag: u8 {
+bitflags! { pub(in crate::emulator) struct CodeDescFlag: u8 {
     const A   = 0b00000001;
     const R   = 0b00000010;
     const C   = 0b00000100;
@@ -152,7 +150,7 @@ pub struct IntrTrapGateDesc {
 }
 
 #[derive(Default)]
-pub struct IVT {
+pub(in crate::emulator) struct IVT {
     pub offset: u16,
     pub segment: u16,
 }
@@ -161,68 +159,68 @@ pub enum TSMode { Jmp, CallInt, Iret }
 
 #[derive(Default, Debug)]
 #[repr(C)]
-pub struct TSS16 {
-    pub prev_task: u16,
-    pub sp0: u16,
-    pub ss0: u16,
-    pub sp1: u16,
-    pub ss1: u16,
-    pub sp2: u16,
-    pub ss2: u16,
-    pub ip: u16,
-    pub flags: u16,
-    pub ax: u16,
-    pub cx: u16,
-    pub dx: u16,
-    pub bx: u16,
-    pub sp: u16,
-    pub bp: u16,
-    pub si: u16,
-    pub di: u16,
-    pub es: u16,
-    pub cs: u16,
-    pub ss: u16,
-    pub ds: u16,
-    pub ldtr: u16,
+struct TSS16 {
+    prev_task: u16,
+    sp0: u16,
+    ss0: u16,
+    sp1: u16,
+    ss1: u16,
+    sp2: u16,
+    ss2: u16,
+    ip: u16,
+    flags: u16,
+    ax: u16,
+    cx: u16,
+    dx: u16,
+    bx: u16,
+    sp: u16,
+    bp: u16,
+    si: u16,
+    di: u16,
+    es: u16,
+    cs: u16,
+    ss: u16,
+    ds: u16,
+    ldtr: u16,
 }
 
 #[derive(Default, Debug)]
 #[repr(C)]
-pub struct TSS32 {
-    pub prev_task: u16,
-    pub esp0: u32,
-    pub ss0: u16,
-    pub esp1: u32,
-    pub ss1: u16,
-    pub esp2: u32,
-    pub ss2: u16,
-    pub cr3: u32,
-    pub eip: u32,
-    pub eflags: u32,
-    pub eax: u32,
-    pub ecx: u32,
-    pub edx: u32,
-    pub ebx: u32,
-    pub esp: u32,
-    pub ebp: u32,
-    pub esi: u32,
-    pub edi: u32,
-    pub es: u16,
+struct TSS32 {
+    prev_task: u16,
+    esp0: u32,
+    ss0: u16,
+    esp1: u32,
+    ss1: u16,
+    esp2: u32,
+    ss2: u16,
+    cr3: u32,
+    eip: u32,
+    eflags: u32,
+    eax: u32,
+    ecx: u32,
+    edx: u32,
+    ebx: u32,
+    esp: u32,
+    ebp: u32,
+    esi: u32,
+    edi: u32,
+    es: u16,
     _r0: u16,
-    pub cs: u16,
+    cs: u16,
     _r1: u16,
-    pub ss: u16,
+    ss: u16,
     _r2: u16,
-    pub ds: u16,
+    ds: u16,
     _r3: u16,
-    pub fs: u16,
+    fs: u16,
     _r4: u16,
-    pub gs: u16,
+    gs: u16,
     _r5: u16,
-    pub ldtr: u16,
+    ldtr: u16,
     _r6: u16,
-    pub T: u8,
-    pub io_base: u16,
+    T: u8,
+    io_base: u16,
 }
 
 const TSS16_SIZE: usize = std::mem::size_of::<TSS16>();

@@ -1,7 +1,7 @@
-pub mod register;
+pub(super) mod register;
 mod memory;
 mod msr;
-pub mod descriptor;
+pub(super) mod descriptor;
 mod port;
 
 use std::cell::RefCell;
@@ -11,7 +11,7 @@ use crate::device;
 use crate::emulator::{EmuException, CPUException};
 
 #[derive(Debug, PartialEq)]
-pub enum CpuMode { Real, Protected, Long }
+pub(super) enum CpuMode { Real, Protected, Long }
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum AcsSize { BIT16, BIT32, BIT64 }
@@ -22,20 +22,20 @@ impl Default for AcsSize {
 }
 
 #[derive(Default)]
-pub struct OpAdSize {
+pub(super) struct OpAdSize {
     pub op: AcsSize,
     pub ad: AcsSize,
 }
 
 #[derive(Debug)]
-pub enum PagingMode { Legacy, LegacyPAE, Ia32e4Lv, Ia32e5Lv }
+enum PagingMode { Legacy, LegacyPAE, Ia32e4Lv, Ia32e5Lv }
 
 pub struct Access {
     pub core: hardware::processor::Processor,
     pub mem: Arc<RwLock<hardware::memory::Memory>>,
-    pub dev: device::Device,
-    pub mode: CpuMode,
-    pub oasz: OpAdSize,
+    dev: device::Device,
+    pub(super) mode: CpuMode,
+    pub(super) oasz: OpAdSize,
     stsz: AcsSize,
     pgmd: Option<PagingMode>,
     tlb: RefCell<memory::TLB>,
@@ -43,7 +43,7 @@ pub struct Access {
 }
 
 impl Access {
-    pub fn new(hw: hardware::Hardware, dev: device::Device) -> Self {
+    pub(super) fn new(hw: hardware::Hardware, dev: device::Device) -> Self {
         Self {
             core: hw.core,
             mem: hw.mem,
@@ -57,7 +57,7 @@ impl Access {
         }
     }
 
-    pub fn update_cpumode(&mut self) -> Result<(), EmuException> {
+    pub(super) fn update_cpumode(&mut self) -> Result<(), EmuException> {
         let efer = &self.core.msr.efer;
         let cr0 = &self.core.cregs.0;
 
@@ -71,7 +71,7 @@ impl Access {
         Ok(())
     }
 
-    pub fn update_opadsize(&mut self) -> Result<(), EmuException> {
+    pub(super) fn update_opadsize(&mut self) -> Result<(), EmuException> {
         let efer = &self.core.msr.efer;
         let cs = &self.core.sgregs.get(register::SgReg::CS).cache;
 
@@ -85,7 +85,7 @@ impl Access {
         Ok(())
     }
 
-    pub fn update_stacksize(&mut self) -> Result<(), EmuException> {
+    pub(super) fn update_stacksize(&mut self) -> Result<(), EmuException> {
         let ss = &self.core.sgregs.get(register::SgReg::SS);
 
         self.stsz = match (ss.cache.L, ss.cache.DB) {
@@ -97,7 +97,7 @@ impl Access {
         Ok(())
     }
 
-    pub fn update_pgmode(&mut self) -> Result<(), EmuException> {
+    pub(super) fn update_pgmode(&mut self) -> Result<(), EmuException> {
         let efer = &mut self.core.msr.efer;
         let cr0 = &self.core.cregs.0;
         let cr4 = &self.core.cregs.4;
@@ -119,11 +119,11 @@ impl Access {
         Ok(())
     }
 
-    pub fn test_cpumode(&self, mode: CpuMode) -> bool {
+    pub(super) fn test_cpumode(&self, mode: CpuMode) -> bool {
         self.mode == mode
     }
 
-    pub fn check_irq(&self, block: bool) -> Option<u8> {
+    pub(super) fn check_irq(&self, block: bool) -> Option<u8> {
         if self.core.rflags.is_interrupt() {
             self.dev.get_interrupt_req(block)
         } else {
@@ -131,7 +131,7 @@ impl Access {
         }
     }
 
-    pub fn dump(&self) -> () {
+    pub(super) fn dump(&self) -> () {
         println!("CPU Mode: {:?} mode\n", self.mode);
         self.core.dump();
 

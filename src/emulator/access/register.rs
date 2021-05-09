@@ -6,17 +6,17 @@ use crate::hardware::processor::general;
 use crate::hardware::processor::segment;
 use crate::hardware::processor::descriptor::DescTbl;
 
-pub type GpReg64 = general::GpReg64;
-pub type GpReg32 = general::GpReg32;
-pub type GpReg16 = general::GpReg16;
+pub(in crate::emulator) type GpReg64 = general::GpReg64;
+pub(in crate::emulator) type GpReg32 = general::GpReg32;
+pub(in crate::emulator) type GpReg16 = general::GpReg16;
 
 #[derive(TryFromPrimitive, Clone, Copy)] #[repr(usize)]
-pub enum GpReg8 { AL, CL, DL, BL, AH, CH, DH, BH }
-pub type GpReg8w = general::GpReg8l;
+pub(in crate::emulator) enum GpReg8 { AL, CL, DL, BL, AH, CH, DH, BH }
+pub(in crate::emulator) type GpReg8w = general::GpReg8l;
 
-pub type SgReg = segment::SgReg;
+pub(in crate::emulator) type SgReg = segment::SgReg;
 
-pub trait GpRegAccess<T, U, V> {
+pub(in crate::emulator) trait GpRegAccess<T, U, V> {
     fn get_gpreg(&self, r: T) -> Result<U, EmuException>;
     fn set_gpreg(&mut self, r: T, v: U) -> Result<(), EmuException>;
     fn update_gpreg(&mut self, r: T, v: V) -> Result<(), EmuException>;
@@ -63,7 +63,7 @@ impl GpRegAccess<GpReg8w, u8, i8> for super::Access {
     fn update_gpreg(&mut self, r: GpReg8w, v: i8) -> Result<(), EmuException> { self.core.gpregs.update8l(r, v); Ok(()) }
 }
 
-pub trait IpAccess<T, U> {
+pub(in crate::emulator) trait IpAccess<T, U> {
     fn get_ip(&self) -> Result<T, EmuException>;
     fn set_ip(&mut self, v: T) -> Result<(), EmuException>;
     fn update_ip(&mut self, v: U) -> Result<(), EmuException>;
@@ -87,7 +87,7 @@ impl IpAccess<u64, i64> for super::Access {
     fn update_ip(&mut self, v: i64) -> Result<(), EmuException> { self.core.ip.update_rip(v); Ok(()) }
 }
 
-pub trait CregAccess<T> {
+pub(in crate::emulator) trait CregAccess<T> {
     fn get_creg(&self, r: usize) -> Result<T, EmuException>;
     fn set_creg(&mut self, r: usize, v: T) -> Result<(), EmuException>;
 }

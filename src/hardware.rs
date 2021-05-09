@@ -1,5 +1,5 @@
-pub mod processor;
-pub mod memory;
+pub(crate) mod processor;
+pub(crate) mod memory;
 
 use std::sync::{Arc, RwLock};
 

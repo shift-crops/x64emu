@@ -1,5 +1,3 @@
-#![allow(non_camel_case_types)]
-
 use num_enum::TryFromPrimitive;
 use std::convert::TryFrom;
 use crate::emulator::*;
@@ -7,7 +5,7 @@ use crate::hardware::processor::model_specific::*;
 use super::register::*;
 
 #[derive(TryFromPrimitive)] #[repr(u32)]
-pub enum MSRAddress {
+enum MSRAddress {
     IA32_EFER    = 0xc0000080,
     STAR         = 0xc0000081,
     CSTAR        = 0xc0000082,
@@ -71,7 +69,7 @@ impl super::Access {
 
 #[cfg(test)]
 #[test]
-pub fn access_msr_test() {
+fn access_msr_test() {
     let hw = hardware::Hardware::new(0x1000);
     let dev = device::Device::new(std::sync::Arc::clone(&hw.mem));
     let mut ac = access::Access::new(hw, dev);
@@ -86,7 +84,7 @@ pub fn access_msr_test() {
 #[cfg(test)]
 #[test]
 #[should_panic]
-pub fn access_msr_test_panic() {
+fn access_msr_test_panic() {
     let hw = hardware::Hardware::new(0x1000);
     let dev = device::Device::new(std::sync::Arc::clone(&hw.mem));
     let mut ac = access::Access::new(hw, dev);
