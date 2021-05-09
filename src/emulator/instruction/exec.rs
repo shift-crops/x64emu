@@ -7,8 +7,6 @@ mod misc;
 
 use super::parse;
 use crate::emulator::*;
-use crate::emulator::EmuException;
-use crate::emulator::access::register::*;
 
 pub struct Exec<'a> {
     pub ac: &'a mut access::Access,
@@ -20,47 +18,6 @@ impl<'a> Exec<'a> {
     pub fn new(ac: &'a mut access::Access, parse: &'a parse::ParseInstr) -> Self {
         Self { ac, idata: &parse.instr, pdata: &parse.prefix, }
     }
-
-    fn update_cpumode(&mut self) -> Result<(), EmuException> {
-        let ac = &mut self.ac;
-        let efer = &mut ac.core.msr.efer;
-        let cr0 = &ac.core.cregs.0;
-
-        ac.mode = match (efer.LME, cr0.PE, cr0.PG) {
-            (0, 0, _) => access::CpuMode::Real,
-            (0, 1, _) => access::CpuMode::Protected,
-            (1, 1, 1) => access::CpuMode::Long,
-            _ => return Err(EmuException::CPUException(CPUException::GP)),
-        };
-        Ok(())
-    }
-
-    fn update_opadsize(&mut self) -> Result<(), EmuException> {
-        let ac = &mut self.ac;
-        let efer = &ac.core.msr.efer;
-        let cs = &ac.core.sgregs.get(SgReg::CS).cache;
-
-        let (op, ad) = match (efer.LMA, cs.L, cs.DB) {
-            (1, 0, 0) | (0, _, 0) => (access::AcsSize::BIT16, access::AcsSize::BIT16),
-            (1, 0, 1) | (0, _, 1) => (access::AcsSize::BIT32, access::AcsSize::BIT32),
-            (1, 1, 0)             => (access::AcsSize::BIT32, access::AcsSize::BIT64),
-            _ => return Err(EmuException::CPUException(CPUException::GP)),
-        };
-        ac.oasz = access::OpAdSize { op, ad };
-        Ok(())
-    }
-
-    fn update_stacksize(&mut self) -> Result<(), EmuException> {
-        let ss = &self.ac.core.sgregs.get(SgReg::SS).cache;
-
-        self.ac.stsz = match (ss.L, ss.DB) {
-            (0, 0) => access::AcsSize::BIT16,
-            (0, 1) => access::AcsSize::BIT32,
-            (1, 0) => access::AcsSize::BIT64,
-            _ => return Err(EmuException::CPUException(CPUException::SS)),
-        };
-        Ok(())
-    }
 }
 
 #[cfg(test)]
@@ -68,6 +25,7 @@ impl<'a> Exec<'a> {
 pub fn exec_test() {
     use crate::hardware;
     use crate::device;
+    use crate::emulator::access::register::*;
 
     let hw = hardware::Hardware::new(0x1000);
     let dev = device::Device::new(std::sync::Arc::clone(&hw.mem));

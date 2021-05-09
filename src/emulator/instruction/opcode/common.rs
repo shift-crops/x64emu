@@ -257,7 +257,7 @@ fn code_0f00(exec: &mut exec::Exec) -> Result<(), EmuException> {
 }
 
 fn lldt_rm16(exec: &mut exec::Exec) -> Result<(), EmuException> {
-    if exec.ac.check_mode(access::CpuMode::Real) {
+    if exec.ac.test_cpumode(access::CpuMode::Real) {
         return Err(EmuException::CPUException(CPUException::UD));
     }
 
@@ -266,7 +266,7 @@ fn lldt_rm16(exec: &mut exec::Exec) -> Result<(), EmuException> {
 }
 
 fn ltr_rm16(exec: &mut exec::Exec) -> Result<(), EmuException> {
-    if exec.ac.check_mode(access::CpuMode::Real) {
+    if exec.ac.test_cpumode(access::CpuMode::Real) {
         return Err(EmuException::CPUException(CPUException::UD));
     }
 

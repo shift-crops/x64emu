@@ -66,7 +66,7 @@ macro_rules! jmp_far {
                     }
                 },
             }
-            self.update_opadsize()
+            self.ac.update_opadsize()
         }
     } };
 }
@@ -151,7 +151,7 @@ macro_rules! call_far {
                     }
                 },
             }
-            self.update_opadsize()
+            self.ac.update_opadsize()
         }
     } };
 }
@@ -205,7 +205,7 @@ macro_rules! ret_far {
             }
 
             self.ac.set_ip(new_ip)?;
-            self.update_opadsize()
+            self.ac.update_opadsize()
         }
     } };
 }
@@ -213,24 +213,24 @@ macro_rules! ret_far {
 macro_rules! int_ret {
     ( $type:ty ) => { paste::item! {
         pub fn [<int_ret_ $type>](&mut self) -> Result<(), EmuException> {
-            let old_flag = self.ac.core.rflags;
-
             let new_ip   = self.ac.[<pop_ $type>]()?;
             let new_cs   = self.ac.[<pop_ $type>]()? as u16;
             let new_flag = self.ac.[<pop_ $type>]()? as u64;
-            self.ac.core.rflags.from_u64(new_flag);
 
             match self.ac.mode {
                 access::CpuMode::Real => {
                     self.ac.load_segment(SgReg::CS, new_cs)?;
                 },
                 access::CpuMode::Protected | access::CpuMode::Long => {
-                    let cpl = self.ac.get_cpl()?;
-                    let rpl = (new_cs & 3) as u8;
-
-                    if old_flag.is_nesttask() {
+                    if self.ac.core.rflags.is_nesttask() {
+                        self.ac.[<push_ $type>](new_flag as $type)?;
+                        self.ac.[<push_ $type>](new_cs as $type)?;
+                        self.ac.[<push_ $type>](new_ip)?;
                         return self.ac.restore_task();
                     }
+
+                    let cpl = self.ac.get_cpl()?;
+                    let rpl = (new_cs & 3) as u8;
 
                     if rpl < cpl {
                         return Err(EmuException::CPUException(CPUException::GP));
@@ -266,8 +266,9 @@ macro_rules! int_ret {
                 },
             }
 
+            self.ac.core.rflags.from_u64(new_flag);
             self.ac.set_ip(new_ip)?;
-            self.update_opadsize()
+            self.ac.update_opadsize()
         }
     } };
 }
@@ -296,7 +297,7 @@ impl<'a> super::Exec<'a> {
         self.ac.load_segment(reg, sel)?;
 
         if reg == SgReg::SS {
-            self.update_stacksize()?;
+            self.ac.update_stacksize()?;
         }
         Ok(())
     }

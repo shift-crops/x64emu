@@ -12,7 +12,17 @@ impl<'a> super::Exec<'a> {
         let r = self.idata.modrm.reg as usize;
         let v = self.ac.get_gpreg(GpReg32::try_from(self.idata.modrm.rm as usize).unwrap())?;
         self.ac.set_creg(r, v)?;
-        if r == 0 { self.update_cpumode()?; }
+
+        match r {
+            0 => {
+                self.ac.update_cpumode()?;
+                self.ac.update_pgmode()?;
+            },
+            4 => {
+                self.ac.update_pgmode()?;
+            },
+            _ => {},
+        }
         Ok(())
     }
 }

@@ -1,7 +1,137 @@
+#![allow(non_snake_case)]
+
 use libc::c_void;
+use packed_struct::prelude::*;
 use crate::emulator::*;
 use super::register::*;
 use crate::hardware::memory::MemDumpSize;
+
+#[derive(Debug, Default, PackedStruct)]
+#[packed_struct(bit_numbering="lsb0", size_bytes="8", endian="msb")]
+pub struct PML5E {
+    #[packed_field(bits="0")]  P:   u8,
+    #[packed_field(bits="1")]  RW:  u8,
+    #[packed_field(bits="2")]  US:  u8,
+    #[packed_field(bits="3")]  PWT: u8,
+    #[packed_field(bits="4")]  PCD: u8,
+    #[packed_field(bits="5")]  A:   u8,
+    #[packed_field(bits="12:39")] pml4_base: u32,
+    #[packed_field(bits="63")] XD:  u8,
+}
+
+#[derive(Debug, Default, PackedStruct)]
+#[packed_struct(bit_numbering="lsb0", size_bytes="8", endian="msb")]
+pub struct PML4E {
+    #[packed_field(bits="0")]  P:   u8,
+    #[packed_field(bits="1")]  RW:  u8,
+    #[packed_field(bits="2")]  US:  u8,
+    #[packed_field(bits="3")]  PWT: u8,
+    #[packed_field(bits="4")]  PCD: u8,
+    #[packed_field(bits="5")]  A:   u8,
+    #[packed_field(bits="12:39")] pdpt_base: u32,
+    #[packed_field(bits="63")] XD:  u8,
+}
+
+#[derive(Debug, Default, PackedStruct)]
+#[packed_struct(bit_numbering="lsb0", size_bytes="8", endian="msb")]
+pub struct PDPTE {
+    #[packed_field(bits="0")]  P:   u8,
+    #[packed_field(bits="1")]  RW:  u8,
+    #[packed_field(bits="2")]  US:  u8,
+    #[packed_field(bits="3")]  PWT: u8,
+    #[packed_field(bits="4")]  PCD: u8,
+    #[packed_field(bits="5")]  A:   u8,
+    #[packed_field(bits="6")]  D:   u8,
+    #[packed_field(bits="7")]  PS:  u8,
+    #[packed_field(bits="8")]  G:   u8,
+    #[packed_field(bits="12:39")] pdt_base: u32,
+    #[packed_field(bits="63")] XD:  u8,
+}
+
+#[derive(Debug, Default, PackedStruct)]
+#[packed_struct(bit_numbering="lsb0", size_bytes="8", endian="msb")]
+pub struct PDE {
+    #[packed_field(bits="0")]  P:   u8,
+    #[packed_field(bits="1")]  RW:  u8,
+    #[packed_field(bits="2")]  US:  u8,
+    #[packed_field(bits="3")]  PWT: u8,
+    #[packed_field(bits="4")]  PCD: u8,
+    #[packed_field(bits="5")]  A:   u8,
+    #[packed_field(bits="6")]  D:   u8,
+    #[packed_field(bits="7")]  PS:  u8,
+    #[packed_field(bits="8")]  G:   u8,
+    #[packed_field(bits="12:39")] pt_base: u32,
+    #[packed_field(bits="63")] XD:  u8,
+}
+
+#[derive(Debug, Default, PackedStruct)]
+#[packed_struct(bit_numbering="lsb0", size_bytes="8", endian="msb")]
+pub struct PTE {
+    #[packed_field(bits="0")]  P:   u8,
+    #[packed_field(bits="1")]  RW:  u8,
+    #[packed_field(bits="2")]  US:  u8,
+    #[packed_field(bits="3")]  PWT: u8,
+    #[packed_field(bits="4")]  PCD: u8,
+    #[packed_field(bits="5")]  A:   u8,
+    #[packed_field(bits="6")]  D:   u8,
+    #[packed_field(bits="7")]  PS:  u8,
+    #[packed_field(bits="8")]  G:   u8,
+    #[packed_field(bits="12:39")] page_base: u32,
+    #[packed_field(bits="63")] XD:  u8,
+}
+
+#[derive(Debug, Default, PackedStruct)]
+#[packed_struct(bit_numbering="lsb0", size_bytes="4", endian="msb")]
+pub struct LAddrLegacy {
+    #[packed_field(bits="0:11")]  p_ofs:    u16,
+    #[packed_field(bits="12:21")] pt_ofs:   u16,
+    #[packed_field(bits="22:31")] pd_ofs:   u16,
+}
+
+#[derive(Debug, Default, PackedStruct)]
+#[packed_struct(bit_numbering="lsb0", size_bytes="4", endian="msb")]
+pub struct LAddrPAE {
+    #[packed_field(bits="0:11")]  p_ofs:    u16,
+    #[packed_field(bits="12:20")] pt_ofs:   u16,
+    #[packed_field(bits="21:29")] pd_ofs:   u16,
+    #[packed_field(bits="30:31")] pdpt_ofs: u8,
+}
+
+#[derive(Debug, Default, PackedStruct)]
+#[packed_struct(bit_numbering="lsb0", size_bytes="8", endian="msb")]
+pub struct LAddrIa32e {
+    #[packed_field(bits="0:11")]  p_ofs:    u16,
+    #[packed_field(bits="12:20")] pt_ofs:   u16,
+    #[packed_field(bits="21:29")] pd_ofs:   u16,
+    #[packed_field(bits="30:38")] pdpt_ofs: u16,
+    #[packed_field(bits="39:47")] pml4_ofs: u16,
+    #[packed_field(bits="48:56")] pml5_ofs: u16,
+}
+
+#[derive(Debug, Default)]
+struct PagingStructIndex {
+    bitlen: usize,
+    pml5: Option<u64>,
+    pml4: Option<u64>,
+    pdpt: Option<u64>,
+    pd:   u64,
+    pt:   u64,
+}
+impl From<&LAddrLegacy> for PagingStructIndex {
+    fn from(l: &LAddrLegacy) -> Self {
+        Self { bitlen: 10, pml5: None, pml4: None, pdpt: None, pd: l.pd_ofs as u64, pt: l.pt_ofs as u64 }
+    }
+}
+impl From<&LAddrPAE> for PagingStructIndex {
+    fn from(l: &LAddrPAE) -> Self {
+        Self { bitlen: 9, pml5: None, pml4: None, pdpt: Some(l.pdpt_ofs as u64), pd: l.pd_ofs as u64, pt: l.pt_ofs as u64 }
+    }
+}
+impl From<&LAddrIa32e> for PagingStructIndex {
+    fn from(l: &LAddrIa32e) -> Self {
+        Self { bitlen: 9, pml5: Some(l.pml5_ofs as u64), pml4: Some(l.pml4_ofs as u64), pdpt: Some(l.pdpt_ofs as u64), pd: l.pd_ofs as u64, pt: l.pt_ofs as u64 }
+    }
+}
 
 #[derive(Clone, Copy)]
 enum MemAccessMode { Read, Write, Exec, Monitor }
@@ -98,15 +228,15 @@ impl super::Access {
 impl super::Access {
     fn stack_update(&mut self, size: i8) -> Result<u64, EmuException> {
         let sp = match self.stsz {
-            access::AcsSize::BIT16 => {
+            super::AcsSize::BIT16 => {
                 self.update_gpreg(GpReg16::SP, size as i16)?;
                 self.get_gpreg(GpReg16::SP)? as u64
             },
-            access::AcsSize::BIT32 => {
+            super::AcsSize::BIT32 => {
                 self.update_gpreg(GpReg32::ESP, size as i32)?;
                 self.get_gpreg(GpReg32::ESP)? as u64
             },
-            access::AcsSize::BIT64 => {
+            super::AcsSize::BIT64 => {
                 self.update_gpreg(GpReg64::RSP, size as i64)?;
                 self.get_gpreg(GpReg64::RSP)?
             },
@@ -170,13 +300,13 @@ impl super::Access {
     }
 
     fn trans_v2l(&self, _acsmode: MemAccessMode, sg: SgReg, vaddr: u64) -> Result<u64, EmuException> {
-        let long64 = self.mode == access::CpuMode::Long && self.oasz.ad == access::AcsSize::BIT64;
+        let long64 = self.mode == super::CpuMode::Long && self.oasz.ad == super::AcsSize::BIT64;
 
         let cache = self.get_sgreg(sg)?.1;
         let base  = if long64 && !(sg == SgReg::FS || sg == SgReg::GS) { 0 } else { cache.base };
 
         match (&self.mode, &self.oasz.ad, sg) {
-            (access::CpuMode::Long, access::AcsSize::BIT64, SgReg::CS) | (access::CpuMode::Protected, _, _) => {
+            (super::CpuMode::Long, super::AcsSize::BIT64, SgReg::CS) | (super::CpuMode::Protected, _, _) => {
                 /*
                 if cache.Type & 0 {
 
@@ -193,8 +323,112 @@ impl super::Access {
         Ok(base + vaddr)
     }
 
-    fn trans_l2p(&self, _acsmode: MemAccessMode, laddr: u64) -> Result<u64, EmuException> {
-        Ok(laddr)
+    fn trans_l2p(&self, acs: MemAccessMode, laddr: u64) -> Result<u64, EmuException> {
+        if let Some(md) = &self.pgmd {
+            let (psidx, offset) = match md {
+                super::PagingMode::Legacy => {
+                    let l = LAddrLegacy::unpack(&(laddr as u32).to_be_bytes()).unwrap();
+                    (PagingStructIndex::from(&l), l.p_ofs)
+                },
+                super::PagingMode::LegacyPAE => {
+                    let l = LAddrPAE::unpack(&(laddr as u32).to_be_bytes()).unwrap();
+                    (PagingStructIndex::from(&l), l.p_ofs)
+                },
+                super::PagingMode::Ia32e4Lv => {
+                    let l = LAddrIa32e::unpack(&laddr.to_be_bytes()).unwrap();
+                    let mut psi = PagingStructIndex::from(&l);
+                    psi.pml5 = None;
+                    (psi, l.p_ofs)
+                },
+                super::PagingMode::Ia32e5Lv => {
+                    let l = LAddrIa32e::unpack(&laddr.to_be_bytes()).unwrap();
+                    (PagingStructIndex::from(&l), l.p_ofs)
+                },
+            };
+
+            let page_paddr = self.page_walk(acs, &md, psidx)?;
+            Ok(page_paddr + offset as u64)
+        } else {
+            Ok(laddr)
+        }
+   }
+
+    fn page_walk(&self, acs: MemAccessMode, pmd: &super::PagingMode, psidx: PagingStructIndex) -> Result<u64, EmuException> {
+        let cr3 = &self.core.cregs.3;
+        let table_size = match pmd {
+            super::PagingMode::Legacy => 4,
+            _ => 8,
+        };
+
+        let pml5e: Option<PML5E> = if let Some(idx) = psidx.pml5 {
+            let pml5_base = cr3.get_pagedir_base();
+            let mut raw: [u8; 8] = [0; 8];
+            self.read_p(raw.as_mut_ptr() as *mut _, pml5_base + idx*8, 8)?;
+            raw.reverse();
+            Some(PML5E::unpack(&raw).unwrap())
+        } else { None };
+
+        let pml4e: Option<PML4E> = if let Some(idx) = psidx.pml4 {
+            let pml4_base = match pml5e {
+                Some(e) => {
+                    (e.pml4_base as u64) << 12
+                },
+                None => cr3.get_pagedir_base(),
+            };
+            let mut raw: [u8; 8] = [0; 8];
+            self.read_p(raw.as_mut_ptr() as *mut _, pml4_base + idx*8, 8)?;
+            raw.reverse();
+            Some(PML4E::unpack(&raw).unwrap())
+        } else { None };
+
+        let pdpte: Option<PDPTE> = if let Some(idx) = psidx.pdpt {
+            let pdpt_base = match pml4e {
+                Some(e) => {
+                    (e.pdpt_base as u64) << 12
+                },
+                None => cr3.get_pagedir_base(),
+            };
+            let mut raw: [u8; 8] = [0; 8];
+            self.read_p(raw.as_mut_ptr() as *mut _, pdpt_base + idx*table_size, table_size as usize)?;
+            raw.reverse();
+            Some(PDPTE::unpack(&raw).unwrap())
+        } else { None };
+
+        let pd_base = match pdpte {
+            Some(e) => {
+                match e.PS {
+                    0 => {
+                        (e.pdt_base as u64) << 12
+                    },
+                    1 => {
+                        return Ok( (((((e.pdt_base as u64) << psidx.bitlen) + psidx.pd) << psidx.bitlen) + psidx.pt) << 12 );
+                    },
+                    _ => { panic!("{:?}", EmuException::UnexpectedError); },
+                }
+            },
+            None => cr3.get_pagedir_base(),
+        };
+        let mut raw: [u8; 8] = [0; 8];
+        self.read_p(raw.as_mut_ptr() as *mut _, pd_base + psidx.pd*table_size, table_size as usize)?;
+        raw.reverse();
+        let pde = PDE::unpack(&raw).unwrap();
+
+        let pt_base = match pde.PS {
+            0 => {
+                (pde.pt_base as u64) << 12
+            },
+            1 => {
+                return Ok( (((pde.pt_base as u64) << psidx.bitlen) + psidx.pt) << 12 );
+            },
+            _ => { panic!("{:?}", EmuException::UnexpectedError); },
+        };
+        let mut raw: [u8; 8] = [0; 8];
+        self.read_p(raw.as_mut_ptr() as *mut _, pt_base + psidx.pt*table_size, table_size as usize)?;
+        raw.reverse();
+        let pte = PTE::unpack(&raw).unwrap();
+
+        //println!("{:x?}", pte);
+        Ok((pte.page_base as u64) << 12)
     }
 }
 
@@ -203,7 +437,7 @@ impl super::Access {
 pub fn access_mem_test() {
     let hw = hardware::Hardware::new(0x1000);
     let dev = device::Device::new(std::sync::Arc::clone(&hw.mem));
-    let mut ac = access::Access::new(hw, dev);
+    let mut ac = super::Access::new(hw, dev);
 
     ac.set_data32((SgReg::DS, 0x10), 0xdeadbeef).unwrap();
     assert_eq!(ac.get_data8((SgReg::DS, 0x10)).unwrap(), 0xef);
