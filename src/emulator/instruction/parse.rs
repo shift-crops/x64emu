@@ -5,23 +5,23 @@ use crate::emulator::access::register::*;
 use crate::emulator::EmuException;
 
 #[derive(Default)]
-pub struct ParseInstr {
+pub(super) struct ParseInstr {
     pub prefix: PrefixData,
     pub instr: InstrData,
 }
 
 #[derive(Default)]
-pub struct PrefixData {
-    pub segment: Option<SgReg>,
-    pub repeat: Option<Rep>,
-    pub size: OverrideSize,
-    pub rex: Rex,
+pub(in crate::emulator) struct PrefixData {
+    pub(super) segment: Option<SgReg>,
+    pub(super) repeat: Option<Rep>,
+    pub(super) size: OverrideSize,
+    pub(super) rex: Rex,
 }
 
-pub enum Rep { REPZ, REPNZ }
+pub(in crate::emulator) enum Rep { REPZ, REPNZ }
 
 bitflags! {
-    pub struct OverrideSize: u8 {
+    pub(in crate::emulator) struct OverrideSize: u8 {
         const NONE = 0b00000000;
         const OP   = 0b00000001;
         const AD   = 0b00000010;
@@ -41,7 +41,7 @@ pub struct Rex {
 }
 
 #[derive(Default)]
-pub struct InstrData {
+pub(super) struct InstrData {
     pub len: u64,
     pub adsize: access::AcsSize,
 

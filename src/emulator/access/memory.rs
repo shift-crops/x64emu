@@ -1,5 +1,3 @@
-#![allow(non_snake_case)]
-
 use std::collections::BTreeMap;
 use libc::c_void;
 use packed_struct::prelude::*;
@@ -82,7 +80,7 @@ pub struct PTE {
 }
 
 #[derive(Debug, Default, Clone, Copy)]
-pub struct PageCache {
+struct PageCache {
     RW:  bool,
     US:  bool,
     PWT: bool,
@@ -166,7 +164,7 @@ enum PageType {
 }
 
 #[derive(Default)]
-pub struct TLB {
+pub(super) struct TLB {
     p1gb: BTreeMap<u64, PageCache>,
     p4mb: BTreeMap<u64, PageCache>,
     p2mb: BTreeMap<u64, PageCache>,
@@ -540,7 +538,7 @@ impl super::Access {
 
 #[cfg(test)]
 #[test]
-pub fn access_mem_test() {
+fn access_mem_test() {
     let hw = hardware::Hardware::new(0x1000);
     let dev = device::Device::new(std::sync::Arc::clone(&hw.mem));
     let mut ac = super::Access::new(hw, dev);

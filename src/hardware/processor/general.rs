@@ -56,7 +56,7 @@ impl GpRegisters {
 
 #[cfg(test)]
 #[test]
-pub fn gpreg_test() {
+fn gpreg_test() {
     let mut reg = GpRegisters::new();
 
     reg.set64(GpReg64::RAX, 0xdeadbeefcafebabe);

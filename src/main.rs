@@ -1,26 +1,40 @@
-#![allow(dead_code)]
-
-#[macro_use]
-extern crate bitflags;
-#[macro_use]
-extern crate log;
-extern crate env_logger as logger;
+extern crate x64emu;
+extern crate env_logger;
 extern crate getopts;
 
-mod hardware;
-mod device;
-mod emulator;
-mod interface;
-
+use x64emu::*;
 use std::{env, process};
 use getopts::Options;
 use gdbstub::{Connection, GdbStub};
-use interface::gdbserver;
 
 #[derive(Debug)]
 struct Args {
     input: Vec<String>,
     gdbport: Option<u16>,
+}
+
+fn main() {
+    let args = parse_args();
+
+    env_logger::init();
+    let hw  = hardware::Hardware::new(0x400*0x400);
+    let dev  = device::Device::new(std::sync::Arc::clone(&hw.mem));
+    let mut emu = emulator::Emulator::new(hw, dev);
+
+    emu.map_binary(0xffff0, include_bytes!("bios/crt0.bin")).expect("Failed to map");
+    emu.map_binary(0xf0000, include_bytes!("bios/bios.bin")).expect("Failed to map");
+
+    let imgname = if args.input.len() > 0 { args.input[0].clone() } else { "/tmp/test".to_string() };
+    emu.load_binfile(0x7c00, imgname).expect("Failed to load binary");
+    
+    if let Some(p) = args.gdbport {
+        let conn: Box<dyn Connection<Error = std::io::Error>> = Box::new(interface::gdbserver::wait_for_tcp(p).expect("wait error"));
+        let mut debugger = GdbStub::new(conn);
+
+        debugger.run(&mut emu).expect("debugger error");
+    } else {
+        emu.run();
+    }
 }
 
 fn print_usage(program: &str, opts: &Options) {
@@ -53,29 +67,5 @@ fn parse_args() -> Args {
     Args {
         input: matches.free.clone(),
         gdbport: matches.opt_get("s").unwrap(),
-    }
-}
-
-fn main() {
-    logger::init();
-    let args = parse_args();
-
-    let hw  = hardware::Hardware::new(0x400*0x400);
-    let dev  = device::Device::new(std::sync::Arc::clone(&hw.mem));
-    let mut emu = emulator::Emulator::new(hw, dev);
-
-    emu.map_binary(0xffff0, include_bytes!("bios/crt0.bin")).expect("Failed to map");
-    emu.map_binary(0xf0000, include_bytes!("bios/bios.bin")).expect("Failed to map");
-
-    let img = if args.input.len() > 0 { args.input[0].clone() } else { "/tmp/test".to_string() };
-    emu.load_binfile(0x7c00, img).expect("Failed to load binary");
-    
-    if let Some(p) = args.gdbport {
-        let conn: Box<dyn Connection<Error = std::io::Error>> = Box::new(gdbserver::wait_for_tcp(p).expect("wait error"));
-        let mut debugger = GdbStub::new(conn);
-
-        debugger.run(&mut emu).expect("debugger error");
-    } else {
-        emu.run();
     }
 }

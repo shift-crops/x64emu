@@ -1,4 +1,3 @@
-#![allow(non_snake_case)]
 use packed_struct::prelude::*;
 use num_enum::TryFromPrimitive;
 
@@ -71,7 +70,7 @@ impl SgRegisters {
 
 #[cfg(test)]
 #[test]
-pub fn sgreg_test() {
+fn sgreg_test() {
     let mut reg = SgRegisters::new();
 
     let mut sel = reg.get_mut(SgReg::ES).selector;
@@ -84,7 +83,7 @@ pub fn sgreg_test() {
 #[cfg(test)]
 #[test]
 #[should_panic]
-pub fn sgreg_test_panic() {
+fn sgreg_test_panic() {
     use std::convert::TryFrom;
 
     let reg = SgRegisters::new();

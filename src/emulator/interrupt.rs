@@ -5,13 +5,13 @@ use crate::emulator::access::register::*;
 use crate::emulator::access::descriptor::*;
 
 #[derive(Debug)]
-pub enum IntrEvent {
+pub(super) enum IntrEvent {
     Hardware(u8),
     Software(u8),
 }
 
 #[derive(Default)]
-pub struct Interrupt(VecDeque<IntrEvent>);
+pub(super) struct Interrupt(VecDeque<IntrEvent>);
 
 impl Interrupt {
     pub fn enqueue(&mut self, e: IntrEvent) -> () {

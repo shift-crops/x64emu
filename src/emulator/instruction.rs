@@ -5,7 +5,7 @@ mod exec;
 use super::access;
 use crate::emulator::{EmuException, CPUException};
 
-pub struct Instruction(opcode::Opcode);
+pub(super) struct Instruction(opcode::Opcode);
 
 impl Instruction {
     pub fn new() -> Self {
