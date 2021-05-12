@@ -17,6 +17,8 @@ fn main() {
     let args = parse_args();
 
     env_logger::init();
+
+    let gui = interface::gui::GUI::new(320, 200);
     let hw  = hardware::Hardware::new(0x400*0x400);
     let dev  = device::Device::new(std::sync::Arc::clone(&hw.mem));
     let mut emu = emulator::Emulator::new(hw, dev);
@@ -27,14 +29,17 @@ fn main() {
     let imgname = if args.input.len() > 0 { args.input[0].clone() } else { "/tmp/test".to_string() };
     emu.load_binfile(0x7c00, imgname).expect("Failed to load binary");
     
-    if let Some(p) = args.gdbport {
-        let conn: Box<dyn Connection<Error = std::io::Error>> = Box::new(interface::gdbserver::wait_for_tcp(p).expect("wait error"));
-        let mut debugger = GdbStub::new(conn);
+    std::thread::spawn(move || {
+        if let Some(p) = args.gdbport {
+            let conn: Box<dyn Connection<Error = std::io::Error>> = Box::new(interface::gdbserver::wait_for_tcp(p).expect("wait error"));
+            let mut debugger = GdbStub::new(conn);
 
-        debugger.run(&mut emu).expect("debugger error");
-    } else {
-        emu.run();
-    }
+            debugger.run(&mut emu).expect("debugger error");
+        } else {
+            emu.run();
+        }
+    });
+    gui.test();
 }
 
 fn print_usage(program: &str, opts: &Options) {

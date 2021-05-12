@@ -1,2 +1,2 @@
-mod gui;
+pub mod gui;
 pub mod gdbserver;
