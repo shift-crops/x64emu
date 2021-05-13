@@ -1,9 +1,10 @@
+mod vga;
 mod testtimer;
 mod testdma;
 
 use core::ops::Range;
 use std::thread;
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, Sender};
 
@@ -19,12 +20,12 @@ pub struct Device {
 enum IOReqType { PortIO(u16), MemIO(u64) }
 enum IOReqRW { Read(usize), Write(Vec<u8>) }
 
-struct IORequest {
+pub struct IORequest {
     ty: IOReqType,
     rw: IOReqRW,
 }
 
-struct IOResult {
+pub struct IOResult {
     data: Option<Vec<u8>>,
 }
 
@@ -89,38 +90,46 @@ type PortIOMap<'a> = Vec<(Range<u16>, &'a mut dyn PortIO)>;
 type MemoryIOMap<'a> = Vec<(Range<u64>, &'a mut dyn MemoryIO)>;
 
 impl Device {
-    pub fn new(mem: Arc<RwLock<memory::Memory>>) -> Self {
+    pub fn new() -> (Self, (Sender<u8>, Receiver<IORequest>, Sender<IOResult>)) {
+        let (irq_tx, irq_rx): (Sender<u8>, Receiver<u8>) = mpsc::channel();
         let (req_tx, req_rx): (Sender<IORequest>, Receiver<IORequest>) = mpsc::channel();
         let (res_tx, res_rx): (Sender<IOResult>, Receiver<IOResult>) = mpsc::channel();
-        let (irq_tx, irq_rx): (Sender<u8>, Receiver<u8>) = mpsc::channel();
 
-        let mut memio_range: Vec<Range<u64>> = Vec::new();
-        memio_range.push(0x1000..0x1000+0x100);
-
-        thread::spawn(move || {
-            Self::init_handler(mem, req_rx, res_tx, irq_tx);
-        });
-
-        Self {
+        (Self {
             io_req_tx: req_tx,
             io_res_rx: res_rx,
             irq_rx: irq_rx,
-            memio_range,
-        }
+            memio_range: Vec::new(),
+        },
+        (irq_tx, req_rx, res_tx))
     }
 
-    fn init_handler(mem: Arc<RwLock<memory::Memory>>, req_rx: Receiver<IORequest>, res_tx: Sender<IOResult>, irq_tx: Sender<u8>) -> () {
-        let mut port_io_map: PortIOMap = Vec::new();
-        let mut memory_io_map: MemoryIOMap = Vec::new();
+    pub fn init_devices(&mut self, chan: (Sender<u8>, Receiver<IORequest>, Sender<IOResult>), mem: Arc<RwLock<memory::Memory>>, imgbuf: Arc<Mutex<Vec<[u8; 3]>>>) {
+        let (irq_tx, req_rx, res_tx) = chan;
 
-        let (mut tst_dma_ctl, mut tst_dma_adr) = testdma::TestDMA::new(IReq::new(&irq_tx, 1), Arc::clone(&mem));
-        let mut tst_timer = testtimer::TestTimer::new(IReq::new(&irq_tx, 2));
+        self.memio_range.push(0x1000..0x1000+0x100);
 
-        port_io_map.push((0x10..0x10+1, &mut tst_dma_ctl));
-        port_io_map.push((0x20..0x20+1, &mut tst_timer));
+        thread::spawn(move || {
+            let mut port_io_map: PortIOMap = Vec::new();
+            let mut memory_io_map: MemoryIOMap = Vec::new();
 
-        memory_io_map.push((0x1000..0x1000+0x10, &mut tst_dma_adr));
+            let mut vga = vga::VGA::new(Arc::clone(&mem), imgbuf);
+            let (mut tst_dma_ctl, mut tst_dma_adr) = testdma::TestDMA::new(IReq::new(&irq_tx, 1), Arc::clone(&mem));
+            let mut tst_timer = testtimer::TestTimer::new(IReq::new(&irq_tx, 2));
 
+            vga.run();
+
+            port_io_map.push((0x3b0..0x3e0, &mut vga));
+            port_io_map.push((0x10..0x10+1, &mut tst_dma_ctl));
+            port_io_map.push((0x20..0x20+1, &mut tst_timer));
+
+            memory_io_map.push((0x1000..0x1000+0x10, &mut tst_dma_adr));
+
+            Self::io_handle(port_io_map, memory_io_map, req_rx, res_tx);
+        });
+    }
+
+    fn io_handle(mut port_io_map: PortIOMap, mut memory_io_map: MemoryIOMap, req_rx: Receiver<IORequest>, res_tx: Sender<IOResult>) -> () {
         loop {
             let req = req_rx.recv().unwrap();
             let res = match req.ty {

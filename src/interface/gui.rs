@@ -1,12 +1,13 @@
 extern crate mini_gl_fb;
 
-use std::{thread, time};
-use std::sync::{Arc, RwLock};
+use std::time;
+use std::sync::{Arc, Mutex};
 use mini_gl_fb::core::BufferFormat;
 use mini_gl_fb::glutin::event::*;
 use mini_gl_fb::glutin::event_loop::*;
 
 pub struct GUI {
+    pub buffer: Arc<Mutex<Vec<[u8; 3]>>>,
     size: (usize, usize),
     grab: bool,
 }
@@ -14,32 +15,20 @@ pub struct GUI {
 impl GUI {
     pub fn new(width: usize, height: usize) -> Self {
         Self {
+            buffer: Arc::new(Mutex::new(vec![[0, 0, 0]; 320 * 200])),
             size: (width, height),
             grab: false,
         }
     }
 
-    pub fn test(mut self) -> () {
+    pub fn persistent(mut self) -> () {
         let (event_loop, mut fb) = mini_gl_fb::gotta_go_fast("x64emu", self.size.0 as f64, self.size.1 as f64);
 
         fb.change_buffer_format::<u8>(BufferFormat::RGB);
         fb.set_resizable(true);
 
-        let buffer :Arc<RwLock<Vec<[u8; 3]>>> = Arc::new(RwLock::new(vec![[0, 0, 0]; 320 * 200]));
-        let buf = Arc::clone(&buffer);
-        std::thread::spawn(move || {
-            let mut c :u8 = 0;
-            loop {
-                thread::sleep(time::Duration::from_millis(1000));
-                c = c.wrapping_add(20);
-                for i in 0..320*200 {
-                    buf.write().unwrap()[i] = [0, 0, c];
-                }
-            }
-        });
-
         event_loop.run(move |event, _, control_flow| {
-            *control_flow = ControlFlow::WaitUntil(std::time::Instant::now() + time::Duration::from_millis(50));
+            *control_flow = ControlFlow::WaitUntil(std::time::Instant::now() + time::Duration::from_millis(40));
 
             match &event {
                 Event::LoopDestroyed => return,
@@ -58,24 +47,27 @@ impl GUI {
                     },
                     _ => {}
                 },
-                Event::DeviceEvent { event, .. } if self.grab => match &event {
-                    DeviceEvent::Key(input) => {
-                        if let Some(VirtualKeyCode::RControl) = input.virtual_keycode {
-                            let window = fb.internal.context.window();
-                            window.set_cursor_grab(false).unwrap();
-                            window.set_cursor_visible(true);
-                            window.set_title("x64emu");
-                            self.grab = false;
-                        }
-                        println!("{:x?}", input);
-                    },
-                    DeviceEvent::MouseMotion { delta } => {
-                        println!("{:x?}", delta);
-                    },
-                    _ => {}
+                Event::DeviceEvent { event, .. } if self.grab => {
+                    match &event {
+                        DeviceEvent::Key(input) => {
+                            if let Some(VirtualKeyCode::RControl) = input.virtual_keycode {
+                                let window = fb.internal.context.window();
+                                window.set_cursor_grab(false).unwrap();
+                                window.set_cursor_visible(true);
+                                window.set_title("x64emu");
+                                self.grab = false;
+                            }
+                            println!("{:x?}", input);
+                        },
+                        DeviceEvent::MouseMotion { delta } => {
+                            println!("{:x?}", delta);
+                        },
+                        _ => {}
+                    }
+                    fb.update_buffer(&self.buffer.lock().unwrap());
                 },
                 Event::NewEvents(cause) => match cause {
-                    StartCause::ResumeTimeReached { .. } => fb.update_buffer(&buffer.read().unwrap()),
+                    StartCause::ResumeTimeReached { .. } => fb.update_buffer(&self.buffer.lock().unwrap()),
                     _ => {},
                 },
                 _ => {},

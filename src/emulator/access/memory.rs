@@ -540,7 +540,7 @@ impl super::Access {
 #[test]
 fn access_mem_test() {
     let hw = hardware::Hardware::new(0x1000);
-    let dev = device::Device::new(std::sync::Arc::clone(&hw.mem));
+    let (dev, _) = device::Device::new();
     let mut ac = super::Access::new(hw, dev);
 
     ac.set_data32((SgReg::DS, 0x10), 0xdeadbeef).unwrap();
