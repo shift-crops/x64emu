@@ -22,7 +22,7 @@ fn main() {
     let gui = interface::gui::GUI::new(320, 200);
 
     let (mut dev, chan_dev)  = device::Device::new();
-    dev.init_devices(chan_dev, std::sync::Arc::clone(&hw.mem), std::sync::Arc::clone(&gui.buffer));
+    dev.init_devices(chan_dev, hw.mem.clone(), gui.buffer.clone());
 
     let mut emu = emulator::Emulator::new(hw, dev);
 

@@ -47,9 +47,9 @@ impl GUI {
                     },
                     _ => {}
                 },
-                Event::DeviceEvent { event, .. } if self.grab => {
+                Event::DeviceEvent { event, .. } => {
                     match &event {
-                        DeviceEvent::Key(input) => {
+                        DeviceEvent::Key(input) if self.grab => {
                             if let Some(VirtualKeyCode::RControl) = input.virtual_keycode {
                                 let window = fb.internal.context.window();
                                 window.set_cursor_grab(false).unwrap();
@@ -59,7 +59,7 @@ impl GUI {
                             }
                             println!("{:x?}", input);
                         },
-                        DeviceEvent::MouseMotion { delta } => {
+                        DeviceEvent::MouseMotion { delta } if self.grab => {
                             println!("{:x?}", delta);
                         },
                         _ => {}

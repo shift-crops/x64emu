@@ -1,50 +1,47 @@
-use std::{thread, time};
 use std::sync::{Arc, Mutex, RwLock};
-use crate::hardware::memory;
 
-pub struct Core {
-    base_addr: usize,
-    mem: Arc<RwLock<memory::Memory>>,
+enum GraphicMode { MODE_TEXT, MODE_GRAPHIC, MODE_GRAPHIC256 }
+
+pub struct VGA {
     image: Arc<Mutex<Vec<[u8; 3]>>>,
+    vram: [u8; 0x20000],
 }
 
-pub struct VGA(Arc<RwLock<Core>>);
 impl VGA {
-    pub fn new(mem: Arc<RwLock<memory::Memory>>, image: Arc<Mutex<Vec<[u8; 3]>>>) -> Self {
-        Self(Arc::new(RwLock::new(
-            Core {
-                base_addr: 0xa0000,
-                mem,
+    pub fn new(image: Arc<Mutex<Vec<[u8; 3]>>>) -> (Reg, Vram) {
+        let vga = Arc::new(RwLock::new(
+            Self {
                 image,
+                vram: [0u8; 0x20000],
             }
-        )))
-    }
+        ));
 
-    pub fn run(&self) {
-        let core = Arc::clone(&self.0);
-        std::thread::spawn(move || {
-            let mut vram = [0u8; 0x20000];
-            loop {
-                thread::sleep(time::Duration::from_millis(40));
-                let vc = core.read().unwrap();
-
-                vc.mem.read().unwrap().read_data(vram.as_mut_ptr() as *mut _, vc.base_addr, std::mem::size_of_val(&vram)).unwrap();
-                let mut buf = vc.image.lock().unwrap();
-
-                for i in 0..320*200 {
-                    let c = vram[i];
-                    buf[i] = [c, c, c];
-                }
-            }
-        });
+        (Reg(vga.clone()), Vram(vga.clone()))
     }
 }
 
-impl super::PortIO for VGA {
+pub struct Reg(Arc<RwLock<VGA>>);
+
+impl super::PortIO for Reg {
     fn in8(&self, _addr: u16) -> u8 {
         0
     }
 
     fn out8(&mut self, _addr: u16, _data: u8) -> () {
+    }
+}
+
+pub struct Vram(Arc<RwLock<VGA>>);
+
+impl super::MemoryIO for Vram {
+    fn read8(&self, _ofs: u64) -> u8 {
+        0
+    }
+
+    fn write8(&mut self, ofs: u64, data: u8) -> () {
+        let vc = self.0.write().unwrap();
+        //vc.vram[ofs as usize] = data;
+        let mut buf = vc.image.lock().unwrap();
+        buf[ofs as usize] = [data, data, data];
     }
 }
