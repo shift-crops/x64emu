@@ -184,19 +184,18 @@ impl super::OpcodeTrait for Opcode32 {
 
         // 0x80 : code_80
         setop!(0x81, code_81, OpFlags::MODRM | OpFlags::IMM32);
-        // 0x82 : code_82
+        setop!(0x82, code_82, OpFlags::MODRM | OpFlags::IMM8);
         setop!(0x83, code_83, OpFlags::MODRM | OpFlags::IMM8);
-
         // 0xc0 : code_c0
         setop!(0xc1, code_c1, OpFlags::MODRM | OpFlags::IMM8);
-        /*
+        // 0xd2 : code_d2
         setop!(0xd3, code_d3, OpFlags::MODRM);
-        setop!(0xf7, code_f7, OpFlags::MODRM);
+        // 0xf6 : code_f6
+        setop!(0xf7, code_f7, OpFlags::MODRM | OpFlags::IMM32);
+        // 0xfe : code_fe
         setop!(0xff, code_ff, OpFlags::MODRM);
-        */
         // 0x0f00 : code_0f00
         setop!(0x0f01, code_0f01, OpFlags::MODRM);
-
     }
 
     fn exec(&self, exec: &mut exec::Exec) -> Result<(), EmuException> {
@@ -239,8 +238,8 @@ impl Opcode32 {
     cmp_dst_src!(32, r32, rm32);
     cmp_dst_src!(32, eax, imm32);
 
-    inc_opr!(32);
-    dec_opr!(32);
+    inc_dst!(opr32);
+    dec_dst!(opr32);
     push_src!(32, opr32);
     pop_dst!(32, opr32);
 
@@ -381,6 +380,10 @@ impl Opcode32 {
     xor_dst_src!(32, rm32, imm32);
     cmp_dst_src!(32, rm32, imm32);
 
+    fn code_82(exec: &mut exec::Exec) -> Result<(), EmuException> {
+        super::common::code_82(exec)
+    }
+
     fn code_83(exec: &mut exec::Exec) -> Result<(), EmuException> {
         match exec.idata.modrm.reg as u32 {
             0 => Opcode32::add_rm32_imm8(exec)?,
@@ -433,6 +436,68 @@ impl Opcode32 {
     sal_dst_src!(32, rm32, imm8);
     sar_dst_src!(32, rm32, imm8);
 
+    fn code_d3(exec: &mut exec::Exec) -> Result<(), EmuException> {
+        match exec.idata.modrm.reg as u8 {
+            /*
+            0 => Opcode32::rol_rm32_cl(exec)?,
+            1 => Opcode32::ror_rm32_cl(exec)?,
+            2 => Opcode32::rcl_rm32_cl(exec)?,
+            3 => Opcode32::rcr_rm32_cl(exec)?,
+            */
+            4 => Opcode32::shl_rm32_cl(exec)?,
+            5 => Opcode32::shr_rm32_cl(exec)?,
+            6 => Opcode32::sal_rm32_cl(exec)?,
+            7 => Opcode32::sar_rm32_cl(exec)?,
+            _ => { return Err(EmuException::UnexpectedError); },
+        }
+        Ok(())
+    }
+
+    /*
+    rol_dst_src!(32, rm32, cl);
+    ror_dst_src!(32, rm32, cl);
+    rcl_dst_src!(32, rm32, cl);
+    rcr_dst_src!(32, rm32, cl);
+    */
+    shl_dst_src!(32, rm32, cl);
+    shr_dst_src!(32, rm32, cl);
+    sal_dst_src!(32, rm32, cl);
+    sar_dst_src!(32, rm32, cl);
+
+    fn code_f7(exec: &mut exec::Exec) -> Result<(), EmuException> {
+        let back = match exec.idata.modrm.reg as u8 {
+            0 => { Opcode32::test_rm32_imm32(exec)?; 0},
+            2 => { Opcode32::not_rm32(exec)?; -4},
+            3 => { Opcode32::neg_rm32(exec)?; -4},
+            4 => { Opcode32::mul_edx_eax_rm32(exec)?; -4},
+            5 => { Opcode32::imul_edx_eax_rm32(exec)?; -4},
+            6 => { Opcode32::div_eax_edx_rm32(exec)?; -4},
+            7 => { Opcode32::idiv_eax_edx_rm32(exec)?; -4},
+            _ => { return Err(EmuException::UnexpectedError); },
+        };
+        exec.ac.update_ip(back)
+    }
+
+    test_dst_src!(32, rm32, imm32);
+    not_dst!(32, rm32);
+    neg_dst!(32, rm32);
+    mul_high_low_src!(32, edx, eax, rm32);
+    imul_high_low_src!(32, edx, eax, rm32);
+    div_quot_rem_src!(32, eax, edx, rm32);
+    idiv_quot_rem_src!(32, eax, edx, rm32);
+
+    fn code_ff(exec: &mut exec::Exec) -> Result<(), EmuException> {
+        match exec.idata.modrm.reg as u8 {
+            0 => Opcode32::inc_rm32(exec)?,
+            1 => Opcode32::dec_rm32(exec)?,
+            _ => { return Err(EmuException::UnexpectedError); },
+        }
+        Ok(())
+    }
+
+    inc_dst!(rm32);
+    dec_dst!(rm32);
+
     fn code_0f01(exec: &mut exec::Exec) -> Result<(), EmuException> {
         match exec.idata.modrm.reg as u32 {
             2 => Opcode32::lgdt_m16_32(exec)?,
@@ -445,6 +510,10 @@ impl Opcode32 {
     fn lgdt_m16_32(exec: &mut exec::Exec) -> Result<(), EmuException> {
         let (sg, adr) = exec.get_m()?;
 
+        if exec.ac.get_cpl()? > 0 {
+            return Err(EmuException::CPUException(CPUException::GP(None)));
+        }
+
         let limit = exec.ac.get_data16((sg,adr))?;
         let base  = exec.ac.get_data32((sg,adr+2))?;
         debug!("lgdt: base = {:04x}, limit = {:02x}", base, limit);
@@ -453,6 +522,10 @@ impl Opcode32 {
 
     fn lidt_m16_32(exec: &mut exec::Exec) -> Result<(), EmuException> {
         let (sg, adr) = exec.get_m()?;
+
+        if exec.ac.get_cpl()? > 0 {
+            return Err(EmuException::CPUException(CPUException::GP(None)));
+        }
 
         let limit = exec.ac.get_data16((sg,adr))?;
         let base  = exec.ac.get_data32((sg,adr+2))?;

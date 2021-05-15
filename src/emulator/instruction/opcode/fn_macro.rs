@@ -105,20 +105,20 @@ macro_rules! cmp_dst_src {
     } };
 }
 
-macro_rules! inc_opr {
-    ( $size:expr ) => { paste::item! {
-        fn [<inc_opr $size>](exec: &mut exec::Exec) -> Result<(), EmuException> {
-            let v = exec.[<get_opr $size>]()?;
-            exec.[<set_opr $size>](v+1)
+macro_rules! inc_dst {
+    ( $dst:ident ) => { paste::item! {
+        fn [<inc_ $dst>](exec: &mut exec::Exec) -> Result<(), EmuException> {
+            let v = exec.[<get_ $dst>]()?;
+            exec.[<set_ $dst>](v+1)
         }
     } };
 }
 
-macro_rules! dec_opr {
-    ( $size:expr ) => { paste::item! {
-        fn [<dec_opr $size>](exec: &mut exec::Exec) -> Result<(), EmuException> {
-            let v = exec.[<get_opr $size>]()?;
-            exec.[<set_opr $size>](v-1)
+macro_rules! dec_dst {
+    ( $dst:ident ) => { paste::item! {
+        fn [<dec_ $dst>](exec: &mut exec::Exec) -> Result<(), EmuException> {
+            let v = exec.[<get_ $dst>]()?;
+            exec.[<set_ $dst>](v-1)
         }
     } };
 }
@@ -146,11 +146,11 @@ macro_rules! pop_dst {
 macro_rules! imul_dst_src1_src2 {
     ( $size:expr, $dst:ident, $src1:ident, $src2:ident ) => { paste::item! {
         fn [<imul_ $dst _ $src1 _ $src2>](exec: &mut exec::Exec) -> Result<(), EmuException> {
-            let src1: u!($size) = exec.[<get_ $src1>]()? as u!($size);
-            let src2: u!($size) = exec.[<get_ $src2>]()? as u!($size);
+            let src1: i!($size) = exec.[<get_ $src1>]()? as i!($size);
+            let src2: i!($size) = exec.[<get_ $src2>]()? as i!($size);
             debug!("imul: {:02x}, {:02x}", src1, src2);
-            exec.update_rflags_mul(src1, src2)?;
-            exec.[<set_ $dst>](src1.wrapping_mul(src2))
+            exec.update_rflags_imul(src1, src2)?;
+            exec.[<set_ $dst>](src1.wrapping_mul(src2) as u!($size))
         }
     } };
 }
@@ -469,6 +469,93 @@ macro_rules! sar_dst_src {
             debug!("sar: {:02x}, {:02x}", dst, src);
             exec.update_rflags_sar(dst, src)?;
             exec.[<set_ $dst>](dst.wrapping_shr(src) as u!($size))
+        }
+    } };
+}
+
+macro_rules! not_dst {
+    ( $size:expr, $dst:ident ) => { paste::item! {
+        fn [<not_ $dst>](exec: &mut exec::Exec) -> Result<(), EmuException> {
+            let v: u!($size) = exec.[<get_ $dst>]()? as u!($size);
+            debug!("not: {:02x}", v);
+            exec.[<set_ $dst>](!v)
+        }
+    } };
+}
+
+macro_rules! neg_dst {
+    ( $size:expr, $dst:ident ) => { paste::item! {
+        fn [<neg_ $dst>](exec: &mut exec::Exec) -> Result<(), EmuException> {
+            let v: u!($size) = exec.[<get_ $dst>]()? as u!($size);
+            debug!("neg: {:02x}", v);
+            exec.update_rflags_sub(0, v)?;
+            exec.[<set_ $dst>](-(v as i!($size)) as u!($size))
+        }
+    } };
+}
+
+macro_rules! mul_high_low_src {
+    ( $size:expr, $high:ident, $low:ident, $src:ident ) => { paste::item! {
+        fn [<mul_ $high _ $low _ $src>](exec: &mut exec::Exec) -> Result<(), EmuException> {
+            let src1h = exec.[<get_ $high>]()? as u!($size);
+            let src1l = exec.[<get_ $low>]()? as u!($size);
+            let src1 = ((src1h as u128) << $size) + src1l as u128;
+            let src2 = exec.[<get_ $src>]()? as u!($size);
+
+            debug!("imul: {:02x}, {:02x}", src1, src2);
+            exec.update_rflags_mul(src1h, src2)?;
+            let v = src1.wrapping_mul(src2 as u128);
+            exec.[<set_ $high>]((v >> $size) as u!($size))?;
+            exec.[<set_ $low>](v  as u!($size))?;
+            Ok(())
+        }
+    } };
+}
+
+macro_rules! imul_high_low_src {
+    ( $size:expr, $high:ident, $low:ident, $src:ident ) => { paste::item! {
+        fn [<imul_ $high _ $low _ $src>](exec: &mut exec::Exec) -> Result<(), EmuException> {
+            let src1h = exec.[<get_ $high>]()? as i!($size);
+            let src1l = exec.[<get_ $low>]()? as i!($size);
+            let src1 = ((src1h as i128) << $size) + src1l as i128;
+            let src2 = exec.[<get_ $src>]()? as i!($size);
+
+            debug!("imul: {:02x}, {:02x}", src1, src2);
+            exec.update_rflags_imul(src1h, src2)?;
+            let v = src1.wrapping_mul(src2 as i128);
+            exec.[<set_ $high>]((v >> $size) as u!($size))?;
+            exec.[<set_ $low>](v  as u!($size))?;
+            Ok(())
+        }
+    } };
+}
+
+macro_rules! div_quot_rem_src {
+    ( $size:expr, $quot:ident, $rem:ident, $src:ident ) => { paste::item! {
+        fn [<div_ $quot _ $rem _ $src>](exec: &mut exec::Exec) -> Result<(), EmuException> {
+            let src1 = ((exec.[<get_ $rem>]()? as u128) << $size) + exec.[<get_ $quot>]()? as u128;
+            let src2 = exec.[<get_ $src>]()? as u128;
+            if src2 == 0 { return Err(EmuException::CPUException(CPUException::DE)); }
+
+            debug!("div: {:02x}, {:02x}", src1, src2);
+            exec.[<set_ $quot>](src1.wrapping_div(src2) as u!($size))?;
+            exec.[<set_ $rem>]((src1 % src2) as u!($size))?;
+            Ok(())
+        }
+    } };
+}
+
+macro_rules! idiv_quot_rem_src {
+    ( $size:expr, $quot:ident, $rem:ident, $src:ident ) => { paste::item! {
+        fn [<idiv_ $quot _ $rem _ $src>](exec: &mut exec::Exec) -> Result<(), EmuException> {
+            let src1 = ((exec.[<get_ $rem>]()? as i128) << $size) + exec.[<get_ $quot>]()? as i128;
+            let src2 = exec.[<get_ $src>]()? as i128;
+            if src2 == 0 { return Err(EmuException::CPUException(CPUException::DE)); }
+
+            debug!("idiv: {:02x}, {:02x}", src1, src2);
+            exec.[<set_ $quot>](src1.wrapping_div(src2) as u!($size))?;
+            exec.[<set_ $rem>]((src1 % src2) as u!($size))?;
+            Ok(())
         }
     } };
 }

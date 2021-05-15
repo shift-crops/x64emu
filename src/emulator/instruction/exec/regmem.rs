@@ -148,55 +148,55 @@ impl<'a> super::Exec<'a> {
     }
 
     pub fn get_imm8(&self) -> Result<u8, EmuException> {
-        Ok(self.idata.imm as u8)
+        if let Some(v) = self.idata.imm { Ok(v as u8) } else { Err(EmuException::UnexpectedError) }
     }
 
     pub fn get_imm16(&self) -> Result<u16, EmuException> {
-        Ok(self.idata.imm as u16)
+        if let Some(v) = self.idata.imm { Ok(v as u16) } else { Err(EmuException::UnexpectedError) }
     }
 
     pub fn get_imm32(&self) -> Result<u32, EmuException> {
-        Ok(self.idata.imm as u32)
+        if let Some(v) = self.idata.imm { Ok(v as u32) } else { Err(EmuException::UnexpectedError) }
     }
 
     pub fn get_imm64(&self) -> Result<u64, EmuException> {
-        Ok(self.idata.imm as u64)
+        self.idata.imm.ok_or(EmuException::UnexpectedError)
     }
 
     pub fn get_ptr16(&self) -> Result<u16, EmuException> {
-        Ok(self.idata.ptr16)
+        self.idata.ptr16.ok_or(EmuException::UnexpectedError)
     }
 
     pub fn get_moffs8(&self) -> Result<u8, EmuException> {
-        self.ac.get_data8((SgReg::DS, self.idata.moffs))
+        self.ac.get_data8((SgReg::DS, self.idata.moffs.ok_or(EmuException::UnexpectedError)?))
     }
 
     pub fn set_moffs8(&mut self, v: u8) -> Result<(), EmuException> {
-        self.ac.set_data8((SgReg::DS, self.idata.moffs), v)
+        self.ac.set_data8((SgReg::DS, self.idata.moffs.ok_or(EmuException::UnexpectedError)?), v)
     }
 
     pub fn get_moffs16(&self) -> Result<u16, EmuException> {
-        self.ac.get_data16((SgReg::DS, self.idata.moffs))
+        self.ac.get_data16((SgReg::DS, self.idata.moffs.ok_or(EmuException::UnexpectedError)?))
     }
 
     pub fn set_moffs16(&mut self, v: u16) -> Result<(), EmuException> {
-        self.ac.set_data16((SgReg::DS, self.idata.moffs), v)
+        self.ac.set_data16((SgReg::DS, self.idata.moffs.ok_or(EmuException::UnexpectedError)?), v)
     }
 
     pub fn get_moffs32(&self) -> Result<u32, EmuException> {
-        self.ac.get_data32((SgReg::DS, self.idata.moffs))
+        self.ac.get_data32((SgReg::DS, self.idata.moffs.ok_or(EmuException::UnexpectedError)?))
     }
 
     pub fn set_moffs32(&mut self, v: u32) -> Result<(), EmuException> {
-        self.ac.set_data32((SgReg::DS, self.idata.moffs), v)
+        self.ac.set_data32((SgReg::DS, self.idata.moffs.ok_or(EmuException::UnexpectedError)?), v)
     }
 
     pub fn get_moffs64(&self) -> Result<u64, EmuException> {
-        self.ac.get_data64((SgReg::DS, self.idata.moffs))
+        self.ac.get_data64((SgReg::DS, self.idata.moffs.ok_or(EmuException::UnexpectedError)?))
     }
 
     pub fn set_moffs64(&mut self, v: u64) -> Result<(), EmuException> {
-        self.ac.set_data64((SgReg::DS, self.idata.moffs), v)
+        self.ac.set_data64((SgReg::DS, self.idata.moffs.ok_or(EmuException::UnexpectedError)?), v)
     }
 
     pub fn get_m(&self) -> Result<(SgReg, u64), EmuException> {

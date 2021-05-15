@@ -11,6 +11,14 @@ impl<'a> super::Exec<'a> {
         self.ac.set_gpreg(GpReg8::AL, v)
     }
 
+    pub fn get_ah(&self) -> Result<u8, EmuException> {
+        self.ac.get_gpreg(GpReg8::AH)
+    }
+
+    pub fn set_ah(&mut self, v: u8) -> Result<(), EmuException> {
+        self.ac.set_gpreg(GpReg8::AH, v)
+    }
+
     pub fn get_ax(&self) -> Result<u16, EmuException> {
         self.ac.get_gpreg(GpReg16::AX)
     }
@@ -27,10 +35,25 @@ impl<'a> super::Exec<'a> {
         self.ac.set_gpreg(GpReg32::EAX, v)
     }
 
+    pub fn get_cl(&self) -> Result<u8, EmuException> {
+        self.ac.get_gpreg(GpReg8::CL)
+    }
+
     pub fn get_dx(&self) -> Result<u16, EmuException> {
         self.ac.get_gpreg(GpReg16::DX)
     }
 
+    pub fn set_dx(&mut self, v: u16) -> Result<(), EmuException> {
+        self.ac.set_gpreg(GpReg16::DX, v)
+    }
+
+    pub fn get_edx(&self) -> Result<u32, EmuException> {
+        self.ac.get_gpreg(GpReg32::EDX)
+    }
+
+    pub fn set_edx(&mut self, v: u32) -> Result<(), EmuException> {
+        self.ac.set_gpreg(GpReg32::EDX, v)
+    }
     pub fn get_sreg(&mut self) -> Result<u16, EmuException> {
         Ok(self.ac.get_sgreg(SgReg::try_from(self.idata.modrm.reg as usize).unwrap())?.0)
     }

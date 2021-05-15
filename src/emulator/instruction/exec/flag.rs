@@ -69,6 +69,15 @@ impl<'a> super::Exec<'a> {
         Ok(())
     }
 
+    pub fn update_rflags_imul<T: Into<i64> + num::traits::ops::overflowing::OverflowingMul + Copy>(&mut self, v1: T, v2: T) -> Result<(), EmuException> {
+        let of = !v1.overflowing_mul(&v2).1;
+
+        let rf = &mut self.ac.core.rflags;
+        rf.set_carry(of);
+        rf.set_overflow(of);
+        Ok(())
+    }
+
     pub fn update_rflags_or<T: Into<u64> + std::ops::BitOr<Output = T> + Copy>(&mut self, v1: T, v2: T) -> Result<(), EmuException> {
         let result = v1 | v2;
         let sr = Self::check_msb(result);
