@@ -106,10 +106,10 @@ impl super::OpcodeTrait for Opcode16 {
         setop!(0x98, cbw,               OpFlags::NONE);
         setop!(0x99, cwd,               OpFlags::NONE);
         setop!(0x9a, callf_ptr16_imm16, OpFlags::PTR16 | OpFlags::IMM16);
-            
+
         setop!(0x9c, pushf,             OpFlags::NONE);
         setop!(0x9d, popf,              OpFlags::NONE);
-            
+
         // 0xa0 : mov_al_moffs8
         setop!(0xa1, mov_ax_moffs16,    OpFlags::MOFFS);
         // 0xa2 : mov_moffs8_al
@@ -126,24 +126,24 @@ impl super::OpcodeTrait for Opcode16 {
         setop!(0xad, lods_m16,          OpFlags::NONE);
         setop!(0xae, scas_m8,           OpFlags::NONE);
         setop!(0xaf, scas_m16,          OpFlags::NONE);
-            
+
         // 0xb0-0xb7 : mov_r8_imm
         for i in 0..8 {
             setop!(0xb8+i, mov_opr16_imm16,   OpFlags::IMM16);
         }
-            
+
         setop!(0xc3, ret,               OpFlags::NONE);
-            
+
         setop!(0xc7, mov_rm16_imm16,    OpFlags::MODRM | OpFlags::IMM16);
-            
+
         setop!(0xc9, leave,             OpFlags::NONE);
-            
+
         setop!(0xcb, retf,              OpFlags::NONE);
         // 0xcc : int3
         // 0xcd : int_imm8
-            
+
         setop!(0xcf, iret,              OpFlags::NONE);
-            
+
         // 0xe4 : in_al_imm8
         setop!(0xe5, in_ax_imm8,        OpFlags::IMM8);
         // 0xe6 : out_imm8_al
@@ -156,7 +156,7 @@ impl super::OpcodeTrait for Opcode16 {
         setop!(0xed, in_ax_dx,          OpFlags::NONE);
         // 0xee : out_dx_al
         setop!(0xef, out_dx_ax,         OpFlags::NONE);
-            
+
         setop!(0x0f80, jo_imm16,        OpFlags::IMM16);
         setop!(0x0f81, jno_imm16,       OpFlags::IMM16);
         setop!(0x0f82, jb_imm16,        OpFlags::IMM16);
@@ -173,12 +173,12 @@ impl super::OpcodeTrait for Opcode16 {
         setop!(0x0f8d, jnl_imm16,       OpFlags::IMM16);
         setop!(0x0f8e, jle_imm16,       OpFlags::IMM16);
         setop!(0x0f8f, jnle_imm16,      OpFlags::IMM16);
-            
+
         setop!(0x0faf, imul_r16_rm16,   OpFlags::MODRM);
 
         setop!(0x0fb6, movzx_r16_rm8,   OpFlags::MODRM);
         setop!(0x0fb7, movzx_r16_rm16,  OpFlags::MODRM);
-            
+
         setop!(0x0fbe, movsx_r16_rm8,   OpFlags::MODRM);
         setop!(0x0fbf, movsx_r16_rm16,  OpFlags::MODRM);
 
@@ -516,7 +516,7 @@ impl Opcode16 {
 
         let limit = exec.ac.get_data16((sg,adr))?;
         let base  = exec.ac.get_data32((sg,adr+2))? & ((1<<24)-1);
-        debug!("lgdt: base = {:04x}, limit = {:02x}", base, limit);
+        debug!("lgdt: base = {:06x}, limit = {:04x}", base, limit);
         exec.ac.set_gdtr(base as u64, limit)
     }
 
@@ -529,7 +529,7 @@ impl Opcode16 {
 
         let limit = exec.ac.get_data16((sg,adr))?;
         let base  = exec.ac.get_data32((sg,adr+2))? & ((1<<24)-1);
-        debug!("lidt: base = {:04x}, limit = {:02x}", base, limit);
+        debug!("lidt: base = {:06x}, limit = {:04x}", base, limit);
         exec.ac.set_idtr(base as u64, limit)
     }
 }

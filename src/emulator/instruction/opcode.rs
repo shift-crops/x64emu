@@ -53,15 +53,14 @@ impl Opcode {
         let mut opa: OpcodeArr = [ Default::default(); MAX_OPCODE];
         common::init_cmn_opcode(&mut opa);
 
-        let mut op = Self {
-            op16: opcode16::Opcode16::new(opa),
-            op32: opcode32::Opcode32::new(opa),
-            op64: opcode64::Opcode64::new(opa),
-        };
-        op.op16.init_opcode();
-        op.op32.init_opcode();
-        op.op64.init_opcode();
-        op
+        let mut op16 = opcode16::Opcode16::new(opa);
+        let mut op32 = opcode32::Opcode32::new(opa);
+        let mut op64 = opcode64::Opcode64::new(opa);
+        op16.init_opcode();
+        op32.init_opcode();
+        op64.init_opcode();
+
+        Self { op16, op32, op64, }
     }
 
     pub fn get(&self, op_size: access::AcsSize) -> &dyn OpcodeTrait {
@@ -79,6 +78,6 @@ pub(super) trait OpcodeTrait {
     fn flag(&self, opcode: u16) -> OpFlags;
 }
 
-fn undefined(_exec: &mut exec::Exec) -> Result<(), EmuException> {
-    Err(EmuException::UndefinedOpcode)
+pub fn undefined(_exec: &mut exec::Exec) -> Result<(), EmuException> {
+    Err(EmuException::CPUException(CPUException::UD))
 }

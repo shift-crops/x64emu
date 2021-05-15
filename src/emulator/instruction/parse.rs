@@ -34,10 +34,11 @@ impl Default for OverrideSize {
 #[derive(Debug, Default, Clone, Copy, PackedStruct)]
 #[packed_struct(bit_numbering="lsb0", size_bytes="1")]
 pub struct Rex {
-    #[packed_field(bits="0")] pub b:  u8,
-    #[packed_field(bits="1")] pub x:  u8,
-    #[packed_field(bits="2")] pub r:  u8,
-    #[packed_field(bits="3")] pub w:  u8,
+    #[packed_field(bits="0")] pub b:   u8,
+    #[packed_field(bits="1")] pub x:   u8,
+    #[packed_field(bits="2")] pub r:   u8,
+    #[packed_field(bits="3")] pub w:   u8,
+    #[packed_field(bits="6")] pub rex: u8,
 }
 
 #[derive(Default)]

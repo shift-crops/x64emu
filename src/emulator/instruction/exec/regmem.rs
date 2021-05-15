@@ -8,108 +8,121 @@ macro_rules! set_gpreg { ($self:expr, $type:ty, $reg:expr, $val:expr) => { $self
 
 impl<'a> super::Exec<'a> {
     pub fn get_r8(&self) -> Result<u8, EmuException> {
-        get_gpreg!(self, GpReg8, self.idata.modrm.reg)
+        if self.pdata.rex.rex == 1 {
+            get_gpreg!(self, GpReg8w, (self.pdata.rex.r << 3) + self.idata.modrm.reg)
+        } else {
+            get_gpreg!(self, GpReg8, self.idata.modrm.reg)
+        }
     }
 
     pub fn set_r8(&mut self, v: u8) -> Result<(), EmuException> {
-        set_gpreg!(self, GpReg8, self.idata.modrm.reg, v)
+        if self.pdata.rex.rex == 1 {
+            set_gpreg!(self, GpReg8w, (self.pdata.rex.r << 3) + self.idata.modrm.reg, v)
+        } else {
+            set_gpreg!(self, GpReg8, self.idata.modrm.reg, v)
+        }
     }
 
     pub fn get_rm8(&self) -> Result<u8, EmuException> {
         let modrm = self.idata.modrm;
-        let v = if modrm.mod_ == 3 {
-            get_gpreg!(self, GpReg8, modrm.rm)?
-        } else {
-            self.ac.get_data8(Self::addr_modrm(self)?)?
-        };
-        Ok(v)
+        match (modrm.mod_, self.pdata.rex.rex) {
+            (3, 0) => get_gpreg!(self, GpReg8, modrm.rm),
+            (3, _) => get_gpreg!(self, GpReg8w, (self.pdata.rex.b << 3) + modrm.rm),
+            _ => self.ac.get_data8(Self::addr_modrm(self)?),
+        }
     }
 
     pub fn set_rm8(&mut self, v: u8) -> Result<(), EmuException> {
         let modrm = self.idata.modrm;
-        if modrm.mod_ == 3 {
-            set_gpreg!(self, GpReg8, modrm.rm, v)
-        } else {
-            self.ac.set_data8(Self::addr_modrm(self)?, v)
+        match (modrm.mod_, self.pdata.rex.rex) {
+            (3, 0) => set_gpreg!(self, GpReg8, modrm.rm, v),
+            (3, _) => set_gpreg!(self, GpReg8w, (self.pdata.rex.b << 3) + modrm.rm, v),
+            _ => self.ac.set_data8(Self::addr_modrm(self)?, v),
         }
     }
 
     pub fn get_opr8(&self) -> Result<u8, EmuException> {
-        get_gpreg!(self, GpReg8, self.idata.opcode&0x7)
+        if self.pdata.rex.rex == 1 {
+            get_gpreg!(self, GpReg8w, (self.pdata.rex.b << 3) as u16 + (self.idata.opcode&0x7))
+        } else {
+            get_gpreg!(self, GpReg8, self.idata.opcode&0x7)
+        }
     }
 
     pub fn set_opr8(&mut self, v: u8) -> Result<(), EmuException> {
-        set_gpreg!(self, GpReg8, self.idata.opcode&0x7, v)
+        if self.pdata.rex.rex == 1 {
+            set_gpreg!(self, GpReg8w, (self.pdata.rex.b << 3) as u16 + (self.idata.opcode&0x7), v)
+        } else {
+            set_gpreg!(self, GpReg8, self.idata.opcode&0x7, v)
+        }
     }
 
     pub fn get_r16(&self) -> Result<u16, EmuException> {
-        get_gpreg!(self, GpReg16, self.idata.modrm.reg)
+        get_gpreg!(self, GpReg16, (self.pdata.rex.r << 3) + self.idata.modrm.reg)
     }
 
     pub fn set_r16(&mut self, v: u16) -> Result<(), EmuException> {
-        set_gpreg!(self, GpReg16, self.idata.modrm.reg, v)
+        set_gpreg!(self, GpReg16, (self.pdata.rex.r << 3) + self.idata.modrm.reg, v)
     }
 
     pub fn get_rm16(&self) -> Result<u16, EmuException> {
         let modrm = self.idata.modrm;
-        let v = if modrm.mod_ == 3 {
-            get_gpreg!(self, GpReg16, modrm.rm)?
+        if modrm.mod_ == 3 {
+            get_gpreg!(self, GpReg16, (self.pdata.rex.b << 3) + modrm.rm)
         } else {
-            self.ac.get_data16(Self::addr_modrm(self)?)?
-        };
-        Ok(v)
+            self.ac.get_data16(Self::addr_modrm(self)?)
+        }
     }
 
     pub fn set_rm16(&mut self, v: u16) -> Result<(), EmuException> {
         let modrm = self.idata.modrm;
         if modrm.mod_ == 3 {
-            set_gpreg!(self, GpReg16, modrm.rm, v)
+            set_gpreg!(self, GpReg16, (self.pdata.rex.b << 3) + modrm.rm, v)
         } else {
             self.ac.set_data16(Self::addr_modrm(self)?, v)
         }
     }
 
     pub fn get_opr16(&self) -> Result<u16, EmuException> {
-        get_gpreg!(self, GpReg16, self.idata.opcode&0x7)
+        get_gpreg!(self, GpReg16, (self.pdata.rex.b << 3) as u16 + (self.idata.opcode&0x7))
     }
 
     pub fn set_opr16(&mut self, v: u16) -> Result<(), EmuException> {
-        set_gpreg!(self, GpReg16, self.idata.opcode&0x7, v)
+        set_gpreg!(self, GpReg16, (self.pdata.rex.b << 3) as u16 + (self.idata.opcode&0x7), v)
     }
 
     pub fn get_r32(&self) -> Result<u32, EmuException> {
-        get_gpreg!(self, GpReg32, self.idata.modrm.reg)
+        get_gpreg!(self, GpReg32, (self.pdata.rex.r << 3) + self.idata.modrm.reg)
     }
 
     pub fn set_r32(&mut self, v: u32) -> Result<(), EmuException> {
-        set_gpreg!(self, GpReg32, self.idata.modrm.reg, v)
+        set_gpreg!(self, GpReg32, (self.pdata.rex.r << 3) + self.idata.modrm.reg, v)
     }
 
     pub fn get_rm32(&self) -> Result<u32, EmuException> {
         let modrm = self.idata.modrm;
-        let v = if modrm.mod_ == 3 { 
-            get_gpreg!(self, GpReg32, modrm.rm)?
+        if modrm.mod_ == 3 { 
+            get_gpreg!(self, GpReg32, (self.pdata.rex.b << 3) + modrm.rm)
         } else {
-            self.ac.get_data32(Self::addr_modrm(self)?)?
-        };
-        Ok(v)
+            self.ac.get_data32(Self::addr_modrm(self)?)
+        }
     }
 
     pub fn set_rm32(&mut self, v: u32) -> Result<(), EmuException> {
         let modrm = self.idata.modrm;
         if modrm.mod_ == 3 {
-            set_gpreg!(self, GpReg32, modrm.rm, v)
+            set_gpreg!(self, GpReg32, (self.pdata.rex.b << 3) + modrm.rm, v)
         } else {
             self.ac.set_data32(Self::addr_modrm(self)?, v)
         }
     }
 
     pub fn get_opr32(&self) -> Result<u32, EmuException> {
-        get_gpreg!(self, GpReg32, self.idata.opcode&0x7)
+        get_gpreg!(self, GpReg32, (self.pdata.rex.b << 3) as u16 + (self.idata.opcode&0x7))
     }
 
     pub fn set_opr32(&mut self, v: u32) -> Result<(), EmuException> {
-        set_gpreg!(self, GpReg32, self.idata.opcode&0x7, v)
+        set_gpreg!(self, GpReg32, (self.pdata.rex.b << 3) as u16 + (self.idata.opcode&0x7), v)
     }
 
     pub fn get_r64(&self) -> Result<u64, EmuException> {
@@ -122,12 +135,11 @@ impl<'a> super::Exec<'a> {
 
     pub fn get_rm64(&self) -> Result<u64, EmuException> {
         let modrm = self.idata.modrm;
-        let v = if modrm.mod_ == 3 { 
-            get_gpreg!(self, GpReg64, (self.pdata.rex.b << 3) + modrm.rm)?
+        if modrm.mod_ == 3 { 
+            get_gpreg!(self, GpReg64, (self.pdata.rex.b << 3) + modrm.rm)
         } else {
-            self.ac.get_data64(Self::addr_modrm(self)?)?
-        };
-        Ok(v)
+            self.ac.get_data64(Self::addr_modrm(self)?)
+        }
     }
 
     pub fn set_rm64(&mut self, v: u64) -> Result<(), EmuException> {

@@ -77,6 +77,8 @@ pub fn init_cmn_opcode(op: &mut super::OpcodeArr){
 
     setcmnop!(0x0f20, mov_r32_cr,  OpFlags::MODRM);
     setcmnop!(0x0f22, mov_cr_r32,  OpFlags::MODRM);
+    setcmnop!(0x0f30, wrmsr,       OpFlags::NONE);
+    setcmnop!(0x0f32, rdmsr,       OpFlags::NONE);
     setcmnop!(0x0f90, seto_rm8,    OpFlags::MODRM);
     setcmnop!(0x0f91, setno_rm8,   OpFlags::MODRM);
     setcmnop!(0x0f92, setb_rm8,    OpFlags::MODRM);
@@ -184,8 +186,11 @@ fn std(exec: &mut exec::Exec) -> Result<(), EmuException> { exec.ac.core.rflags.
 
 fn hlt(_exec: &mut exec::Exec) -> Result<(), EmuException> { Err(EmuException::Halt) }
 
-fn mov_r32_cr(exec: &mut exec::Exec) -> Result<(), EmuException> { exec.cr_to_r32() }
-fn mov_cr_r32(exec: &mut exec::Exec) -> Result<(), EmuException> { exec.cr_from_r32() }
+fn mov_r32_cr(exec: &mut exec::Exec) -> Result<(), EmuException> { exec.cr_to_reg() }
+fn mov_cr_r32(exec: &mut exec::Exec) -> Result<(), EmuException> { exec.cr_from_reg() }
+
+fn wrmsr(exec: &mut exec::Exec) -> Result<(), EmuException> { exec.msr_from_reg() }
+fn rdmsr(exec: &mut exec::Exec) -> Result<(), EmuException> { exec.msr_to_reg() }
 
 setcc_dst!(8, o, rm8);
 setcc_dst!(8, b, rm8);
