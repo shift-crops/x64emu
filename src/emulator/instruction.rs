@@ -29,7 +29,7 @@ impl Instruction {
     pub fn opad_size(size: &access::OpAdSize, pdata: &parse::PrefixData) -> access::OpAdSize {
         let (mut op, mut ad) = (size.op, size.ad);
 
-        if pdata.rex.w == 1 { 
+        if if let Some(rex) = pdata.rex { rex.w } else { 0 } == 1 {
             op = access::AcsSize::BIT64;
         }
         if pdata.size.contains(parse::OverrideSize::OP) {

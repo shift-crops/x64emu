@@ -15,7 +15,7 @@ pub(in crate::emulator) struct PrefixData {
     pub(super) segment: Option<SgReg>,
     pub(super) repeat: Option<Rep>,
     pub(super) size: OverrideSize,
-    pub(super) rex: Rex,
+    pub(super) rex: Option<Rex>,
 }
 
 pub(in crate::emulator) enum Rep { REPZ, REPNZ }
@@ -38,7 +38,6 @@ pub struct Rex {
     #[packed_field(bits="1")] pub x:   u8,
     #[packed_field(bits="2")] pub r:   u8,
     #[packed_field(bits="3")] pub w:   u8,
-    #[packed_field(bits="6")] pub rex: u8,
 }
 
 #[derive(Default)]
@@ -145,9 +144,10 @@ impl ParseInstr {
         let code = ac.get_code8(self.instr.len)?;
         if (code >> 4) != 4 { return Ok(()); }
 
-        self.prefix.rex = Rex::unpack(&code.to_be_bytes()).unwrap();
+        let rex = Rex::unpack(&code.to_be_bytes()).unwrap();
+        debug!("{:} ", rex);
+        self.prefix.rex = Some(rex);
         self.instr.len += 1;
-        debug!("{:} ", self.prefix.rex);
         Ok(())
     }
 
