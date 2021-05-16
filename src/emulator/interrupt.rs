@@ -49,7 +49,7 @@ fn interrupt_vector(ac: &mut Access, ivec: u8, hw: bool) -> Result<(), EmuExcept
 
             ac.save_regs(AcsSize::BIT16, None)?;
             ac.load_segment(SgReg::CS, ivt.segment)?;
-            ac.set_ip(ivt.offset)?;
+            ac.set_ip(ivt.offset as u64)?;
         },
         CpuMode::Protected | CpuMode::Long => {
             let cpl = ac.get_cpl()?;
@@ -67,7 +67,7 @@ fn interrupt_vector(ac: &mut Access, ivec: u8, hw: bool) -> Result<(), EmuExcept
                     ac.save_regs(gatesize, if rpl < cpl { Some(rpl) } else { None })?;
                     ac.core.rflags.set_interrupt(false);
                     ac.set_sgreg(SgReg::CS, sel, cache)?;
-                    ac.set_ip(new_ip)?;
+                    ac.set_ip(new_ip as u64)?;
                 },
                 Some(DescType::System(SysDescType::Trap(gate))) => {
                     let (new_ip, dpl) = (((gate.offset_h as u32) << 16) + gate.offset_l as u32, gate.DPL);
@@ -81,7 +81,7 @@ fn interrupt_vector(ac: &mut Access, ivec: u8, hw: bool) -> Result<(), EmuExcept
 
                     ac.save_regs(gatesize, if rpl < cpl { Some(rpl) } else { None })?;
                     ac.set_sgreg(SgReg::CS, sel, cache)?;
-                    ac.set_ip(new_ip)?;
+                    ac.set_ip(new_ip as u64)?;
                 },
                 Some(DescType::System(SysDescType::Task(gate))) => {
                     if gate.DPL < cpl { return Err(EmuException::CPUException(CPUException::GP(None))); }

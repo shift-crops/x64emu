@@ -198,7 +198,6 @@ impl super::OpcodeTrait for Opcode64 {
     }
 
     fn exec(&self, exec: &mut exec::Exec) -> Result<(), EmuException> {
-        exec.ac.update_ip(exec.idata.len as i64)?;
         (self.0[exec.idata.opcode as usize].func)(exec)
     }
     fn flag(&self, opcode: u16) -> OpFlags { self.0[opcode as usize].flag }

@@ -22,6 +22,7 @@ impl Instruction {
         parse.parse_opcode(ac)?;
         parse.parse_oprand(ac, op.flag(parse.instr.opcode), size.ad)?;
 
+        ac.update_ip(parse.instr.len as i64)?;
         op.exec(&mut exec::Exec::new(ac, &parse))?;
         if ac.core.rflags.is_trap() { Err(EmuException::CPUException(CPUException::DB)) } else { Ok(()) }
     }
@@ -29,7 +30,7 @@ impl Instruction {
     pub fn opad_size(size: &access::OpAdSize, pdata: &parse::PrefixData) -> access::OpAdSize {
         let (mut op, mut ad) = (size.op, size.ad);
 
-        if if let Some(rex) = pdata.rex { rex.w } else { 0 } == 1 {
+        if let Some(parse::Rex { w: 1, .. }) = pdata.rex {
             op = access::AcsSize::BIT64;
         }
         if pdata.size.contains(parse::OverrideSize::OP) {

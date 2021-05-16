@@ -301,7 +301,7 @@ macro_rules! scas_src_dst {
 macro_rules! ret {
     ( $size:expr ) => { paste::item! {
         fn ret(exec: &mut exec::Exec) -> Result<(), EmuException> {
-            let ret = exec.ac.[<pop_u $size>]()? as u!($size);
+            let ret = exec.ac.[<pop_u $size>]()? as u64;
             debug!("ret: {:04x}", ret);
             exec.ac.set_ip(ret)
         }
@@ -349,10 +349,10 @@ macro_rules! out_port_reg {
 macro_rules! call_rel {
     ( $size:expr, $rel:ident ) => { paste::item! {
         fn [<call_ $rel>](exec: &mut exec::Exec) -> Result<(), EmuException> {
-            let offs = exec.[<get_ $rel>]()? as i!($size);
+            let offs = exec.[<get_ $rel>]()? as i64;
             let rip = exec.ac.get_ip()?;
-            debug!("call: 0x{:04x}", rip as i!($size) + offs);
-            exec.ac.[<push_u $size>](rip)?;
+            debug!("call: 0x{:04x}", rip as i64 + offs);
+            exec.ac.[<push_u $size>](rip as u!($size))?;
             exec.ac.update_ip(offs)
         }
     } };

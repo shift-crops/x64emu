@@ -77,7 +77,7 @@ macro_rules! repeat_reg {
                 _ => true,
                 }
             }
-            if rep { self.ac.update_ip(-(self.idata.len as i16))?; }
+            if rep { self.ac.update_ip(-(self.idata.len as i64))?; }
             Ok(())
         }
     } };

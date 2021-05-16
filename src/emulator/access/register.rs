@@ -63,30 +63,6 @@ impl GpRegAccess<GpReg8w, u8, i8> for super::Access {
     fn update_gpreg(&mut self, r: GpReg8w, v: i8) -> Result<(), EmuException> { self.core.gpregs.update8l(r, v); Ok(()) }
 }
 
-pub(in crate::emulator) trait IpAccess<T, U> {
-    fn get_ip(&self) -> Result<T, EmuException>;
-    fn set_ip(&mut self, v: T) -> Result<(), EmuException>;
-    fn update_ip(&mut self, v: U) -> Result<(), EmuException>;
-}
-
-impl IpAccess<u16, i16> for super::Access {
-    fn get_ip(&self) -> Result<u16, EmuException> { Ok(self.core.ip.get_ip()) }
-    fn set_ip(&mut self, v: u16) -> Result<(), EmuException> { self.core.ip.set_ip(v); Ok(()) }
-    fn update_ip(&mut self, v: i16) -> Result<(), EmuException> { self.core.ip.update_ip(v); Ok(()) }
-}
-
-impl IpAccess<u32, i32> for super::Access {
-    fn get_ip(&self) -> Result<u32, EmuException> { Ok(self.core.ip.get_eip()) }
-    fn set_ip(&mut self, v: u32) -> Result<(), EmuException> { self.core.ip.set_eip(v); Ok(()) }
-    fn update_ip(&mut self, v: i32) -> Result<(), EmuException> { self.core.ip.update_eip(v); Ok(()) }
-}
-
-impl IpAccess<u64, i64> for super::Access {
-    fn get_ip(&self) -> Result<u64, EmuException> { Ok(self.core.ip.get_rip()) }
-    fn set_ip(&mut self, v: u64) -> Result<(), EmuException> { self.core.ip.set_rip(v); Ok(()) }
-    fn update_ip(&mut self, v: i64) -> Result<(), EmuException> { self.core.ip.update_rip(v); Ok(()) }
-}
-
 pub(in crate::emulator) trait CregAccess<T> {
     fn get_creg(&self, r: usize) -> Result<T, EmuException>;
     fn set_creg(&mut self, r: usize, v: T) -> Result<(), EmuException>;
@@ -121,6 +97,35 @@ impl CregAccess<u64> for super::Access {
 }
 
 impl super::Access {
+    pub fn get_ip(&self) -> Result<u64, EmuException> {
+        let ip = &self.core.ip;
+        Ok(match self.oasz.ad {
+            super::AcsSize::BIT16 => ip.get_ip() as u64,
+            super::AcsSize::BIT32 => ip.get_eip() as u64,
+            super::AcsSize::BIT64 => ip.get_rip(),
+        })
+    }
+
+    pub fn set_ip(&mut self, v: u64) -> Result<(), EmuException> {
+        let ip = &mut self.core.ip;
+        match self.oasz.ad {
+            super::AcsSize::BIT16 => ip.set_ip(v as u16),
+            super::AcsSize::BIT32 => ip.set_eip(v as u32),
+            super::AcsSize::BIT64 => ip.set_rip(v),
+        }
+        Ok(())
+    }
+
+    pub fn update_ip(&mut self, v: i64) -> Result<(), EmuException> {
+        let ip = &mut self.core.ip;
+        match self.oasz.ad {
+            super::AcsSize::BIT16 => ip.update_ip(v as i16),
+            super::AcsSize::BIT32 => ip.update_eip(v as i32),
+            super::AcsSize::BIT64 => ip.update_rip(v),
+        }
+        Ok(())
+    }
+
     pub fn get_rflags(&self) -> Result<u64, EmuException> { Ok(self.core.rflags.to_u64()) }
     pub fn set_rflags(&mut self, v: u64) -> Result<(), EmuException> { self.core.rflags.from_u64(v); Ok(()) }
 
