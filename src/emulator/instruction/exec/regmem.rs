@@ -244,15 +244,14 @@ impl<'a> super::Exec<'a> {
 
         match self.idata.adsize {
             access::AcsSize::BIT16 => {
-                addr += match mod_ {
-                    1|2 => self.idata.disp as u64,
-                    _ => 0,
-                };
+                if let 1..=2 = mod_ {
+                    addr += self.idata.disp as u64;
+                }
 
-                addr += match (rm, mod_) {
-                    (6, 0)                   => self.idata.disp as u64,
-                    (0, _) | (1, _) | (7, _) => self.ac.get_gpreg(GpReg16::BX)? as u64,
-                    (2, _) | (3, _) | (6, _) => {
+                addr += match rm {
+                    6 if mod_ == 0 => self.idata.disp as u64,
+                    0|1|7          => self.ac.get_gpreg(GpReg16::BX)? as u64,
+                    2|3|6          => {
                         segment = Some(SgReg::SS);
                         self.ac.get_gpreg(GpReg16::BP)? as u64
                     }
@@ -266,14 +265,13 @@ impl<'a> super::Exec<'a> {
                 };
             },
             access::AcsSize::BIT32 => {
-                addr += match mod_ {
-                    1|2 => self.idata.disp as u64,
-                    _ => 0,
-                };
+                if let 1..=2 = mod_ {
+                    addr += self.idata.disp as u64;
+                }
 
                 let sgad = match (rm, mod_) {
                     (4, _) => self.addr_sib()?,
-                    (5, 0) => (None, self.idata.disp as u64),
+                    (5, 0) if mod_ == 0 => (None, self.idata.disp as u64),
                     (5, _) => (Some(SgReg::SS), self.ac.get_gpreg(GpReg32::EBP)? as u64),
                     _      => (None, get_gpreg!(self, GpReg32, rm as usize)? as u64),
                 };
@@ -283,10 +281,9 @@ impl<'a> super::Exec<'a> {
             access::AcsSize::BIT64 => {
                 let b = if let Some(rex) = self.pdata.rex { rex.b << 3 } else { 0 };
 
-                addr += match mod_ {
-                    1|2 => self.idata.disp as u64,
-                    _ => 0,
-                };
+                if let 1..=2 = mod_ {
+                    addr += self.idata.disp as u64;
+                }
 
                 let sgad = match (rm, mod_, b) {
                     (4, _, _) => self.addr_sib()?,
