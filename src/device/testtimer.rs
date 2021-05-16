@@ -26,8 +26,8 @@ impl TestTimer {
 
     fn start_timer(&mut self) {
         let interval = self.reg as u64;
-        let irq = super::IReq::clone(&self.irq);
-        let running = Arc::clone(&self.running);
+        let irq = self.irq.clone();
+        let running = self.running.clone();
         running.store(true, Ordering::Relaxed);
 
         let (tx, rx) = mpsc::channel();

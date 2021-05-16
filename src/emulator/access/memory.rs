@@ -562,7 +562,7 @@ fn page_table_test() {
 #[test]
 fn page_walk_legacy_test() {
     let hw = hardware::Hardware::new(0x2000);
-    let dev = device::Device::new(std::sync::Arc::clone(&hw.mem));
+    let (dev, _) = device::Device::new();
     let mut ac = super::Access::new(hw, dev);
 
     ac.pgmd = Some(super::PagingMode::Legacy);
@@ -596,7 +596,7 @@ fn page_walk_legacy_test() {
 #[test]
 fn page_walk_pae_test() {
     let hw = hardware::Hardware::new(0x3000);
-    let dev = device::Device::new(std::sync::Arc::clone(&hw.mem));
+    let (dev, _) = device::Device::new();
     let mut ac = super::Access::new(hw, dev);
 
     ac.pgmd = Some(super::PagingMode::LegacyPAE);
@@ -634,7 +634,7 @@ fn page_walk_pae_test() {
 #[test]
 fn page_walk_ia32e4l_test() {
     let hw = hardware::Hardware::new(0x5000);
-    let dev = device::Device::new(std::sync::Arc::clone(&hw.mem));
+    let (dev, _) = device::Device::new();
     let mut ac = super::Access::new(hw, dev);
 
     ac.pgmd = Some(super::PagingMode::Ia32e4Lv);
@@ -689,7 +689,7 @@ fn page_walk_ia32e4l_test() {
 #[test]
 fn page_walk_ia32e5l_test() {
     let hw = hardware::Hardware::new(0x6000);
-    let dev = device::Device::new(std::sync::Arc::clone(&hw.mem));
+    let (dev, _) = device::Device::new();
     let mut ac = super::Access::new(hw, dev);
 
     ac.pgmd = Some(super::PagingMode::Ia32e5Lv);
@@ -750,7 +750,7 @@ fn page_walk_ia32e5l_test() {
 #[should_panic]
 fn page_walk_test_panic() {
     let hw = hardware::Hardware::new(0x1000);
-    let dev = device::Device::new(std::sync::Arc::clone(&hw.mem));
+    let (dev, _) = device::Device::new();
     let mut ac = super::Access::new(hw, dev);
 
     ac.pgmd = Some(super::PagingMode::Legacy);
@@ -763,7 +763,7 @@ fn page_walk_test_panic() {
 #[test]
 fn real_mem_test() {
     let hw = hardware::Hardware::new(0x1000);
-    let dev = device::Device::new(std::sync::Arc::clone(&hw.mem));
+    let (dev, _) = device::Device::new();
     let mut ac = super::Access::new(hw, dev);
 
     ac.set_data32((SgReg::DS, 0x10), 0xdeadbeef).unwrap();

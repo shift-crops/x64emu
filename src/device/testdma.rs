@@ -18,7 +18,7 @@ impl TestDMA {
             raw: [0; 0x10],
         }));
 
-        (DMACtrl::new(Rc::clone(&dma)), DMAAddr::new(Rc::clone(&dma)))
+        (DMACtrl(dma.clone()), DMAAddr(dma.clone()))
     }
 
     fn get_src(&self) -> u64 {
@@ -31,12 +31,6 @@ impl TestDMA {
 }
 
 pub struct DMACtrl(Rc<RefCell<TestDMA>>);
-
-impl DMACtrl {
-    pub fn new(dma: Rc<RefCell<TestDMA>>) -> Self {
-        Self(dma)
-    }
-}
 
 impl super::PortIO for DMACtrl {
     fn in8(&self, _addr: u16) -> u8 {
@@ -56,12 +50,6 @@ impl super::PortIO for DMACtrl {
 }
 
 pub struct DMAAddr(Rc<RefCell<TestDMA>>);
-
-impl DMAAddr {
-    pub fn new(dma: Rc<RefCell<TestDMA>>) -> Self {
-        Self(dma)
-    }
-}
 
 impl super::MemoryIO for DMAAddr {
     fn read8(&self, ofs: u64) -> u8 {

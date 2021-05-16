@@ -28,7 +28,7 @@ fn exec_test() {
     use crate::emulator::access::register::*;
 
     let hw = hardware::Hardware::new(0x1000);
-    let dev = device::Device::new(std::sync::Arc::clone(&hw.mem));
+    let (dev, _) = device::Device::new();
     let mut ac = super::access::Access::new(hw, dev);
     let parse: parse::ParseInstr = Default::default();
 
