@@ -16,6 +16,13 @@ description = "Test x64emu"
 category = "Test"
 command = "cargo"
 args = ["test", "--all-features", "-${@}"]
+dependencies = ["bios", "sample"]
+
+[tasks.sample]
+description = "Sample kernel"
+category = "Build"
+command = "make"
+args = ["-C", "${CARGO_MAKE_WORKSPACE_WORKING_DIRECTORY}/tests/kernel"]
 
 [tasks.clean]
 category = "Clean"
