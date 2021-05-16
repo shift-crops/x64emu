@@ -122,7 +122,7 @@ impl Device {
         memory_io_map.push((0x1000..0x1000+0x10, &mut tst_dma_adr));
 
         loop {
-            let req = req_rx.recv().unwrap();
+            let req = if let Ok(r) = req_rx.recv() { r } else { break; };
             let res = match req.ty {
                 IOReqType::PortIO(addr) => {
                     let mut dev: Option<&mut dyn PortIO> = None;

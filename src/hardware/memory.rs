@@ -33,6 +33,7 @@ impl Memory {
             unsafe{ libc::memcpy(dst, slice.as_ptr() as *const c_void, len); }
             Ok(len)
         } else {
+            unsafe{ libc::memset(dst, 0, len); }
             Err(MemoryError::OutOfRange(src_addr+len))
         }
     }

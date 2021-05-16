@@ -21,53 +21,53 @@ impl super::OpcodeTrait for Opcode32 {
         // 0x02 : add_r8_rm8
         setop!(0x03, add_r32_rm32,  OpFlags::MODRM);
         // 0x04 : add_al_imm8
-        setop!(0x05, add_eax_imm32,  OpFlags::IMM32);
+        setop!(0x05, add_eax_imm32, OpFlags::IMM32);
         // 0x08 : or_rm8_r8
         setop!(0x09, or_rm32_r32,   OpFlags::MODRM);
         // 0x0a : or_r8_rm8
         setop!(0x0b, or_r32_rm32,   OpFlags::MODRM);
         // 0x0c : or_al_imm8
-        setop!(0x0d, or_eax_imm32,   OpFlags::IMM32);
+        setop!(0x0d, or_eax_imm32,  OpFlags::IMM32);
 
         // 0x10 : adc_rm8_r8
         setop!(0x11, adc_rm32_r32,  OpFlags::MODRM);
         // 0x12 : adc_r8_rm8
         setop!(0x13, adc_r32_rm32,  OpFlags::MODRM);
         // 0x14 : adc_al_imm8
-        setop!(0x15, adc_eax_imm32,  OpFlags::IMM32);
+        setop!(0x15, adc_eax_imm32, OpFlags::IMM32);
 
         // 0x18 : sbb_rm8_r8
         setop!(0x19, sbb_rm32_r32,  OpFlags::MODRM);
         // 0x1a : sbb_r8_rm8
         setop!(0x1b, sbb_r32_rm32,  OpFlags::MODRM);
         // 0x1c : sbb_al_imm8
-        setop!(0x1d, sbb_eax_imm32,  OpFlags::IMM32);
+        setop!(0x1d, sbb_eax_imm32, OpFlags::IMM32);
 
         // 0x20 : and_rm8_r8
         setop!(0x21, and_rm32_r32,  OpFlags::MODRM);
         // 0x22 : and_r8_rm8
         setop!(0x23, and_r32_rm32,  OpFlags::MODRM);
         // 0x24 : and_al_imm8
-        setop!(0x25, and_eax_imm32,  OpFlags::IMM32);
+        setop!(0x25, and_eax_imm32, OpFlags::IMM32);
         // 0x28 : sub_rm8_r8
         setop!(0x29, sub_rm32_r32,  OpFlags::MODRM);
         // 0x2a : sub_r8_rm8
         setop!(0x2b, sub_r32_rm32,  OpFlags::MODRM);
         // 0x2c : sub_al_imm8
-        setop!(0x2d, sub_eax_imm32,  OpFlags::IMM32);
+        setop!(0x2d, sub_eax_imm32, OpFlags::IMM32);
 
         // 0x30 : xor_rm8_r8
         setop!(0x31, xor_rm32_r32,  OpFlags::MODRM);
         // 0x32 : xor_r8_rm8
         setop!(0x33, xor_r32_rm32,  OpFlags::MODRM);
         // 0x34 : xor_al_imm8
-        setop!(0x35, xor_eax_imm32,  OpFlags::IMM32);
+        setop!(0x35, xor_eax_imm32, OpFlags::IMM32);
         // 0x38 : cmp_rm8_r8
         setop!(0x39, cmp_rm32_r32,  OpFlags::MODRM);
         // 0x3a : cmp_r8_rm8
         setop!(0x3b, cmp_r32_rm32,  OpFlags::MODRM);
         // 0x3c : cmp_al_imm8
-        setop!(0x3d, cmp_eax_imm32,  OpFlags::IMM32);
+        setop!(0x3d, cmp_eax_imm32, OpFlags::IMM32);
 
         for i in 0..8 {
             setop!(0x40+i, inc_opr32,   OpFlags::NONE);
@@ -103,60 +103,60 @@ impl super::OpcodeTrait for Opcode32 {
         for i in 0..8 {
             setop!(0x90+i, xchg_eax_opr32,     OpFlags::NONE);
         }
-        setop!(0x98, cbw,               OpFlags::NONE);
-        setop!(0x99, cwd,               OpFlags::NONE);
+        setop!(0x98, cwde,              OpFlags::NONE);
+        setop!(0x99, cdq,               OpFlags::NONE);
         setop!(0x9a, callf_ptr16_imm32, OpFlags::PTR16 | OpFlags::IMM32);
-            
+
         setop!(0x9c, pushf,             OpFlags::NONE);
         setop!(0x9d, popf,              OpFlags::NONE);
-            
+
         // 0xa0 : mov_al_moffs8
-        setop!(0xa1, mov_eax_moffs32,    OpFlags::MOFFS);
+        setop!(0xa1, mov_eax_moffs32,   OpFlags::MOFFS);
         // 0xa2 : mov_moffs8_al
-        setop!(0xa3, mov_moffs32_eax,    OpFlags::MOFFS);
+        setop!(0xa3, mov_moffs32_eax,   OpFlags::MOFFS);
         setop!(0xa4, movs_m8,           OpFlags::NONE);
         setop!(0xa5, movs_m32,          OpFlags::NONE);
         setop!(0xa6, cmps_m8,           OpFlags::NONE);
         setop!(0xa7, cmps_m32,          OpFlags::NONE);
         // 0xa8 : test_al_imm8
-        setop!(0xa9, test_eax_imm32,     OpFlags::IMM32);
+        setop!(0xa9, test_eax_imm32,    OpFlags::IMM32);
         setop!(0xaa, stos_m8,           OpFlags::NONE);
         setop!(0xab, stos_m32,          OpFlags::NONE);
         setop!(0xac, lods_m8,           OpFlags::NONE);
         setop!(0xad, lods_m32,          OpFlags::NONE);
         setop!(0xae, scas_m8,           OpFlags::NONE);
         setop!(0xaf, scas_m32,          OpFlags::NONE);
-            
+
         // 0xb0-0xb7 : mov_r8_imm
         for i in 0..8 {
             setop!(0xb8+i, mov_opr32_imm32,   OpFlags::IMM32);
         }
-            
+
         setop!(0xc3, ret,               OpFlags::NONE);
-            
+
         setop!(0xc7, mov_rm32_imm32,    OpFlags::MODRM | OpFlags::IMM32);
-            
+
         setop!(0xc9, leave,             OpFlags::NONE);
-            
+
         setop!(0xcb, retf,              OpFlags::NONE);
         // 0xcc : int3
         // 0xcd : int_imm8
-            
+
         setop!(0xcf, iret,              OpFlags::NONE);
-            
+
         // 0xe4 : in_al_imm8
-        setop!(0xe5, in_eax_imm8,        OpFlags::IMM8);
+        setop!(0xe5, in_eax_imm8,       OpFlags::IMM8);
         // 0xe6 : out_imm8_al
-        setop!(0xe7, out_imm8_eax,       OpFlags::IMM8);
+        setop!(0xe7, out_imm8_eax,      OpFlags::IMM8);
         setop!(0xe8, call_imm32,        OpFlags::IMM32);
         setop!(0xe9, jmp_imm32,         OpFlags::IMM32);
         setop!(0xea, jmpf_ptr16_imm32,  OpFlags::PTR16 | OpFlags::IMM32);
         // 0xeb : jmp_imm8
         // 0xec : in_al_dx
-        setop!(0xed, in_eax_dx,          OpFlags::NONE);
+        setop!(0xed, in_eax_dx,         OpFlags::NONE);
         // 0xee : out_dx_al
-        setop!(0xef, out_dx_eax,         OpFlags::NONE);
-            
+        setop!(0xef, out_dx_eax,        OpFlags::NONE);
+
         setop!(0x0f80, jo_imm32,        OpFlags::IMM32);
         setop!(0x0f81, jno_imm32,       OpFlags::IMM32);
         setop!(0x0f82, jb_imm32,        OpFlags::IMM32);
@@ -173,34 +173,32 @@ impl super::OpcodeTrait for Opcode32 {
         setop!(0x0f8d, jnl_imm32,       OpFlags::IMM32);
         setop!(0x0f8e, jle_imm32,       OpFlags::IMM32);
         setop!(0x0f8f, jnle_imm32,      OpFlags::IMM32);
-            
+
         setop!(0x0faf, imul_r32_rm32,   OpFlags::MODRM);
 
         setop!(0x0fb6, movzx_r32_rm8,   OpFlags::MODRM);
         setop!(0x0fb7, movzx_r32_rm32,  OpFlags::MODRM);
-            
+
         setop!(0x0fbe, movsx_r32_rm8,   OpFlags::MODRM);
         setop!(0x0fbf, movsx_r32_rm32,  OpFlags::MODRM);
 
         // 0x80 : code_80
         setop!(0x81, code_81, OpFlags::MODRM | OpFlags::IMM32);
-        // 0x82 : code_82
+        setop!(0x82, code_82, OpFlags::MODRM | OpFlags::IMM8);
         setop!(0x83, code_83, OpFlags::MODRM | OpFlags::IMM8);
-
         // 0xc0 : code_c0
         setop!(0xc1, code_c1, OpFlags::MODRM | OpFlags::IMM8);
-        /*
+        // 0xd2 : code_d2
         setop!(0xd3, code_d3, OpFlags::MODRM);
-        setop!(0xf7, code_f7, OpFlags::MODRM);
+        // 0xf6 : code_f6
+        setop!(0xf7, code_f7, OpFlags::MODRM | OpFlags::IMM32);
+        // 0xfe : code_fe
         setop!(0xff, code_ff, OpFlags::MODRM);
-        */
         // 0x0f00 : code_0f00
         setop!(0x0f01, code_0f01, OpFlags::MODRM);
-
     }
 
     fn exec(&self, exec: &mut exec::Exec) -> Result<(), EmuException> {
-        exec.ac.update_ip(exec.idata.len as i32)?;
         (self.0[exec.idata.opcode as usize].func)(exec)
     }
     fn flag(&self, opcode: u16) -> OpFlags { self.0[opcode as usize].flag }
@@ -239,8 +237,8 @@ impl Opcode32 {
     cmp_dst_src!(32, r32, rm32);
     cmp_dst_src!(32, eax, imm32);
 
-    inc_opr!(32);
-    dec_opr!(32);
+    inc_dst!(opr32);
+    dec_dst!(opr32);
     push_src!(32, opr32);
     pop_dst!(32, opr32);
 
@@ -285,12 +283,12 @@ impl Opcode32 {
 
     xchg_dst_src!(32, eax, opr32);
 
-    fn cbw(exec: &mut exec::Exec) -> Result<(), EmuException> {
-        let al = exec.ac.get_gpreg(GpReg8::AL)? as i8;
-        exec.ac.set_gpreg(GpReg32::EAX, al as u32)
+    fn cwde(exec: &mut exec::Exec) -> Result<(), EmuException> {
+        let ax = exec.ac.get_gpreg(GpReg16::AX)? as i16;
+        exec.ac.set_gpreg(GpReg32::EAX, ax as u32)
     }
 
-    fn cwd(exec: &mut exec::Exec) -> Result<(), EmuException> {
+    fn cdq(exec: &mut exec::Exec) -> Result<(), EmuException> {
         let eax = exec.ac.get_gpreg(GpReg32::EAX)? as i32;
         exec.ac.set_gpreg(GpReg32::EDX, if eax < 0 { u32::MAX } else { 0 })
     }
@@ -325,7 +323,7 @@ impl Opcode32 {
         let ebp = exec.ac.get_gpreg(GpReg32::EBP)?;
         exec.ac.set_gpreg(GpReg32::ESP, ebp)?;
         let new_ebp = exec.ac.pop_u32()?;
-        debug!("leave: esp <- 0x{:04x}, ebp <- 0x{:04x}", ebp, new_ebp);
+        debug!("leave: esp <- 0x{:08x}, ebp <- 0x{:08x}", ebp, new_ebp);
         exec.ac.set_gpreg(GpReg32::EBP, new_ebp)
     }
 
@@ -358,7 +356,7 @@ impl Opcode32 {
     movsx_dst_src!(32, r32, 32, rm32);
 
     fn code_81(exec: &mut exec::Exec) -> Result<(), EmuException> {
-        match exec.idata.modrm.reg as u32 {
+        match exec.idata.modrm.reg as u8 {
             0 => Opcode32::add_rm32_imm32(exec)?,
             1 => Opcode32::or_rm32_imm32(exec)?,
             2 => Opcode32::adc_rm32_imm32(exec)?,
@@ -381,8 +379,12 @@ impl Opcode32 {
     xor_dst_src!(32, rm32, imm32);
     cmp_dst_src!(32, rm32, imm32);
 
+    fn code_82(exec: &mut exec::Exec) -> Result<(), EmuException> {
+        super::common::code_82(exec)
+    }
+
     fn code_83(exec: &mut exec::Exec) -> Result<(), EmuException> {
-        match exec.idata.modrm.reg as u32 {
+        match exec.idata.modrm.reg as u8 {
             0 => Opcode32::add_rm32_imm8(exec)?,
             1 => Opcode32::or_rm32_imm8(exec)?,
             2 => Opcode32::adc_rm32_imm8(exec)?,
@@ -433,8 +435,70 @@ impl Opcode32 {
     sal_dst_src!(32, rm32, imm8);
     sar_dst_src!(32, rm32, imm8);
 
+    fn code_d3(exec: &mut exec::Exec) -> Result<(), EmuException> {
+        match exec.idata.modrm.reg as u8 {
+            /*
+            0 => Opcode32::rol_rm32_cl(exec)?,
+            1 => Opcode32::ror_rm32_cl(exec)?,
+            2 => Opcode32::rcl_rm32_cl(exec)?,
+            3 => Opcode32::rcr_rm32_cl(exec)?,
+            */
+            4 => Opcode32::shl_rm32_cl(exec)?,
+            5 => Opcode32::shr_rm32_cl(exec)?,
+            6 => Opcode32::sal_rm32_cl(exec)?,
+            7 => Opcode32::sar_rm32_cl(exec)?,
+            _ => { return Err(EmuException::UnexpectedError); },
+        }
+        Ok(())
+    }
+
+    /*
+    rol_dst_src!(32, rm32, cl);
+    ror_dst_src!(32, rm32, cl);
+    rcl_dst_src!(32, rm32, cl);
+    rcr_dst_src!(32, rm32, cl);
+    */
+    shl_dst_src!(32, rm32, cl);
+    shr_dst_src!(32, rm32, cl);
+    sal_dst_src!(32, rm32, cl);
+    sar_dst_src!(32, rm32, cl);
+
+    fn code_f7(exec: &mut exec::Exec) -> Result<(), EmuException> {
+        let back = match exec.idata.modrm.reg as u8 {
+            0 => { Opcode32::test_rm32_imm32(exec)?; 0},
+            2 => { Opcode32::not_rm32(exec)?; -4},
+            3 => { Opcode32::neg_rm32(exec)?; -4},
+            4 => { Opcode32::mul_edx_eax_rm32(exec)?; -4},
+            5 => { Opcode32::imul_edx_eax_rm32(exec)?; -4},
+            6 => { Opcode32::div_eax_edx_rm32(exec)?; -4},
+            7 => { Opcode32::idiv_eax_edx_rm32(exec)?; -4},
+            _ => { return Err(EmuException::UnexpectedError); },
+        };
+        exec.ac.update_ip(back)
+    }
+
+    test_dst_src!(32, rm32, imm32);
+    not_dst!(32, rm32);
+    neg_dst!(32, rm32);
+    mul_high_low_src!(32, edx, eax, rm32);
+    imul_high_low_src!(32, edx, eax, rm32);
+    div_quot_rem_src!(32, eax, edx, rm32);
+    idiv_quot_rem_src!(32, eax, edx, rm32);
+
+    fn code_ff(exec: &mut exec::Exec) -> Result<(), EmuException> {
+        match exec.idata.modrm.reg as u8 {
+            0 => Opcode32::inc_rm32(exec)?,
+            1 => Opcode32::dec_rm32(exec)?,
+            _ => { return Err(EmuException::UnexpectedError); },
+        }
+        Ok(())
+    }
+
+    inc_dst!(rm32);
+    dec_dst!(rm32);
+
     fn code_0f01(exec: &mut exec::Exec) -> Result<(), EmuException> {
-        match exec.idata.modrm.reg as u32 {
+        match exec.idata.modrm.reg as u8 {
             2 => Opcode32::lgdt_m16_32(exec)?,
             3 => Opcode32::lidt_m16_32(exec)?,
             _ => { return Err(EmuException::NotImplementedOpcode); },
@@ -445,18 +509,26 @@ impl Opcode32 {
     fn lgdt_m16_32(exec: &mut exec::Exec) -> Result<(), EmuException> {
         let (sg, adr) = exec.get_m()?;
 
+        if exec.ac.get_cpl()? > 0 {
+            return Err(EmuException::CPUException(CPUException::GP(None)));
+        }
+
         let limit = exec.ac.get_data16((sg,adr))?;
         let base  = exec.ac.get_data32((sg,adr+2))?;
-        debug!("lgdt: base = {:04x}, limit = {:02x}", base, limit);
+        debug!("lgdt: base = {:08x}, limit = {:04x}", base, limit);
         exec.ac.set_gdtr(base as u64, limit)
     }
 
     fn lidt_m16_32(exec: &mut exec::Exec) -> Result<(), EmuException> {
         let (sg, adr) = exec.get_m()?;
 
+        if exec.ac.get_cpl()? > 0 {
+            return Err(EmuException::CPUException(CPUException::GP(None)));
+        }
+
         let limit = exec.ac.get_data16((sg,adr))?;
         let base  = exec.ac.get_data32((sg,adr+2))?;
-        debug!("lidt: base = {:04x}, limit = {:02x}", base, limit);
+        debug!("lidt: base = {:08x}, limit = {:04x}", base, limit);
         exec.ac.set_idtr(base as u64, limit)
     }
 }

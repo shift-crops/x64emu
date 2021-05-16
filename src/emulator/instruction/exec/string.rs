@@ -77,7 +77,7 @@ macro_rules! repeat_reg {
                 _ => true,
                 }
             }
-            if rep { self.ac.update_ip(-(self.idata.len as i16))?; }
+            if rep { self.ac.update_ip(-(self.idata.len as i64))?; }
             Ok(())
         }
     } };
@@ -87,22 +87,27 @@ impl<'a> super::Exec<'a> {
     move_str!(8);
     move_str!(16);
     move_str!(32);
+    move_str!(64);
 
     cmp_str!(8);
     cmp_str!(16);
     cmp_str!(32);
+    cmp_str!(64);
 
     store_str!(8, al);
     store_str!(16, ax);
     store_str!(32, eax);
+    store_str!(64, rax);
 
     load_str!(8, al);
     load_str!(16, ax);
     load_str!(32, eax);
+    load_str!(64, rax);
 
     scan_str!(8, al);
     scan_str!(16, ax);
     scan_str!(32, eax);
+    scan_str!(64, rax);
 
     fn get_si_addr(&mut self, step: i64) -> Result<(SgReg, u64), EmuException> {
         let seg = self.pdata.segment.unwrap_or(SgReg::DS);

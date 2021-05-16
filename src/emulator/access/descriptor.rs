@@ -472,12 +472,12 @@ impl super::Access {
             (access::CpuMode::Real, access::AcsSize::BIT16) | (access::CpuMode::Protected, access::AcsSize::BIT16) => {
                 self.push_u16(self.get_rflags()? as u16)?;
                 self.push_u16(cs_sel)?;
-                self.push_u16(self.get_ip()?)?;
+                self.push_u16(self.get_ip()? as u16)?;
             },
             (access::CpuMode::Protected, access::AcsSize::BIT32) => {
                 self.push_u32(self.get_rflags()? as u32)?;
                 self.push_u32(cs_sel as u32)?;
-                self.push_u32(self.get_ip()?)?;
+                self.push_u32(self.get_ip()? as u32)?;
             },
             (access::CpuMode::Long, access::AcsSize::BIT64) => {
                 self.push_u64(self.get_rflags()?)?;
@@ -513,7 +513,7 @@ impl super::Access {
                 let mut tss: TSS16 = Default::default();
                 self.read_l(&mut tss as *mut TSS16 as *mut _, old_tssd.base, TSS16_SIZE)?;
                 tss.prev_task = old_sel;
-                tss.ip     = self.get_ip()?;
+                tss.ip     = self.get_ip()? as u16;
                 tss.flags  = self.get_rflags()? as u16;
                 tss.ax     = self.get_gpreg(GpReg16::AX)?;
                 tss.cx     = self.get_gpreg(GpReg16::CX)?;
@@ -533,7 +533,7 @@ impl super::Access {
 
                 self.read_l(&mut tss as *mut TSS16 as *mut _, new_tssd.base, TSS16_SIZE)?;
                 debug!("To: {:x?}", tss);
-                self.set_ip(tss.ip)?;
+                self.set_ip(tss.ip as u64)?;
                 self.set_rflags(tss.flags as u64)?;
                 self.set_gpreg(GpReg16::AX, tss.ax)?;
                 self.set_gpreg(GpReg16::CX, tss.cx)?;
@@ -562,7 +562,7 @@ impl super::Access {
                 self.read_l(&mut tss as *mut TSS32 as *mut _, old_tssd.base, TSS32_SIZE)?;
                 tss.prev_task = old_sel;
                 tss.cr3    = self.get_creg(3)?;
-                tss.eip    = self.get_ip()?;
+                tss.eip    = self.get_ip()? as u32;
                 tss.eflags = self.get_rflags()? as u32;
                 tss.eax    = self.get_gpreg(GpReg32::EAX)?;
                 tss.ecx    = self.get_gpreg(GpReg32::ECX)?;
@@ -585,7 +585,7 @@ impl super::Access {
                 self.read_l(&mut tss as *mut TSS32 as *mut _, new_tssd.base, TSS32_SIZE)?;
                 debug!("To: {:x?}", tss);
                 self.set_creg(3, tss.cr3)?;
-                self.set_ip(tss.eip)?;
+                self.set_ip(tss.eip as u64)?;
                 self.set_rflags(tss.eflags as u64)?;
                 self.set_gpreg(GpReg32::EAX, tss.eax)?;
                 self.set_gpreg(GpReg32::ECX, tss.ecx)?;
