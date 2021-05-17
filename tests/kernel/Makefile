@@ -1,5 +1,5 @@
 TARGET  := ipl.bin
-SAMPLE  := switch/kernel.bin
+SAMPLE  := mode/kernel.bin task/kernel.bin
 
 AS      := nasm
 
