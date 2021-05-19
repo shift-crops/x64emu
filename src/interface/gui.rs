@@ -15,10 +15,16 @@ pub struct GUI {
 impl GUI {
     pub fn new(width: usize, height: usize) -> Self {
         Self {
-            buffer: Arc::new(Mutex::new(vec![[0, 0, 0]; 320 * 200])),
+            buffer: Arc::new(Mutex::new(vec![[0, 0, 0]; width * height])),
             size: (width, height),
             grab: false,
         }
+    }
+
+    fn get_buffer(&self) -> Vec<[u8; 3]> {
+        let mut buf = self.buffer.lock().unwrap().clone();
+        buf.reverse();
+        buf
     }
 
     pub fn persistent(mut self) -> () {
@@ -28,7 +34,7 @@ impl GUI {
         fb.set_resizable(true);
 
         event_loop.run(move |event, _, control_flow| {
-            *control_flow = ControlFlow::WaitUntil(std::time::Instant::now() + time::Duration::from_millis(40));
+            *control_flow = ControlFlow::WaitUntil(time::Instant::now() + time::Duration::from_millis(40));
 
             match &event {
                 Event::LoopDestroyed => return,
@@ -64,10 +70,10 @@ impl GUI {
                         },
                         _ => {}
                     }
-                    fb.update_buffer(&self.buffer.lock().unwrap());
+                    fb.update_buffer(&self.get_buffer());
                 },
                 Event::NewEvents(cause) => match cause {
-                    StartCause::ResumeTimeReached { .. } => fb.update_buffer(&self.buffer.lock().unwrap()),
+                    StartCause::ResumeTimeReached { .. } => fb.update_buffer(&self.get_buffer()),
                     _ => {},
                 },
                 _ => {},
