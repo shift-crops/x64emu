@@ -2,28 +2,28 @@ use packed_struct::prelude::*;
 
 #[derive(Debug, Default)]
 pub(super) struct Attribute {
+    pub port_data: bool,
     pub air:  AttrCtrlIndex,
-    pub pr:   [Palette; 0x10],
-    pub mcr:  ModeCtrl,
-    pub mper: MemPlaneEnable,
-    pub hppr: HorPixelPan,
-    pub csr:  ColorSel,
+    pr:   [Palette; 0x10],
+    mcr:  ModeCtrl,
+    mper: MemPlaneEnable,
+    hppr: HorPixelPan,
+    csr:  ColorSel,
 }
 
 impl Attribute {
-    pub fn read(&self) -> u8 {
-        let data = match self.air.idx {
-            i @ 0x00..=0x0f => self.pr[i as usize].pack().unwrap(),
-            0x10 => self.mcr.pack().unwrap(),
-            0x12 => self.mper.pack().unwrap(),
-            0x13 => self.hppr.pack().unwrap(),
-            0x14 => self.csr.pack().unwrap(),
-            _ => [0],
-        };
-        u8::from_be_bytes(data)
+    pub fn get(&self) -> u8 {
+        match self.air.idx {
+            i @ 0x00..=0x0f => self.pr[i as usize].pack().unwrap()[0],
+            0x10 => self.mcr.pack().unwrap()[0],
+            0x12 => self.mper.pack().unwrap()[0],
+            0x13 => self.hppr.pack().unwrap()[0],
+            0x14 => self.csr.pack().unwrap()[0],
+            _ => 0,
+        }
     }
 
-    pub fn write(&mut self, v: u8) -> () {
+    pub fn set(&mut self, v: u8) -> () {
         let data = &v.to_be_bytes();
         match self.air.idx {
             i @ 0x00..=0x0f => self.pr[i as usize] = Palette::unpack(data).unwrap(),

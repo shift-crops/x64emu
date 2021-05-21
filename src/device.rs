@@ -150,7 +150,7 @@ impl Device {
             let (mut tst_dma_ctl, mut tst_dma_adr) = testdma::TestDMA::new(IReq::new(&irq_tx, 1), mem.clone());
             let mut tst_timer = testtimer::TestTimer::new(IReq::new(&irq_tx, 2));
 
-            port_io_map.push((0x3b0..0x3e0, &mut vga.0));
+            port_io_map.push((0x3b4..0x3e0, &mut vga.0));
             port_io_map.push((0x10..0x10+1, &mut tst_dma_ctl));
             port_io_map.push((0x20..0x20+1, &mut tst_timer));
 

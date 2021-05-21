@@ -3,27 +3,26 @@ use packed_struct::prelude::*;
 #[derive(Debug, Default)]
 pub(super) struct Sequencer {
     pub sir: SeqIndex,
-    pub cmr: ClkMode,
+    cmr: ClkMode,
     pub pmr: PlaneMask,
-    pub cfr: CharFont,
+    cfr: CharFont,
     pub mmr: MemMode,
-    pub hccr: u8,
+    hccr: u8,
 }
 
 impl Sequencer {
-    pub fn read(&self) -> u8 {
-        let data = match self.sir.idx {
-            1 => self.cmr.pack().unwrap(),
-            2 => self.pmr.pack().unwrap(),
-            3 => self.cfr.pack().unwrap(),
-            4 => self.mmr.pack().unwrap(),
-            7 => [self.hccr],
-            _ => [0],
-        };
-        u8::from_be_bytes(data)
+    pub fn get(&self) -> u8 {
+        match self.sir.idx {
+            1 => self.cmr.pack().unwrap()[0],
+            2 => self.pmr.pack().unwrap()[0],
+            3 => self.cfr.pack().unwrap()[0],
+            4 => self.mmr.pack().unwrap()[0],
+            7 => self.hccr,
+            _ => 0,
+        }
     }
 
-    pub fn write(&mut self, v: u8) -> () {
+    pub fn set(&mut self, v: u8) -> () {
         let data = &v.to_be_bytes();
         match self.sir.idx {
             1 => self.cmr = ClkMode::unpack(data).unwrap(),
@@ -52,13 +51,19 @@ pub struct ClkMode {
     #[packed_field(bits="5")]   scr_off:  u8,
 }
 
-#[derive(Debug, Default, PackedStruct)]
+#[derive(Debug, Default, Clone, Copy, PackedStruct)]
 #[packed_struct(bit_numbering="lsb0", size_bytes="1")]
 pub struct PlaneMask {
-    #[packed_field(bits="0")]   pl0:  u8,
-    #[packed_field(bits="1")]   pl1:  u8,
-    #[packed_field(bits="2")]   pl2:  u8,
-    #[packed_field(bits="3")]   pl3:  u8,
+    #[packed_field(bits="0")]   pl0:  bool,
+    #[packed_field(bits="1")]   pl1:  bool,
+    #[packed_field(bits="2")]   pl2:  bool,
+    #[packed_field(bits="3")]   pl3:  bool,
+}
+
+impl From<PlaneMask> for super::PlaneFlag {
+    fn from(mask: PlaneMask) -> Self {
+        Self::from_bits_truncate(mask.pack().unwrap()[0])
+    }
 }
 
 #[derive(Debug, Default, PackedStruct)]
@@ -73,7 +78,7 @@ pub struct CharFont {
 #[derive(Debug, Default, PackedStruct)]
 #[packed_struct(bit_numbering="lsb0", size_bytes="1")]
 pub struct MemMode {
-    #[packed_field(bits="1")]   ext_mem:  u8,
-    #[packed_field(bits="2")]   odd_even: u8,
-    #[packed_field(bits="3")]   chain4:   u8,
+    #[packed_field(bits="1")]   pub ext_mem:  bool,
+    #[packed_field(bits="2")]   pub oe_dis:   bool,
+    #[packed_field(bits="3")]   pub chain4:   bool,
 }
