@@ -65,7 +65,7 @@ impl CRT {
     }
 
     pub fn set(&mut self, v: u8) -> () {
-        let data = &v.to_be_bytes();
+        let data = &[v];
         match self.ccir.idx {
             0x00 => self.htr = v,
             0x01 => self.hdeer = v,

@@ -37,9 +37,9 @@ impl super::PortIO for DMACtrl {
         0
     }
 
-    fn out8(&mut self, addr: u16, data: u8) -> () {
+    fn out8(&mut self, addr: u16, val: u8) -> () {
         if addr > 0x10 { return; }
-        let size = data as usize;
+        let size = val as usize;
         let mut tmp = vec![0; size];
 
         let dma = self.0.borrow_mut();
@@ -56,7 +56,7 @@ impl super::MemoryIO for DMAAddr {
         self.0.borrow().raw[ofs as usize]
     }
 
-    fn write8(&mut self, ofs: u64, data: u8) -> () {
-        self.0.borrow_mut().raw[ofs as usize] = data;
+    fn write8(&mut self, ofs: u64, val: u8) -> () {
+        self.0.borrow_mut().raw[ofs as usize] = val;
     }
 }

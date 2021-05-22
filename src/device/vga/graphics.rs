@@ -5,12 +5,12 @@ pub(super) struct GraphicCtrl {
     pub gcir: GraphCtrlIndex,
     spr:  SetPlane,
     espr: EnableSetPlane,
-    ccr:  ColorCmp,
+    pub ccr:  ColorCmp,
     drr:  DataRot,
     pub rpsr: ReadPlaneSel,
     pub gmr:  GraphMode,
     pub mr:   Misc,
-    icr:  IgnoreColor,
+    pub icr:  IgnoreColor,
     bmr:  u8,
     amr:  AddrMap,
     psr:  u8,
@@ -37,7 +37,7 @@ impl GraphicCtrl {
     }
 
     pub fn set(&mut self, v: u8) -> () {
-        let data = &v.to_be_bytes();
+        let data = &[v];
         match self.gcir.idx {
             0x00 => self.spr  = SetPlane::unpack(data).unwrap(),
             0x01 => self.espr = EnableSetPlane::unpack(data).unwrap(),
@@ -54,6 +54,32 @@ impl GraphicCtrl {
             _ => {},
         }
     }
+
+    pub fn rotate(&self, v: u8) -> u8 {
+        v.rotate_right(self.drr.rot_count as u32)
+    }
+
+    pub fn set_reset(&self, n: u8, v: Option<u8>) -> u8 {
+        let sr = if super::PlaneFlag::from(self.spr).check(n) { 0xff } else { 0 };
+
+        if let Some(v) = v {
+            if super::PlaneFlag::from(self.espr).check(n) {sr } else { v }
+        } else { sr }
+    }
+
+    pub fn calc_latch(&self, v: u8, latch: u8) -> u8 {
+        match self.drr.func_sel {
+            1 => v & latch,
+            2 => v | latch,
+            3 => v ^ latch,
+            _ => v,
+        }
+    }
+
+    pub fn mask_latch(&self, v: u8, latch: u8) -> u8 {
+        (v & self.bmr) | (latch & !self.bmr)
+    }
+
 }
 
 #[derive(Debug, Default, PackedStruct)]
@@ -62,31 +88,16 @@ pub struct GraphCtrlIndex {
     #[packed_field(bits="0:4")] idx: u8,
 }
 
-#[derive(Debug, Default, PackedStruct)]
-#[packed_struct(bit_numbering="lsb0", size_bytes="1")]
-pub struct SetPlane {
-    #[packed_field(bits="0")]   pl0:  u8,
-    #[packed_field(bits="1")]   pl1:  u8,
-    #[packed_field(bits="2")]   pl2:  u8,
-    #[packed_field(bits="3")]   pl3:  u8,
-}
-
-#[derive(Debug, Default, PackedStruct)]
-#[packed_struct(bit_numbering="lsb0", size_bytes="1")]
-pub struct EnableSetPlane {
-    #[packed_field(bits="0")]   pl0:  u8,
-    #[packed_field(bits="1")]   pl1:  u8,
-    #[packed_field(bits="2")]   pl2:  u8,
-    #[packed_field(bits="3")]   pl3:  u8,
-}
+type SetPlane = super::PlaneSelect;
+type EnableSetPlane = super::PlaneSelect;
 
 #[derive(Debug, Default, PackedStruct)]
 #[packed_struct(bit_numbering="lsb0", size_bytes="1")]
 pub struct ColorCmp {
-    #[packed_field(bits="0")]   pl0:  u8,
-    #[packed_field(bits="1")]   pl1:  u8,
-    #[packed_field(bits="2")]   pl2:  u8,
-    #[packed_field(bits="3")]   pl3:  u8,
+    #[packed_field(bits="0")]   bit0:  u8,
+    #[packed_field(bits="1")]   bit1:  u8,
+    #[packed_field(bits="2")]   bit2:  u8,
+    #[packed_field(bits="3")]   bit3:  u8,
 }
 
 #[derive(Debug, Default, PackedStruct)]
@@ -122,10 +133,10 @@ pub struct Misc {
 #[derive(Debug, Default, PackedStruct)]
 #[packed_struct(bit_numbering="lsb0", size_bytes="1")]
 pub struct IgnoreColor {
-    #[packed_field(bits="0")]   pl0:  u8,
-    #[packed_field(bits="1")]   pl1:  u8,
-    #[packed_field(bits="2")]   pl2:  u8,
-    #[packed_field(bits="3")]   pl3:  u8,
+    #[packed_field(bits="0")]   bit0:  u8,
+    #[packed_field(bits="1")]   bit1:  u8,
+    #[packed_field(bits="2")]   bit2:  u8,
+    #[packed_field(bits="3")]   bit3:  u8,
 }
 
 #[derive(Debug, Default, PackedStruct)]

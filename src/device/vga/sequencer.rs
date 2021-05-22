@@ -23,7 +23,7 @@ impl Sequencer {
     }
 
     pub fn set(&mut self, v: u8) -> () {
-        let data = &v.to_be_bytes();
+        let data = &[v];
         match self.sir.idx {
             1 => self.cmr = ClkMode::unpack(data).unwrap(),
             2 => self.pmr = PlaneMask::unpack(data).unwrap(),
@@ -31,6 +31,14 @@ impl Sequencer {
             4 => self.mmr = MemMode::unpack(data).unwrap(),
             7 => self.hccr = v,
             _ => {},
+        }
+    }
+
+    pub fn get_memmode(&self) -> super::MemAcsMode {
+        match (self.mmr.chain4, self.mmr.oe_dis) {
+            (false, false) => super::MemAcsMode::ODD_EVEN,
+            (false, true)  => super::MemAcsMode::SEQUENCE,
+            (true, _)      => super::MemAcsMode::CHAIN4,
         }
     }
 }
@@ -51,20 +59,7 @@ pub struct ClkMode {
     #[packed_field(bits="5")]   scr_off:  u8,
 }
 
-#[derive(Debug, Default, Clone, Copy, PackedStruct)]
-#[packed_struct(bit_numbering="lsb0", size_bytes="1")]
-pub struct PlaneMask {
-    #[packed_field(bits="0")]   pl0:  bool,
-    #[packed_field(bits="1")]   pl1:  bool,
-    #[packed_field(bits="2")]   pl2:  bool,
-    #[packed_field(bits="3")]   pl3:  bool,
-}
-
-impl From<PlaneMask> for super::PlaneFlag {
-    fn from(mask: PlaneMask) -> Self {
-        Self::from_bits_truncate(mask.pack().unwrap()[0])
-    }
-}
+type PlaneMask = super::PlaneSelect;
 
 #[derive(Debug, Default, PackedStruct)]
 #[packed_struct(bit_numbering="lsb0", size_bytes="1")]
@@ -79,6 +74,6 @@ pub struct CharFont {
 #[packed_struct(bit_numbering="lsb0", size_bytes="1")]
 pub struct MemMode {
     #[packed_field(bits="1")]   pub ext_mem:  bool,
-    #[packed_field(bits="2")]   pub oe_dis:   bool,
-    #[packed_field(bits="3")]   pub chain4:   bool,
+    #[packed_field(bits="2")]   oe_dis:   bool,
+    #[packed_field(bits="3")]   chain4:   bool,
 }

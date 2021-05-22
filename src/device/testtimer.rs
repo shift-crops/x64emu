@@ -58,13 +58,13 @@ impl super::PortIO for TestTimer {
         if addr != 0x20 { 0 } else { self.reg }
     }
 
-    fn out8(&mut self, addr: u16, data: u8) -> () {
+    fn out8(&mut self, addr: u16, val: u8) -> () {
         if addr != 0x20 { return; }
 
-        self.reg = data;
+        self.reg = val;
 
         self.stop_timer();
-        if data > 0 {
+        if val > 0 {
             self.start_timer();
         }
     }

@@ -5,9 +5,8 @@ mod attribute;
 mod dac;
 mod crt;
 
-use std::rc::Rc;
-use std::cell::RefCell;
-use std::sync::{Arc, Mutex};
+use std::{thread, time};
+use std::sync::{Arc, Mutex, RwLock};
 use packed_struct::prelude::*;
 
 enum GraphicMode { MODE_TEXT, MODE_GRAPHIC, MODE_GRAPHIC256 }
@@ -22,23 +21,51 @@ bitflags! { struct PlaneFlag: u8 {
     const ODD  = Self::PL1.bits | Self::PL3.bits;
 } }
 
+impl PlaneFlag {
+    fn select_one(&self) -> Option<u8> {
+        for i in 0..4 {
+            if self.check(i) { return Some(i); }
+        }
+        None
+    }
+
+    fn check(&self, n: u8) -> bool {
+        if n > 3 { return false; }
+        self.bits() & (1<<n) != 0
+    }
+}
+
+#[derive(Debug, Default, Clone, Copy, PackedStruct)]
+#[packed_struct(bit_numbering="lsb0", size_bytes="1")]
+pub struct PlaneSelect {
+    #[packed_field(bits="0")]   pl0:  bool,
+    #[packed_field(bits="1")]   pl1:  bool,
+    #[packed_field(bits="2")]   pl2:  bool,
+    #[packed_field(bits="3")]   pl3:  bool,
+}
+
+impl From<PlaneSelect> for PlaneFlag {
+    fn from(sel: PlaneSelect) -> Self {
+        Self::from_bits_truncate(sel.pack().unwrap()[0])
+    }
+}
+
 pub struct VGA {
-    image: Arc<Mutex<Vec<[u8; 3]>>>,
+    mem_mode: MemAcsMode,
     plane: [[u8; 0x10000]; 4],
     gr: general::General,
     seq: sequencer::Sequencer,
     gc: graphics::GraphicCtrl,
     atr: attribute::Attribute,
-    dac: dac::DAC,
+    dac: dac::DAConv,
     crt: crt::CRT,
-    mem_mode: MemAcsMode,
 }
 
 impl VGA {
     pub fn new(image: Arc<Mutex<Vec<[u8; 3]>>>) -> (Reg, Vram) {
-        let vga = Rc::new(RefCell::new(
+        let vga = Arc::new(RwLock::new(
             Self {
-                image,
+                mem_mode: MemAcsMode::ODD_EVEN,
                 plane: [[0; 0x10000]; 4],
                 gr:  Default::default(),
                 seq: Default::default(),
@@ -46,49 +73,60 @@ impl VGA {
                 atr: Default::default(),
                 dac: Default::default(),
                 crt: Default::default(),
-                mem_mode: MemAcsMode::ODD_EVEN,
             }
         ));
+
+        let _vga = vga.clone();
+        thread::spawn(move || {
+            loop {
+                thread::sleep(time::Duration::from_millis(100));
+                _vga.read().unwrap().refresh(&mut image.lock().unwrap());
+            }
+        });
 
         (Reg(vga.clone()), Vram(vga.clone()))
     }
 
+    fn refresh(&self, buf: &mut Vec<[u8; 3]>) -> () {
+        for i in 0..(320*200) {
+            buf[i] = [self.plane[0][i], self.plane[1][i], self.plane[2][i]];
+        }
+    }
+
     fn update_memmode(&mut self) -> () {
-        let mmr = &self.seq.mmr;
-        self.mem_mode = match (mmr.chain4, mmr.oe_dis) {
-            (false, false) => MemAcsMode::ODD_EVEN,
-            (false, true)  => MemAcsMode::SEQUENCE,
-            (true, _)      => MemAcsMode::CHAIN4,
-        };
+        self.mem_mode = self.seq.get_memmode();
     }
 
-    fn read_plane(&self, pf: PlaneFlag, ofs: u32) -> u8 {
+    fn read_plane(&self, n: u8, ofs: u16) -> u8 {
+        self.plane[n as usize][ofs as usize]
+    }
+
+    fn read_planes(&mut self, pf: PlaneFlag, ofs: u16) -> Vec<u8> {
+        let mut data: Vec<u8> = Vec::new();
         for i in 0..4 {
-            if pf.bits() & (1<<i) != 0 {
-                return self.plane[i][ofs as usize];
+            if pf.check(i) {
+                data.push(self.read_plane(i, ofs));
             }
         }
-        0
+        data
     }
 
-    fn write_plane(&mut self, pf: PlaneFlag, ofs: u32, v: u8) -> () {
+    fn write_plane(&mut self, n: u8, ofs: u16, v: u8) -> () {
+        self.plane[n as usize][ofs as usize] = v;
+    }
+
+    fn write_planes(&mut self, pf: PlaneFlag, ofs: u16, v: u8) -> () {
         for i in 0..4 {
-            if pf.bits() & (1<<i) != 0 {
-                self.plane[i][ofs as usize] = v;
+            if pf.check(i) {
+                self.write_plane(i, ofs, v);
             }
         }
     }
 
-    fn plane_offset(&self, mut ofs: u32) -> Option<(PlaneFlag, u32)> {
+    fn plane_offset(&self, mut ofs: u32) -> Option<(PlaneFlag, u16)> {
         if !self.seq.mmr.ext_mem {
             ofs &= (1<<16)-1;
         }
-
-        let pf = match self.mem_mode {
-            MemAcsMode::ODD_EVEN => if ofs % 2 == 0 { PlaneFlag::EVEN } else { PlaneFlag::ODD },
-            MemAcsMode::SEQUENCE => PlaneFlag::all(),
-            MemAcsMode::CHAIN4   => PlaneFlag::from_bits_truncate((ofs as u8) % 4),
-        };
 
         match (self.gc.mr.map_mode, ofs) {
             (0, 0..=0x1ffff)|(1, 0..=0xffff) => {},
@@ -97,22 +135,34 @@ impl VGA {
             _ => { return None; }
         }
 
-        if self.gc.mr.oe_decode {
-            ofs >>= 1;
-            if self.gc.mr.map_mode == 1 && !self.gr.msr.pg_sel {
-                ofs |= 1<<15;
-            }
-        }
+        let pf = match self.mem_mode {
+            MemAcsMode::ODD_EVEN => {
+                if self.gc.mr.oe_decode {
+                    ofs >>= 1;
+                    if self.gc.mr.map_mode == 1 && !self.gr.msr.pg_sel {
+                        ofs |= 1<<15;
+                    }
+                }
 
-        Some((pf & self.seq.pmr.into(), ofs))
+                if ofs % 2 == 0 { PlaneFlag::EVEN } else { PlaneFlag::ODD }
+            },
+            MemAcsMode::SEQUENCE => PlaneFlag::all(),
+            MemAcsMode::CHAIN4   => {
+                let sel = (ofs as u8) %4;
+                ofs /= 4;
+                PlaneFlag::from_bits_truncate(sel)
+            },
+        };
+
+        if ofs < 1<<16 { Some((pf & self.seq.pmr.into(), ofs as u16)) } else { None }
     }
 }
 
-pub struct Reg(Rc<RefCell<VGA>>);
+pub struct Reg(Arc<RwLock<VGA>>);
 
 impl super::PortIO for Reg {
     fn in8(&self, addr: u16) -> u8 {
-        let mut vga = self.0.borrow_mut();
+        let mut vga = self.0.write().unwrap();
         match (addr, vga.gr.msr.io_sel) {
             (0x3b4, 0)|(0x3d4, 1) => vga.crt.ccir.pack().unwrap()[0],
             (0x3b5, 0)|(0x3d5, 1) => vga.crt.get(),
@@ -139,80 +189,120 @@ impl super::PortIO for Reg {
         }
     }
 
-    fn out8(&mut self, addr: u16, v: u8) -> () {
-        let mut vga = self.0.borrow_mut();
-        let data = &v.to_be_bytes();
+    fn out8(&mut self, addr: u16, val: u8) -> () {
+        let mut vga = self.0.write().unwrap();
+        let datum = &[val];
         match (addr, vga.gr.msr.io_sel) {
-            (0x3b4, 0)|(0x3d4, 1) => vga.crt.ccir = crt::CRTCtrlIndex::unpack(data).unwrap(),
-            (0x3b5, 0)|(0x3d5, 1) => vga.crt.set(v),
+            (0x3b4, 0)|(0x3d4, 1) => vga.crt.ccir = crt::CRTCtrlIndex::unpack(datum).unwrap(),
+            (0x3b5, 0)|(0x3d5, 1) => vga.crt.set(val),
 
-            (0x3ba, 0)|(0x3da, 1) => vga.gr.fcr = general::FeatureCtrl::unpack(data).unwrap(),
-            (0x3c2, _)            => vga.gr.msr = general::MiscOutput::unpack(data).unwrap(),
+            (0x3ba, 0)|(0x3da, 1) => vga.gr.fcr = general::FeatureCtrl::unpack(datum).unwrap(),
+            (0x3c2, _)            => vga.gr.msr = general::MiscOutput::unpack(datum).unwrap(),
 
             (0x3c0, _)            => {
                 if vga.atr.port_data {
-                    vga.atr.set(v);
+                    vga.atr.set(val);
                 } else {
-                    vga.atr.air = attribute::AttrCtrlIndex::unpack(data).unwrap();
+                    vga.atr.air = attribute::AttrCtrlIndex::unpack(datum).unwrap();
                 }
                 vga.atr.port_data ^= true;
             },
 
-            (0x3c4, _)            => vga.seq.sir = sequencer::SeqIndex::unpack(data).unwrap(),
+            (0x3c4, _)            => vga.seq.sir = sequencer::SeqIndex::unpack(datum).unwrap(),
             (0x3c5, _)            => {
-                vga.seq.set(v);
+                vga.seq.set(val);
                 vga.update_memmode();
             },
 
-            (0x3c6, _)            => vga.dac.pdmr = v,
-            (0x3c7, _)            => vga.dac.set_read_idx(v),
-            (0x3c8, _)            => vga.dac.set_write_idx(v),
-            (0x3c9, _)            => vga.dac.write_palette(v),
+            (0x3c6, _)            => vga.dac.pdmr = val,
+            (0x3c7, _)            => vga.dac.set_read_idx(val),
+            (0x3c8, _)            => vga.dac.set_write_idx(val),
+            (0x3c9, _)            => vga.dac.write_palette(val),
 
-            (0x3ce, _)            => vga.gc.gcir = graphics::GraphCtrlIndex::unpack(data).unwrap(),
-            (0x3cf, _)            => vga.gc.set(v),
+            (0x3ce, _)            => vga.gc.gcir = graphics::GraphCtrlIndex::unpack(datum).unwrap(),
+            (0x3cf, _)            => vga.gc.set(val),
 
             _                     => {}
         }
     }
 }
 
-pub struct Vram(Rc<RefCell<VGA>>);
+pub struct Vram(Arc<RwLock<VGA>>);
 
 impl super::MemoryIO for Vram {
     fn read8(&self, ofs: u64) -> u8 {
-        let mut vga = self.0.borrow_mut();
+        let mut vga = self.0.write().unwrap();
         if !vga.gr.msr.mem_ena { return 0; }
 
+        let mut datum = 0;
         if let Some((mut pf, ofs)) = vga.plane_offset(ofs as u32) {
-            if let MemAcsMode::SEQUENCE = vga.mem_mode {
-                pf &= PlaneFlag::from_bits_truncate(1 << vga.gc.rpsr.sel);
-            }
+            datum = match vga.gc.gmr.read {
+                0 => {
+                    if let MemAcsMode::SEQUENCE = vga.mem_mode {
+                        pf &= PlaneFlag::from_bits_truncate(1 << vga.gc.rpsr.sel);
+                    }
 
-            let v = vga.read_plane(pf, ofs);
-            vga.crt.latch = v;
-            match vga.gc.gmr.read {
-                0 => v,
-                _ => 0,
-            }
-        } else { 0 }
+                    if let Some(n) = pf.select_one() {
+                        vga.read_plane(n, ofs)
+                    } else { 0 }
+                },
+                1 => {
+                    let cmp = !vga.gc.ccr.pack().unwrap()[0];
+                    let mut plane_data = vga.read_planes(pf, ofs);
+
+                    for v in plane_data.iter_mut() {
+                        *v = *v^cmp;
+                    }
+                    plane_data.iter().fold(0xf, |res, v| res & v ) & vga.gc.icr.pack().unwrap()[0]
+                },
+                _ => panic!("Unknown read mode: {}", vga.gc.gmr.read),
+            };
+            vga.crt.latch = datum;
+        }
+        datum
     }
 
-    fn write8(&mut self, ofs: u64, data: u8) -> () {
-        let mut vga = self.0.borrow_mut();
+    fn write8(&mut self, ofs: u64, val: u8) -> () {
+        let mut vga = self.0.write().unwrap();
         if !vga.gr.msr.mem_ena { return; }
 
         if let Some((pf, ofs)) = vga.plane_offset(ofs as u32) {
-            let v = match vga.gc.gmr.write {
-                0 => data,
-                _ => 0,
-            };
-            vga.write_plane(pf, ofs, v);
+            let latch = vga.crt.latch;
+            match vga.gc.gmr.write {
+                0 => {
+                    let rot = vga.gc.rotate(val);
+                    for i in 0..4 {
+                        if !pf.check(i) { continue; }
 
-            // test
-            let mut buf = vga.image.lock().unwrap();
-            let ofs = ofs as usize;
-            buf[ofs] = [vga.plane[0][ofs], vga.plane[1][ofs], vga.plane[2][ofs]];
+                        let v = vga.gc.set_reset(i, Some(rot));
+                        let v = vga.gc.calc_latch(v, latch);
+                        let v = vga.gc.mask_latch(v, latch);
+                        vga.write_plane(i, ofs, v);
+                    }
+                },
+                1 => vga.write_planes(pf, ofs, latch),
+                2 => {
+                    for i in 0..4 {
+                        if !pf.check(i) { continue; }
+
+                        let v = if (val >> i) & 1 == 0 { 0 } else { 0xff };
+                        let v = vga.gc.calc_latch(v, latch);
+                        let v = vga.gc.mask_latch(v, latch);
+                        vga.write_plane(i, ofs, v);
+                    }
+                },
+                3 => {
+                    let rot = vga.gc.rotate(val);
+                    let mask = vga.gc.mask_latch(rot, 0);
+                    for i in 0..4 {
+                        if !pf.check(i) { continue; }
+
+                        let sr = vga.gc.set_reset(i, None);
+                        vga.write_plane(i, ofs, (sr & mask) | (latch & !mask));
+                    }
+                },
+                _ => panic!("Unknown write mode: {}", vga.gc.gmr.write),
+            }
         }
     }
 }

@@ -1,7 +1,7 @@
 use packed_struct::prelude::*;
 
 #[derive(Debug)]
-pub(super) struct DAC {
+pub(super) struct DAConv {
     pub pdmr: u8,
     pub dsr:  State,
     pub prir: u8,
@@ -11,7 +11,7 @@ pub(super) struct DAC {
     progress: RGBSel,
 }
 
-impl Default for DAC {
+impl Default for DAConv {
     fn default() -> Self {
         Self{
             pdmr: 0,
@@ -24,7 +24,7 @@ impl Default for DAC {
     }
 }
 
-impl DAC {
+impl DAConv {
     pub fn set_write_idx(&mut self, v: u8) -> () {
         self.pwir = v;
         self.dsr.stat = 0;

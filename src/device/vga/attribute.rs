@@ -24,7 +24,7 @@ impl Attribute {
     }
 
     pub fn set(&mut self, v: u8) -> () {
-        let data = &v.to_be_bytes();
+        let data = &[v];
         match self.air.idx {
             i @ 0x00..=0x0f => self.pr[i as usize] = Palette::unpack(data).unwrap(),
             0x10 => self.mcr  = ModeCtrl::unpack(data).unwrap(),

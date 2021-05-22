@@ -33,11 +33,16 @@ impl GUI {
         fb.change_buffer_format::<u8>(BufferFormat::RGB);
         fb.set_resizable(true);
 
+        let mut resume = time::Instant::now();
         event_loop.run(move |event, _, control_flow| {
-            *control_flow = ControlFlow::WaitUntil(time::Instant::now() + time::Duration::from_millis(40));
+            *control_flow = ControlFlow::WaitUntil(resume);
 
             match &event {
                 Event::LoopDestroyed => return,
+                Event::NewEvents(StartCause::ResumeTimeReached { .. }) =>  {
+                    resume = time::Instant::now() + time::Duration::from_millis(100);
+                    fb.update_buffer(&self.get_buffer());
+                },
                 Event::WindowEvent { event, .. } => match &event {
                     WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
                     WindowEvent::Resized(ps) => {
@@ -53,9 +58,9 @@ impl GUI {
                     },
                     _ => {}
                 },
-                Event::DeviceEvent { event, .. } => {
+                Event::DeviceEvent { event, .. } if self.grab => {
                     match &event {
-                        DeviceEvent::Key(input) if self.grab => {
+                        DeviceEvent::Key(input) => {
                             if let Some(VirtualKeyCode::RControl) = input.virtual_keycode {
                                 let window = fb.internal.context.window();
                                 window.set_cursor_grab(false).unwrap();
@@ -65,16 +70,11 @@ impl GUI {
                             }
                             println!("{:x?}", input);
                         },
-                        DeviceEvent::MouseMotion { delta } if self.grab => {
+                        DeviceEvent::MouseMotion { delta } => {
                             println!("{:x?}", delta);
                         },
                         _ => {}
                     }
-                    fb.update_buffer(&self.get_buffer());
-                },
-                Event::NewEvents(cause) => match cause {
-                    StartCause::ResumeTimeReached { .. } => fb.update_buffer(&self.get_buffer()),
-                    _ => {},
                 },
                 _ => {},
             }
