@@ -57,20 +57,19 @@ impl DAConv {
             self.pwir = self.pwir.wrapping_add(1);
         }
     }
+
+    pub fn get_palette(&self, idx: u8) -> [u8; 3] {
+        let mut rgb_arr = [0u8; 3];
+        let rgb = self.palette[idx as usize];
+        for i in 0..3 {
+            rgb_arr[i] = rgb.0[i].v << 2;
+        }
+        rgb_arr
+    }
 }
 
 #[derive(Debug, Default, Clone, Copy)]
 struct RGB([Color; 3]);
-
-impl Into<[u8; 3]> for &RGB {
-    fn into(self) -> [u8; 3] {
-        let mut rgb = [0u8; 3];
-        for i in 0..3 {
-            rgb[i] = self.0[i].v << 2;
-        }
-        rgb
-    }
-}
 
 #[derive(Debug, Default, Clone, Copy, PackedStruct)]
 #[packed_struct(bit_numbering="lsb0", size_bytes="1")]

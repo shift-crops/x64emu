@@ -34,12 +34,18 @@ impl Sequencer {
         }
     }
 
-    pub fn get_memmode(&self) -> super::MemAcsMode {
+    pub fn memory_mode(&self) -> super::MemAcsMode {
         match (self.mmr.chain4, self.mmr.oe_dis) {
             (false, false) => super::MemAcsMode::ODD_EVEN,
             (false, true)  => super::MemAcsMode::SEQUENCE,
             (true, _)      => super::MemAcsMode::CHAIN4,
         }
+    }
+
+    pub fn charmap_offset(&self, sel_a: bool) -> u16 {
+        let cfr = &self.cfr;
+        let map = if sel_a { cfr.a_high << 2 + cfr.a_low } else { cfr.b_high << 2 + cfr.b_low } as u16;
+        (if map < 4 { map*2 } else { (map&!4)*2 + 1 }) * 0x2000
     }
 }
 

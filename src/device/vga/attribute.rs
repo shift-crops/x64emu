@@ -34,6 +34,16 @@ impl Attribute {
             _ => {},
         }
     }
+
+    pub fn dac_index(&self, idx: u8) -> u8 {
+        let plt = &self.pr[(idx&0xf) as usize];
+
+        let mut dac_idx = plt.p03;
+        dac_idx += (if self.mcr.p45_sel { self.csr.alt_p45 } else { plt.p45 }) << 4;
+        dac_idx += self.csr.p67 << 6;
+
+        dac_idx
+    }
 }
 
 #[derive(Debug, Default, PackedStruct)]
@@ -46,7 +56,8 @@ pub struct AttrCtrlIndex {
 #[derive(Debug, Default, PackedStruct)]
 #[packed_struct(bit_numbering="lsb0", size_bytes="1")]
 pub struct Palette {
-    #[packed_field(bits="0:5")] bits: u8,
+    #[packed_field(bits="0:3")] p03: u8,
+    #[packed_field(bits="4:5")] p45: u8,
 }
 
 #[derive(Debug, Default, PackedStruct)]
@@ -58,7 +69,7 @@ pub struct ModeCtrl {
     #[packed_field(bits="3")]   bsbi_ena:    u8,
     #[packed_field(bits="5")]   pixel_cmpt:  u8,
     #[packed_field(bits="6")]   pwc_sel:     u8,
-    #[packed_field(bits="7")]   p54_sel:     u8,
+    #[packed_field(bits="7")]   p45_sel:     bool,
 }
 
 #[derive(Debug, Default, PackedStruct)]
@@ -80,8 +91,6 @@ pub struct HorPixelPan {
 #[derive(Debug, Default, PackedStruct)]
 #[packed_struct(bit_numbering="lsb0", size_bytes="1")]
 pub struct ColorSel {
-    #[packed_field(bits="0")]   alt_p4: u8,
-    #[packed_field(bits="1")]   alt_p5: u8,
-    #[packed_field(bits="2")]   p6:     u8,
-    #[packed_field(bits="3")]   p7:     u8,
+    #[packed_field(bits="0:1")] alt_p45: u8,
+    #[packed_field(bits="2:3")] p67: u8,
 }

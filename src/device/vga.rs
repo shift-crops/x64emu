@@ -9,7 +9,7 @@ use std::{thread, time};
 use std::sync::{Arc, Mutex, RwLock};
 use packed_struct::prelude::*;
 
-enum GraphicMode { MODE_TEXT, MODE_GRAPHIC, MODE_GRAPHIC256 }
+enum GraphicMode { TEXT, GRAPHIC, GRAPHIC_SHIFT, GRAPHIC_256 }
 enum MemAcsMode  { ODD_EVEN, SEQUENCE, CHAIN4 }
 
 bitflags! { struct PlaneFlag: u8 {
@@ -51,7 +51,8 @@ impl From<PlaneSelect> for PlaneFlag {
 }
 
 pub struct VGA {
-    mem_mode: MemAcsMode,
+    gmode: GraphicMode,
+    mmode: MemAcsMode,
     plane: [[u8; 0x10000]; 4],
     gr: general::General,
     seq: sequencer::Sequencer,
@@ -63,16 +64,21 @@ pub struct VGA {
 
 impl VGA {
     pub fn new(image: Arc<Mutex<Vec<[u8; 3]>>>) -> (Reg, Vram) {
+        let mut crt: crt::CRT = Default::default();
+        crt.hdeer = 40;
+        crt.vdeer = 25;
+
         let vga = Arc::new(RwLock::new(
             Self {
-                mem_mode: MemAcsMode::ODD_EVEN,
+                gmode: GraphicMode::TEXT,
+                mmode: MemAcsMode::ODD_EVEN,
                 plane: [[0; 0x10000]; 4],
                 gr:  Default::default(),
                 seq: Default::default(),
                 gc:  Default::default(),
                 atr: Default::default(),
                 dac: Default::default(),
-                crt: Default::default(),
+                crt,
             }
         ));
 
@@ -88,13 +94,47 @@ impl VGA {
     }
 
     fn refresh(&self, buf: &mut Vec<[u8; 3]>) -> () {
-        for i in 0..(320*200) {
-            buf[i] = [self.plane[0][i], self.plane[1][i], self.plane[2][i]];
-        }
-    }
+        for i in 0..buf.len() {
+            let attr_idx = match self.gmode {
+                GraphicMode::TEXT => {
+                    let c_height  = self.crt.char_height();
 
-    fn update_memmode(&mut self) -> () {
-        self.mem_mode = self.seq.get_memmode();
+                    let (x, y) = self.crt.pixel_to_pos(i as u32);
+                    let idx    = self.crt.pos_to_chridx(x, y) as usize;
+                    let (cx, cy) = (x % 8, y % c_height);
+
+                    let (chr, att) = (self.plane[0][idx], self.plane[1][idx]);
+                    let map_ofs = self.seq.charmap_offset(att&8 != 0) as usize;
+
+                    let bit = (self.plane[2][map_ofs + (0x20*chr as u32 + cy) as usize] >> cx) & 1 != 0;
+
+                    (att >> (if bit { 0 } else { 4 })) & 0xf
+                },
+                GraphicMode::GRAPHIC => {
+                    let idx = i/8;
+                    let bit = 7-(i%8);
+
+                    let mut attr_idx = 0;
+                    for j in 0..4 {
+                        attr_idx |= ((self.plane[j][idx] >> bit) & 1) << j;
+                    }
+                    attr_idx
+                },
+                GraphicMode::GRAPHIC_SHIFT => {
+                    let num = (i/4)%2;
+                    let idx = i/8;
+                    let bit = 6-((i%4)*2);
+
+                    (((self.plane[num+2][idx] >> bit) & 3) << 2) | ((self.plane[num][idx] >> bit) & 3)
+                },
+                GraphicMode::GRAPHIC_256 => {
+                    self.plane[i%4][i/4]
+                },
+            };
+
+            let dac_idx = if let GraphicMode::GRAPHIC_256 = self.gmode { attr_idx } else { self.atr.dac_index(attr_idx) };
+            buf[i] = self.dac.get_palette(dac_idx);
+        }
     }
 
     fn read_plane(&self, n: u8, ofs: u16) -> u8 {
@@ -135,7 +175,7 @@ impl VGA {
             _ => { return None; }
         }
 
-        let pf = match self.mem_mode {
+        let pf = match self.mmode {
             MemAcsMode::ODD_EVEN => {
                 if self.gc.mr.oe_decode {
                     ofs >>= 1;
@@ -211,7 +251,7 @@ impl super::PortIO for Reg {
             (0x3c4, _)            => vga.seq.sir = sequencer::SeqIndex::unpack(datum).unwrap(),
             (0x3c5, _)            => {
                 vga.seq.set(val);
-                vga.update_memmode();
+                vga.mmode = vga.seq.memory_mode();
             },
 
             (0x3c6, _)            => vga.dac.pdmr = val,
@@ -220,7 +260,10 @@ impl super::PortIO for Reg {
             (0x3c9, _)            => vga.dac.write_palette(val),
 
             (0x3ce, _)            => vga.gc.gcir = graphics::GraphCtrlIndex::unpack(datum).unwrap(),
-            (0x3cf, _)            => vga.gc.set(val),
+            (0x3cf, _)            => {
+                vga.gc.set(val);
+                vga.gmode = vga.gc.graphic_mode();
+            },
 
             _                     => {}
         }
@@ -238,7 +281,7 @@ impl super::MemoryIO for Vram {
         if let Some((mut pf, ofs)) = vga.plane_offset(ofs as u32) {
             datum = match vga.gc.gmr.read {
                 0 => {
-                    if let MemAcsMode::SEQUENCE = vga.mem_mode {
+                    if let MemAcsMode::SEQUENCE = vga.mmode {
                         pf &= PlaneFlag::from_bits_truncate(1 << vga.gc.rpsr.sel);
                     }
 

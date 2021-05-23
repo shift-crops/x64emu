@@ -55,6 +55,15 @@ impl GraphicCtrl {
         }
     }
 
+    pub fn graphic_mode(&self) -> super::GraphicMode {
+        match (self.mr.gt_mode, self.gmr.c256_mode, self.gmr.sft_ctrl) {
+            (false, _, _)        => super::GraphicMode::TEXT,
+            (true, false, false) => super::GraphicMode::GRAPHIC,
+            (true, false, true)  => super::GraphicMode::GRAPHIC_SHIFT,
+            (true, true, _)      => super::GraphicMode::GRAPHIC_256,
+        }
+    }
+
     pub fn rotate(&self, v: u8) -> u8 {
         v.rotate_right(self.drr.rot_count as u32)
     }
@@ -79,7 +88,6 @@ impl GraphicCtrl {
     pub fn mask_latch(&self, v: u8, latch: u8) -> u8 {
         (v & self.bmr) | (latch & !self.bmr)
     }
-
 }
 
 #[derive(Debug, Default, PackedStruct)]
@@ -116,16 +124,17 @@ pub struct ReadPlaneSel {
 #[derive(Debug, Default, PackedStruct)]
 #[packed_struct(bit_numbering="lsb0", size_bytes="1")]
 pub struct GraphMode {
-    #[packed_field(bits="0:1")] pub write:    u8,
-    #[packed_field(bits="3")]   pub read:     u8,
-    #[packed_field(bits="4")]   oe_cga:   u8,
-    #[packed_field(bits="5:6")] sft_ctrl: u8,
+    #[packed_field(bits="0:1")] pub write: u8,
+    #[packed_field(bits="3")]   pub read:  u8,
+    #[packed_field(bits="4")]   oe_cga:    u8,
+    #[packed_field(bits="5")]   sft_ctrl:  bool,
+    #[packed_field(bits="6")]   c256_mode: bool,
 }
 
 #[derive(Debug, Default, PackedStruct)]
 #[packed_struct(bit_numbering="lsb0", size_bytes="1")]
 pub struct Misc {
-    #[packed_field(bits="0")]   pub graph_text: u8,
+    #[packed_field(bits="0")]   gt_mode:    bool,
     #[packed_field(bits="1")]   pub oe_decode:  bool,
     #[packed_field(bits="2:3")] pub map_mode:   u8,
 }

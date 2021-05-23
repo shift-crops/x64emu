@@ -4,7 +4,7 @@ use packed_struct::prelude::*;
 pub(super) struct CRT {
     pub ccir:  CRTCtrlIndex,
     htr:   u8,
-    hdeer: u8,
+    pub hdeer: u8,
     hbsr:  u8,
     hber:  HorBlnkEnd,
     hssr:  u8,
@@ -21,7 +21,7 @@ pub(super) struct CRT {
     tcllr: u8,
     vssr:  u8,
     vser:  VertSyncEnd,
-    vdeer: u8,
+    pub vdeer: u8,
     or:    u8,
     ulr:   UnderLocate,
     vbsr:  u8,
@@ -94,6 +94,23 @@ impl CRT {
             0x18 => self.lcr = v,
             _ => {},
         }
+    }
+
+    pub fn get_windowsize(&self) -> (u32, u32) {
+        (8 * self.hdeer as u32, 8 * self.vdeer as u32)
+    }
+
+    pub fn char_height(&self) -> u32 {
+        self.mslr.scan_count as u32 + 1
+    }
+
+    pub fn pixel_to_pos(&self, idx: u32) -> (u32, u32) {
+        let (x_size, _) = self.get_windowsize();
+        (idx % x_size, idx / x_size)
+    }
+
+    pub fn pos_to_chridx(&self, x: u32, y: u32) -> u32 {
+        y/self.char_height()* self.hdeer as u32 + x/8
     }
 }
 
