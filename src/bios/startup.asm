@@ -3,8 +3,6 @@ global start
 
 BITS 16
 start:
-	nop
-	nop
 	mov ax, cs
 	mov ds, ax
 
