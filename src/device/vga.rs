@@ -84,31 +84,46 @@ impl VGA {
 
         let _vga = vga.clone();
         thread::spawn(move || {
+            let mut frame_count: u8 = 0;
             loop {
                 thread::sleep(time::Duration::from_millis(100));
-                _vga.read().unwrap().refresh(&mut image.lock().unwrap());
+                _vga.read().unwrap().refresh(&mut image.lock().unwrap(), frame_count);
+                frame_count = frame_count.wrapping_add(1);
             }
         });
 
         (Reg(vga.clone()), Vram(vga.clone()))
     }
 
-    fn refresh(&self, buf: &mut Vec<[u8; 3]>) -> () {
+    fn refresh(&self, buf: &mut Vec<[u8; 3]>, fc: u8) -> () {
         for i in 0..buf.len() {
             let attr_idx = match self.gmode {
                 GraphicMode::TEXT => {
+                    let (cur_frq, chr_frq) = ((fc/3) % 2 == 0, (fc/6) % 2 == 0);
+
                     let c_height  = self.crt.char_height();
+                    let blink = self.atr.text_blink();
 
                     let (x, y) = self.crt.pixel_to_pos(i as u32);
-                    let idx    = self.crt.pos_to_chridx(x, y) as usize;
-                    let (cx, cy) = (x % 8, y % c_height);
+                    let idx    = self.crt.pos_to_chridx(x, y);
+                    let (chr, attr) = (self.plane[0][idx as usize], self.plane[1][idx as usize]);
 
-                    let (chr, att) = (self.plane[0][idx], self.plane[1][idx]);
-                    let map_ofs = self.seq.charmap_offset(att&8 != 0) as usize;
+                    let (cx, cy) = (x as u8 % 8, y as u8 % c_height);
+                    let chr_bit = if !(blink && (attr & 0x80 != 0) && chr_frq) {
+                        let map_ofs = self.seq.charmap_offset(attr&8 != 0) as usize;
+                        let chr_ofs = 0x20*chr as usize + cy as usize;
+                        (self.plane[2][map_ofs + chr_ofs] >> cx) & 1 != 0
+                    } else { false };
 
-                    let bit = (self.plane[2][map_ofs + (0x20*chr as u32 + cy) as usize] >> cx) & 1 != 0;
+                    let cur_bit = if let Some((h_rng, skew)) = self.crt.get_cursor(idx) {
+                        cur_frq && (skew..=6).contains(&cx) && h_rng.contains(&cy)
+                    } else { false };
 
-                    (att >> (if bit { 0 } else { 4 })) & 0xf
+                    match (chr_bit | cur_bit, blink) {
+                        (true, _)      => attr & 7,
+                        (false, true)  => (attr >> 4) & 7,
+                        (false, false) => attr >> 4,
+                    }
                 },
                 GraphicMode::GRAPHIC => {
                     let idx = i/8;
@@ -177,14 +192,14 @@ impl VGA {
 
         let pf = match self.mmode {
             MemAcsMode::ODD_EVEN => {
+                let pf = if ofs % 2 == 0 { PlaneFlag::EVEN } else { PlaneFlag::ODD };
                 if self.gc.mr.oe_decode {
                     ofs >>= 1;
                     if self.gc.mr.map_mode == 1 && !self.gr.msr.pg_sel {
                         ofs |= 1<<15;
                     }
                 }
-
-                if ofs % 2 == 0 { PlaneFlag::EVEN } else { PlaneFlag::ODD }
+                pf
             },
             MemAcsMode::SEQUENCE => PlaneFlag::all(),
             MemAcsMode::CHAIN4   => {

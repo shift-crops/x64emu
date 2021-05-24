@@ -44,6 +44,10 @@ impl Attribute {
 
         dac_idx
     }
+
+    pub fn text_blink(&self) -> bool {
+        !self.mcr.graph_text & self.mcr.ebsb_sel
+    }
 }
 
 #[derive(Debug, Default, PackedStruct)]
@@ -63,13 +67,13 @@ pub struct Palette {
 #[derive(Debug, Default, PackedStruct)]
 #[packed_struct(bit_numbering="lsb0", size_bytes="1")]
 pub struct ModeCtrl {
-    #[packed_field(bits="0")]   graph_alpha: u8,
-    #[packed_field(bits="1")]   disp_sel:    u8,
-    #[packed_field(bits="2")]   lgcc_ena:    u8,
-    #[packed_field(bits="3")]   bsbi_ena:    u8,
-    #[packed_field(bits="5")]   pixel_cmpt:  u8,
-    #[packed_field(bits="6")]   pwc_sel:     u8,
-    #[packed_field(bits="7")]   p45_sel:     bool,
+    #[packed_field(bits="0")]   graph_text: bool,
+    #[packed_field(bits="1")]   disp_sel:   u8,
+    #[packed_field(bits="2")]   lgcc_ena:   u8,
+    #[packed_field(bits="3")]   ebsb_sel:   bool,
+    #[packed_field(bits="5")]   pixel_cmpt: u8,
+    #[packed_field(bits="6")]   pwc_sel:    u8,
+    #[packed_field(bits="7")]   p45_sel:    bool,
 }
 
 #[derive(Debug, Default, PackedStruct)]

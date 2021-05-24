@@ -100,17 +100,30 @@ impl CRT {
         (8 * self.hdeer as u32, 8 * self.vdeer as u32)
     }
 
-    pub fn char_height(&self) -> u32 {
-        self.mslr.scan_count as u32 + 1
+    pub fn char_height(&self) -> u8 {
+        self.mslr.scan_count + 1
     }
 
-    pub fn pixel_to_pos(&self, idx: u32) -> (u32, u32) {
+    pub fn pixel_to_pos(&self, pxl: u32) -> (u32, u32) {
         let (x_size, _) = self.get_windowsize();
-        (idx % x_size, idx / x_size)
+        (pxl % x_size, pxl / x_size)
     }
 
-    pub fn pos_to_chridx(&self, x: u32, y: u32) -> u32 {
-        y/self.char_height()* self.hdeer as u32 + x/8
+    pub fn pos_to_chridx(&self, x: u32, y: u32) -> u16 {
+        (y/self.char_height() as u32 * self.hdeer as u32 + x/8) as u16
+    }
+
+    pub fn get_cursor(&self, idx: u16) -> Option<(std::ops::RangeInclusive<u8>, u8)> {
+        let loc = ((self.tclhr as u16) << 8) + self.tcllr as u16;
+        if !self.tcsr.cur_off && idx == loc {
+            let (start, end) = (self.tcsr.cur_srt, self.tcer.cur_end);
+
+            if start > end {
+                None
+            } else {
+                Some((start..=end, self.tcer.cur_skew))
+            }
+        } else { None }
     }
 }
 
@@ -167,8 +180,8 @@ pub struct MaxScanLine {
 #[derive(Debug, Default, PackedStruct)]
 #[packed_struct(bit_numbering="lsb0", size_bytes="1")]
 pub struct TextCurStart {
-    #[packed_field(bits="0:4")] cur_str: u8,
-    #[packed_field(bits="5")]   cur_off: u8,
+    #[packed_field(bits="0:4")] cur_srt: u8,
+    #[packed_field(bits="5")]   cur_off: bool,
 }
 
 #[derive(Debug, Default, PackedStruct)]

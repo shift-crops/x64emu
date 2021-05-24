@@ -56,7 +56,7 @@ impl GraphicCtrl {
     }
 
     pub fn graphic_mode(&self) -> super::GraphicMode {
-        match (self.mr.gt_mode, self.gmr.c256_mode, self.gmr.sft_ctrl) {
+        match (self.mr.graph_text, self.gmr.c256_mode, self.gmr.sft_ctrl) {
             (false, _, _)        => super::GraphicMode::TEXT,
             (true, false, false) => super::GraphicMode::GRAPHIC,
             (true, false, true)  => super::GraphicMode::GRAPHIC_SHIFT,
@@ -134,9 +134,9 @@ pub struct GraphMode {
 #[derive(Debug, Default, PackedStruct)]
 #[packed_struct(bit_numbering="lsb0", size_bytes="1")]
 pub struct Misc {
-    #[packed_field(bits="0")]   gt_mode:    bool,
-    #[packed_field(bits="1")]   pub oe_decode:  bool,
-    #[packed_field(bits="2:3")] pub map_mode:   u8,
+    #[packed_field(bits="0")]   graph_text:    bool,
+    #[packed_field(bits="1")]   pub oe_decode: bool,
+    #[packed_field(bits="2:3")] pub map_mode:  u8,
 }
 
 #[derive(Debug, Default, PackedStruct)]

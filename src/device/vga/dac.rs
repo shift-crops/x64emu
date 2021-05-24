@@ -38,8 +38,8 @@ impl DAConv {
     }
 
     pub fn read_palette(&mut self) -> u8 {
-        let rgb = self.palette[self.prir as usize];
-        let c = rgb.0[self.progress as usize];
+        let rgb = &self.palette[self.prir as usize];
+        let c = &rgb.0[self.progress as usize];
 
         self.progress.next();
         if let RGBSel::Red = self.progress {
@@ -49,7 +49,7 @@ impl DAConv {
     }
 
     pub fn write_palette(&mut self, v: u8) -> () {
-        let mut rgb = self.palette[self.pwir as usize];
+        let mut rgb = &mut self.palette[self.pwir as usize];
         rgb.0[self.progress as usize] = Color::unpack(&[v]).unwrap();
 
         self.progress.next();
@@ -60,7 +60,7 @@ impl DAConv {
 
     pub fn get_palette(&self, idx: u8) -> [u8; 3] {
         let mut rgb_arr = [0u8; 3];
-        let rgb = self.palette[idx as usize];
+        let rgb = &self.palette[idx as usize];
         for i in 0..3 {
             rgb_arr[i] = rgb.0[i].v << 2;
         }
