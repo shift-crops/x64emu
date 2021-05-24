@@ -2,36 +2,50 @@ extern crate mini_gl_fb;
 
 use std::time;
 use std::sync::{Arc, Mutex};
+use mini_gl_fb::{get_fancy, config};
 use mini_gl_fb::core::BufferFormat;
 use mini_gl_fb::glutin::event::*;
 use mini_gl_fb::glutin::event_loop::*;
+use mini_gl_fb::glutin::dpi::LogicalSize;
+
 
 pub struct GUI {
     pub buffer: Arc<Mutex<Vec<[u8; 3]>>>,
-    size: (usize, usize),
+    size: (u32, u32),
     grab: bool,
 }
 
 impl GUI {
-    pub fn new(width: usize, height: usize) -> Self {
+    pub fn new(width: u32, height: u32) -> Self {
         Self {
-            buffer: Arc::new(Mutex::new(vec![[0, 0, 0]; 320 * 200])),
+            buffer: Arc::new(Mutex::new(vec![[0, 0, 0]; (width * height) as usize])),
             size: (width, height),
             grab: false,
         }
     }
 
     pub fn persistent(mut self) -> () {
-        let (event_loop, mut fb) = mini_gl_fb::gotta_go_fast("x64emu", self.size.0 as f64, self.size.1 as f64);
+        let event_loop = EventLoop::new();
+        let config = config! {
+            window_title: "x64emu".to_string(),
+            window_size: LogicalSize::from(self.size),
+            resizable: true,
+            invert_y: false,
+        };
+        let mut fb = get_fancy(config, &event_loop);
 
         fb.change_buffer_format::<u8>(BufferFormat::RGB);
-        fb.set_resizable(true);
 
+        let mut resume = time::Instant::now();
         event_loop.run(move |event, _, control_flow| {
-            *control_flow = ControlFlow::WaitUntil(std::time::Instant::now() + time::Duration::from_millis(40));
+            *control_flow = ControlFlow::WaitUntil(resume);
 
             match &event {
                 Event::LoopDestroyed => return,
+                Event::NewEvents(StartCause::ResumeTimeReached { .. }) =>  {
+                    resume = time::Instant::now() + time::Duration::from_millis(100);
+                    fb.update_buffer(&self.buffer.lock().unwrap());
+                },
                 Event::WindowEvent { event, .. } => match &event {
                     WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
                     WindowEvent::Resized(ps) => {
@@ -47,9 +61,9 @@ impl GUI {
                     },
                     _ => {}
                 },
-                Event::DeviceEvent { event, .. } => {
+                Event::DeviceEvent { event, .. } if self.grab => {
                     match &event {
-                        DeviceEvent::Key(input) if self.grab => {
+                        DeviceEvent::Key(input) => {
                             if let Some(VirtualKeyCode::RControl) = input.virtual_keycode {
                                 let window = fb.internal.context.window();
                                 window.set_cursor_grab(false).unwrap();
@@ -59,16 +73,11 @@ impl GUI {
                             }
                             println!("{:x?}", input);
                         },
-                        DeviceEvent::MouseMotion { delta } if self.grab => {
+                        DeviceEvent::MouseMotion { delta } => {
                             println!("{:x?}", delta);
                         },
                         _ => {}
                     }
-                    fb.update_buffer(&self.buffer.lock().unwrap());
-                },
-                Event::NewEvents(cause) => match cause {
-                    StartCause::ResumeTimeReached { .. } => fb.update_buffer(&self.buffer.lock().unwrap()),
-                    _ => {},
                 },
                 _ => {},
             }

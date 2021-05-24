@@ -63,7 +63,7 @@ impl<T> IOQueue<T> {
 
 trait PortIO {
     fn in8(&self, addr: u16) -> u8;
-    fn out8(&mut self, addr: u16, data: u8) -> ();
+    fn out8(&mut self, addr: u16, val: u8) -> ();
 
     fn in_io(&self, addr: u16, len: usize) -> Vec<u8> {
         let mut data = vec![0; len];
@@ -82,7 +82,7 @@ trait PortIO {
 
 trait MemoryIO {
     fn read8(&self, ofs: u64) -> u8;
-    fn write8(&mut self, ofs: u64, data: u8) -> ();
+    fn write8(&mut self, ofs: u64, val: u8) -> ();
 
     fn read_io(&self, ofs: u64, len: usize) -> Vec<u8> {
         let mut data = vec![0; len];
@@ -150,7 +150,7 @@ impl Device {
             let (mut tst_dma_ctl, mut tst_dma_adr) = testdma::TestDMA::new(IReq::new(&irq_tx, 1), mem.clone());
             let mut tst_timer = testtimer::TestTimer::new(IReq::new(&irq_tx, 2));
 
-            port_io_map.push((0x3b0..0x3e0, &mut vga.0));
+            port_io_map.push((0x3b4..0x3e0, &mut vga.0));
             port_io_map.push((0x10..0x10+1, &mut tst_dma_ctl));
             port_io_map.push((0x20..0x20+1, &mut tst_timer));
 
@@ -163,7 +163,7 @@ impl Device {
 
     fn io_handle(mut port_io_map: PortIOMap, mut memory_io_map: MemoryIOMap, req_que: Arc<IOQueue<IORequest>>, res_tx: Sender<IOResult>) -> () {
         loop {
-            let _ = req_que.wait_timeout(time::Duration::from_millis(50));
+            let _ = req_que.wait_timeout(time::Duration::from_millis(100));
 
             while let Some(req) = req_que.dequeue() {
                 let res = match req.ty {
