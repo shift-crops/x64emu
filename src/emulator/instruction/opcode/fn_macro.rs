@@ -348,10 +348,10 @@ macro_rules! out_port_reg {
 
 macro_rules! call_rel {
     ( $size:expr, $rel:ident ) => { paste::item! {
-        fn [<call_ $rel>](exec: &mut exec::Exec) -> Result<(), EmuException> {
+        fn [<call_rel_ $rel>](exec: &mut exec::Exec) -> Result<(), EmuException> {
             let offs = exec.[<get_ $rel>]()? as i64;
             let rip = exec.ac.get_ip()?;
-            debug!("call: 0x{:04x}", rip as i64 + offs);
+            debug!("call rel: 0x{:04x}", rip as i64 + offs);
             exec.ac.[<push_u $size>](rip as u!($size))?;
             exec.ac.update_ip(offs)
         }
@@ -360,10 +360,32 @@ macro_rules! call_rel {
 
 macro_rules! jmp_rel {
     ( $size:expr, $rel:ident ) => { paste::item! {
-        fn [<jmp_ $rel>](exec: &mut exec::Exec) -> Result<(), EmuException> {
-            let rel = exec.[<get_ $rel>]()? as i!($size);
-            debug!("jmp: {:04x}", rel);
+        fn [<jmp_rel_ $rel>](exec: &mut exec::Exec) -> Result<(), EmuException> {
+            let rel = exec.[<get_ $rel>]()?;
+            debug!("jmp rel: {:04x}", rel);
             exec.ac.update_ip(rel as i64)
+        }
+    } };
+}
+
+macro_rules! call_abs {
+    ( $size:expr, $abs:ident ) => { paste::item! {
+        fn [<call_abs_ $abs>](exec: &mut exec::Exec) -> Result<(), EmuException> {
+            let addr = exec.[<get_ $abs>]()? as u64;
+            let rip = exec.ac.get_ip()?;
+            debug!("call abs: 0x{:04x}", addr);
+            exec.ac.[<push_u $size>](rip as u!($size))?;
+            exec.ac.set_ip(addr)
+        }
+    } };
+}
+
+macro_rules! jmp_abs {
+    ( $size:expr, $abs:ident ) => { paste::item! {
+        fn [<jmp_abs_ $abs>](exec: &mut exec::Exec) -> Result<(), EmuException> {
+            let addr = exec.[<get_ $abs>]()? as u64;
+            debug!("jmp abs: {:04x}", addr);
+            exec.ac.set_ip(addr)
         }
     } };
 }

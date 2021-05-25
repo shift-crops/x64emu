@@ -245,10 +245,10 @@ impl<'a> super::Exec<'a> {
         match self.idata.adsize {
             access::AcsSize::BIT16 => {
                 if let 1..=2 = mod_ {
-                    addr += self.idata.disp as u64;
+                    addr = self.idata.disp as u64;
                 }
 
-                addr += match rm {
+                addr = addr.wrapping_add(match rm {
                     6 if mod_ == 0 => self.idata.disp as u64,
                     0|1|7          => self.ac.get_gpreg(GpReg16::BX)? as u64,
                     2|3|6          => {
@@ -256,17 +256,17 @@ impl<'a> super::Exec<'a> {
                         self.ac.get_gpreg(GpReg16::BP)? as u64
                     }
                     _ => 0,
-                };
+                });
 
-                addr += match rm {
+                addr = addr.wrapping_add(match rm {
                     0|2|4 => self.ac.get_gpreg(GpReg16::SI)? as u64,
                     1|3|5 => self.ac.get_gpreg(GpReg16::DI)? as u64,
                     _ => { 0 },
-                };
+                });
             },
             access::AcsSize::BIT32 => {
                 if let 1..=2 = mod_ {
-                    addr += self.idata.disp as u64;
+                    addr = self.idata.disp as u64;
                 }
 
                 let sgad = match (rm, mod_) {
@@ -276,13 +276,13 @@ impl<'a> super::Exec<'a> {
                     _      => (None, get_gpreg!(self, GpReg32, rm as usize)? as u64),
                 };
                 segment = sgad.0;
-                addr += sgad.1 as u32 as u64;
+                addr = addr.wrapping_add(sgad.1 as u32 as u64);
             },
             access::AcsSize::BIT64 => {
                 let b = if let Some(rex) = self.pdata.rex { rex.b << 3 } else { 0 };
 
                 if let 1..=2 = mod_ {
-                    addr += self.idata.disp as u64;
+                    addr = self.idata.disp as u64;
                 }
 
                 let sgad = match (rm, mod_, b) {
@@ -295,7 +295,7 @@ impl<'a> super::Exec<'a> {
                     _         => (None, get_gpreg!(self, GpReg64, (b + rm) as usize)?),
                 };
                 segment = sgad.0;
-                addr += sgad.1;
+                addr = addr.wrapping_add(sgad.1);
             },
         }
 

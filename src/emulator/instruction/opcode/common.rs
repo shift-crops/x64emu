@@ -64,7 +64,7 @@ pub fn init_cmn_opcode(op: &mut super::OpcodeArr){
     setcmnop!(0xce, into,          OpFlags::NONE);
     setcmnop!(0xe4, in_al_imm8,    OpFlags::IMM8);
     setcmnop!(0xe6, out_imm8_al,   OpFlags::IMM8);
-    setcmnop!(0xeb, jmp_imm8,      OpFlags::IMM8);
+    setcmnop!(0xeb, jmp_rel_imm8,  OpFlags::IMM8);
     setcmnop!(0xec, in_al_dx,      OpFlags::NONE);
     setcmnop!(0xee, out_dx_al,     OpFlags::NONE);
     setcmnop!(0xf1, icebp,         OpFlags::NONE);

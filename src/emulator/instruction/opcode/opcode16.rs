@@ -148,8 +148,8 @@ impl super::OpcodeTrait for Opcode16 {
         setop!(0xe5, in_ax_imm8,        OpFlags::IMM8);
         // 0xe6 : out_imm8_al
         setop!(0xe7, out_imm8_ax,       OpFlags::IMM8);
-        setop!(0xe8, call_imm16,        OpFlags::IMM16);
-        setop!(0xe9, jmp_imm16,         OpFlags::IMM16);
+        setop!(0xe8, call_rel_imm16,    OpFlags::IMM16);
+        setop!(0xe9, jmp_rel_imm16,     OpFlags::IMM16);
         setop!(0xea, jmpf_ptr16_imm16,  OpFlags::PTR16 | OpFlags::IMM16);
         // 0xeb : jmp_imm8
         // 0xec : in_al_dx
@@ -489,6 +489,11 @@ impl Opcode16 {
         match exec.idata.modrm.reg as u8 {
             0 => Opcode16::inc_rm16(exec)?,
             1 => Opcode16::dec_rm16(exec)?,
+            2 => Opcode16::call_abs_rm16(exec)?,
+            3 => Opcode16::callf_m16_16(exec)?,
+            4 => Opcode16::jmp_abs_rm16(exec)?,
+            5 => Opcode16::jmpf_m16_16(exec)?,
+            6 => Opcode16::push_rm16(exec)?,
             _ => { return Err(EmuException::UnexpectedError); },
         }
         Ok(())
@@ -496,6 +501,27 @@ impl Opcode16 {
 
     inc_dst!(rm16);
     dec_dst!(rm16);
+    call_abs!(16, rm16);
+    jmp_abs!(16, rm16);
+    push_src!(16, rm16);
+
+    fn callf_m16_16(exec: &mut exec::Exec) -> Result<(), EmuException> {
+        let (sg, adr) = exec.get_m()?;
+
+        let sel = exec.ac.get_data16((sg,adr))?;
+        let abs = exec.ac.get_data16((sg,adr+2))?;
+        debug!("callf: {:04x}:{:04x}", sel, abs);
+        exec.call_far_u16(sel, abs)
+    }
+
+    fn jmpf_m16_16(exec: &mut exec::Exec) -> Result<(), EmuException> {
+        let (sg, adr) = exec.get_m()?;
+
+        let sel = exec.ac.get_data16((sg,adr))?;
+        let abs = exec.ac.get_data16((sg,adr+2))?;
+        debug!("jmpf: {:04x}:{:04x}", sel, abs);
+        exec.jmp_far_u16(sel, abs)
+    }
 
     fn code_0f01(exec: &mut exec::Exec) -> Result<(), EmuException> {
         match exec.idata.modrm.reg as u16 {

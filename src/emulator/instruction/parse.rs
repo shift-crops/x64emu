@@ -48,7 +48,7 @@ pub(super) struct InstrData {
     pub opcode: u16,
     pub modrm: ModRM,
     pub sib: Sib,
-    pub disp: u32,
+    pub disp: i64,
     pub imm: Option<u64>,
     pub ptr16: Option<u16>,
     pub moffs: Option<u64>,
@@ -180,11 +180,11 @@ impl ParseInstr {
             access::AcsSize::BIT16 => {
                 match (mod_, rm) {
                     (1, _) => {
-                        self.instr.disp = ac.get_code8(self.instr.len)? as u32;
+                        self.instr.disp = ac.get_code8(self.instr.len)? as i8 as i64;
                         self.instr.len += 1;
                     },
                     (2, _) | (0, 6) => {
-                        self.instr.disp = ac.get_code16(self.instr.len)? as u32;
+                        self.instr.disp = ac.get_code16(self.instr.len)? as i16 as i64;
                         self.instr.len += 2;
                     },
                     _ => {},
@@ -200,11 +200,11 @@ impl ParseInstr {
 
                 match (mod_, rm, self.instr.sib.base) {
                     (1, _, _) => {
-                        self.instr.disp = ac.get_code8(self.instr.len)? as u32;
+                        self.instr.disp = ac.get_code8(self.instr.len)? as i8 as i64;
                         self.instr.len += 1;
                     },
                     (2, _, _) | (0, 5, _) | (0, 4, 5)=> {
-                        self.instr.disp = ac.get_code32(self.instr.len)? as u32;
+                        self.instr.disp = ac.get_code32(self.instr.len)? as i32 as i64;
                         self.instr.len += 4;
                     },
                     _ => {},

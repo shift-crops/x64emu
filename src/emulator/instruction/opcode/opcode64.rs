@@ -147,8 +147,8 @@ impl super::OpcodeTrait for Opcode64 {
         setop!(0xe5, in_eax_imm8,       OpFlags::IMM8);
         // 0xe6 : out_imm8_al
         setop!(0xe7, out_imm8_eax,      OpFlags::IMM8);
-        setop!(0xe8, call_imm64,        OpFlags::IMM64);
-        setop!(0xe9, jmp_imm64,         OpFlags::IMM64);
+        setop!(0xe8, call_rel_imm64,    OpFlags::IMM64);
+        setop!(0xe9, jmp_rel_imm64,     OpFlags::IMM64);
         // 0xea : invalid
         // 0xeb : jmp_imm8
         // 0xec : in_al_dx
@@ -461,6 +461,11 @@ impl Opcode64 {
         match exec.idata.modrm.reg as u8 {
             0 => Opcode64::inc_rm64(exec)?,
             1 => Opcode64::dec_rm64(exec)?,
+            2 => Opcode64::call_abs_rm64(exec)?,
+            3 => Opcode64::callf_m16_64(exec)?,
+            4 => Opcode64::jmp_abs_rm64(exec)?,
+            5 => Opcode64::jmpf_m16_64(exec)?,
+            6 => Opcode64::push_rm64(exec)?,
             _ => { return Err(EmuException::UnexpectedError); },
         }
         Ok(())
@@ -468,6 +473,27 @@ impl Opcode64 {
 
     inc_dst!(rm64);
     dec_dst!(rm64);
+    call_abs!(64, rm64);
+    jmp_abs!(64, rm64);
+    push_src!(64, rm64);
+
+    fn callf_m16_64(exec: &mut exec::Exec) -> Result<(), EmuException> {
+        let (sg, adr) = exec.get_m()?;
+
+        let sel = exec.ac.get_data16((sg,adr))?;
+        let abs = exec.ac.get_data64((sg,adr+2))?;
+        debug!("callf: {:04x}:{:016x}", sel, abs);
+        exec.call_far_u64(sel, abs)
+    }
+
+    fn jmpf_m16_64(exec: &mut exec::Exec) -> Result<(), EmuException> {
+        let (sg, adr) = exec.get_m()?;
+
+        let sel = exec.ac.get_data16((sg,adr))?;
+        let abs = exec.ac.get_data64((sg,adr+2))?;
+        debug!("jmpf: {:04x}:{:016x}", sel, abs);
+        exec.jmp_far_u64(sel, abs)
+    }
 
     fn code_0f01(exec: &mut exec::Exec) -> Result<(), EmuException> {
         match exec.idata.modrm.reg as u8 {
