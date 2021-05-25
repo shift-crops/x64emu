@@ -438,12 +438,12 @@ impl Opcode64 {
     fn code_f7(exec: &mut exec::Exec) -> Result<(), EmuException> {
         let back = match exec.idata.modrm.reg as u8 {
             0 => { Opcode64::test_rm64_imm64(exec)?; 0},
-            2 => { Opcode64::not_rm64(exec)?; -4},
-            3 => { Opcode64::neg_rm64(exec)?; -4},
-            4 => { Opcode64::mul_rdx_rax_rm64(exec)?; -4},
-            5 => { Opcode64::imul_rdx_rax_rm64(exec)?; -4},
-            6 => { Opcode64::div_rax_rdx_rm64(exec)?; -4},
-            7 => { Opcode64::idiv_rax_rdx_rm64(exec)?; -4},
+            2 => { Opcode64::not_rm64(exec)?; -8},
+            3 => { Opcode64::neg_rm64(exec)?; -8},
+            4 => { Opcode64::mul_rdx_rax_rm64(exec)?; -8},
+            5 => { Opcode64::imul_rdx_rax_rm64(exec)?; -8},
+            6 => { Opcode64::div_rax_rdx_rm64(exec)?; -8},
+            7 => { Opcode64::idiv_rax_rdx_rm64(exec)?; -8},
             _ => { return Err(EmuException::UnexpectedError); },
         };
         exec.ac.update_ip(back)

@@ -6,6 +6,6 @@
 ## How to run
 
 ```
-$ make -C src/bios
-$ cargo run /path/to/image
+$ cargo make bios
+$ cargo run --release /path/to/image
 ```

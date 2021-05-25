@@ -109,7 +109,7 @@ macro_rules! inc_dst {
     ( $dst:ident ) => { paste::item! {
         fn [<inc_ $dst>](exec: &mut exec::Exec) -> Result<(), EmuException> {
             let v = exec.[<get_ $dst>]()?;
-            exec.[<set_ $dst>](v+1)
+            exec.[<set_ $dst>](v.wrapping_add(1))
         }
     } };
 }
@@ -118,7 +118,7 @@ macro_rules! dec_dst {
     ( $dst:ident ) => { paste::item! {
         fn [<dec_ $dst>](exec: &mut exec::Exec) -> Result<(), EmuException> {
             let v = exec.[<get_ $dst>]()?;
-            exec.[<set_ $dst>](v-1)
+            exec.[<set_ $dst>](v.wrapping_sub(1))
         }
     } };
 }
@@ -487,9 +487,10 @@ macro_rules! neg_dst {
     ( $size:expr, $dst:ident ) => { paste::item! {
         fn [<neg_ $dst>](exec: &mut exec::Exec) -> Result<(), EmuException> {
             let v = exec.[<get_ $dst>]()? as u!($size);
+            let z = 0 as i!($size);
             debug!("neg: {:02x}", v);
             exec.update_rflags_sub(0, v)?;
-            exec.[<set_ $dst>](-(v as i!($size)) as u!($size))
+            exec.[<set_ $dst>](z.wrapping_sub(v as i!($size)) as u!($size))
         }
     } };
 }

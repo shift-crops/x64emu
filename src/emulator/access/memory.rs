@@ -181,10 +181,11 @@ impl TLB {
 
     fn add_cache(&mut self, vpn: u64, cache: PageType) -> () {
         match cache {
-            PageType::Page1GB(tbl) => { if !tbl.PCD { self.p1gb.insert(vpn >> 18, tbl); } },
-            PageType::Page4MB(tbl) => { if !tbl.PCD { self.p4mb.insert(vpn >> 10, tbl); } },
-            PageType::Page2MB(tbl) => { if !tbl.PCD { self.p2mb.insert(vpn >> 9, tbl); } },
-            PageType::Page4KB(tbl) => { if !tbl.PCD { self.p4kb.insert(vpn, tbl); } },
+            PageType::Page1GB(tbl) if !tbl.PCD => { self.p1gb.insert(vpn >> 18, tbl); },
+            PageType::Page4MB(tbl) if !tbl.PCD => { self.p4mb.insert(vpn >> 10, tbl); },
+            PageType::Page2MB(tbl) if !tbl.PCD => { self.p2mb.insert(vpn >> 9, tbl); },
+            PageType::Page4KB(tbl) if !tbl.PCD => { self.p4kb.insert(vpn, tbl); },
+            _ => {},
         }
     }
 
@@ -322,11 +323,12 @@ impl super::Access {
             u64::from_le_bytes(dst)
         } else {
             let paddr = paddr as usize;
+            let mem = self.mem.read().unwrap();
             match size {
-                MemAccessSize::Byte  => self.mem.read().unwrap().read8(paddr) as u64,
-                MemAccessSize::Word  => self.mem.read().unwrap().read16(paddr) as u64,
-                MemAccessSize::DWord => self.mem.read().unwrap().read32(paddr) as u64,
-                MemAccessSize::QWord => self.mem.read().unwrap().read64(paddr),
+                MemAccessSize::Byte  => mem.read8(paddr) as u64,
+                MemAccessSize::Word  => mem.read16(paddr) as u64,
+                MemAccessSize::DWord => mem.read32(paddr) as u64,
+                MemAccessSize::QWord => mem.read64(paddr),
             }
         };
         Ok(v)
@@ -338,11 +340,12 @@ impl super::Access {
             self.dev.write_memio(paddr, &v.to_le_bytes()[..size as usize]);
         } else {
             let paddr = paddr as usize;
+            let mut mem = self.mem.write().unwrap();
             match size {
-                MemAccessSize::Byte  => self.mem.write().unwrap().write8(paddr, v as u8),
-                MemAccessSize::Word  => self.mem.write().unwrap().write16(paddr, v as u16),
-                MemAccessSize::DWord => self.mem.write().unwrap().write32(paddr, v as u32),
-                MemAccessSize::QWord => self.mem.write().unwrap().write64(paddr, v),
+                MemAccessSize::Byte  => mem.write8(paddr, v as u8),
+                MemAccessSize::Word  => mem.write16(paddr, v as u16),
+                MemAccessSize::DWord => mem.write32(paddr, v as u32),
+                MemAccessSize::QWord => mem.write64(paddr, v),
             }
         }
         Ok(())
@@ -351,11 +354,12 @@ impl super::Access {
     fn get_code_size(&self, index: u64, size: MemAccessSize) -> Result<u64, EmuException> {
         let ip: u64 = self.get_ip()?;
         let paddr = self.trans_v2p(MemAccessMode::Exec, SgReg::CS, ip + index)? as usize;
+        let mem = self.mem.read().unwrap();
         let v = match size {
-            MemAccessSize::Byte  => self.mem.read().unwrap().read8(paddr) as u64,
-            MemAccessSize::Word  => self.mem.read().unwrap().read16(paddr) as u64,
-            MemAccessSize::DWord => self.mem.read().unwrap().read32(paddr) as u64,
-            MemAccessSize::QWord => self.mem.read().unwrap().read64(paddr),
+            MemAccessSize::Byte  => mem.read8(paddr) as u64,
+            MemAccessSize::Word  => mem.read16(paddr) as u64,
+            MemAccessSize::DWord => mem.read32(paddr) as u64,
+            MemAccessSize::QWord => mem.read64(paddr),
         };
         Ok(v)
     }
@@ -446,7 +450,6 @@ impl super::Access {
                 PageType::Page4KB(tbl) => { tbl.base + (laddr & ((1<<12)-1)) },
             }
         } else { laddr };
-        //println!("{:x} -> {:x}", laddr, paddr);
         Ok(paddr)
    }
 
@@ -461,46 +464,31 @@ impl super::Access {
         } else { None };
 
         let pml4e: Option<PML4E> = if let Some(idx) = psidx.pml4 {
-            let pml4_base = match pml5e {
-                Some(e) => {
-                    if !e.P || (acs == MemAccessMode::Write && !e.RW) || (cpl > 2 && !e.US ){
-                        return None;
-                    }
-                    (e.pml4_base as usize) << 12
-                },
-                None => cr3.get_pagedir_base() as usize,
-            };
+            let pml4_base = if let Some(e) = pml5e {
+                if !e.P || (acs == MemAccessMode::Write && !e.RW) || (cpl > 2 && !e.US) { return None; }
+                (e.pml4_base as usize) << 12
+            } else { cr3.get_pagedir_base() as usize };
             Some(PML4E::unpack(&mem.read64(pml4_base + (idx as usize)*8).to_be_bytes()).unwrap())
         } else { None };
 
         let pdpte: Option<PDPTE> = if let Some(idx) = psidx.pdpt {
-            let pdpt_base = match pml4e {
-                Some(e) => {
-                    if !e.P || (acs == MemAccessMode::Write && !e.RW) || (cpl > 2 && !e.US ){
-                        return None;
-                    }
-                    (e.pdpt_base as usize) << 12
-                },
-                None => cr3.get_pagedir_base() as usize,
-            };
+            let pdpt_base = if let Some(e) = pml4e {
+                if !e.P || (acs == MemAccessMode::Write && !e.RW) || (cpl > 2 && !e.US) { return None; }
+                (e.pdpt_base as usize) << 12
+            } else { cr3.get_pagedir_base() as usize };
             let raw = if let super::PagingMode::Legacy = pmd { mem.read32(pdpt_base + (idx as usize)*4) as u64 } else { mem.read64(pdpt_base + (idx as usize)*8) };
             Some(PDPTE::unpack(&raw.to_be_bytes()).unwrap())
         } else { None };
 
-        let pd_base = match pdpte {
-            Some(mut e) => {
-                if e.PS {
-                    e.pdt_base &= !((1<<18)-1);
-                    return Some(PageType::Page1GB(PageCache::from(&e)));
-                } else {
-                    if !e.P || (acs == MemAccessMode::Write && !e.RW) || (cpl > 2 && !e.US ){
-                        return None;
-                    }
-                    (e.pdt_base as usize) << 12
-                }
-            },
-            None => cr3.get_pagedir_base() as usize,
-        };
+        let pd_base = if let Some(mut e) = pdpte {
+            if e.PS {
+                e.pdt_base &= !((1<<18)-1);
+                return Some(PageType::Page1GB(PageCache::from(&e)));
+            } else {
+                if !e.P || (acs == MemAccessMode::Write && !e.RW) || (cpl > 2 && !e.US) { return None; }
+                (e.pdt_base as usize) << 12
+            }
+        } else { cr3.get_pagedir_base() as usize };
         let raw = if let super::PagingMode::Legacy = pmd { mem.read32(pd_base + (psidx.pd as usize)*4) as u64 } else { mem.read64(pd_base + (psidx.pd as usize)*8) };
         let mut pde = PDE::unpack(&raw.to_be_bytes()).unwrap();
 
@@ -514,18 +502,14 @@ impl super::Access {
                 return Some(PageType::Page2MB(PageCache::from(&pde)));
             },
             _ => {
-                if !pde.P || (acs == MemAccessMode::Write && !pde.RW) || (cpl > 2 && !pde.US ){
-                    return None;
-                }
+                if !pde.P || (acs == MemAccessMode::Write && !pde.RW) || (cpl > 2 && !pde.US) { return None; }
                 (pde.pt_base as usize) << 12
             },
         };
         let raw = if let super::PagingMode::Legacy = pmd { mem.read32(pt_base + (psidx.pt as usize)*4) as u64 } else { mem.read64(pt_base + (psidx.pt as usize)*8) };
         let pte = PTE::unpack(&raw.to_be_bytes()).unwrap();
 
-        if !pte.P || (acs == MemAccessMode::Write && !pte.RW) || (cpl > 2 && !pte.US ){
-            return None;
-        }
+        if !pte.P || (acs == MemAccessMode::Write && !pte.RW) || (cpl > 2 && !pte.US) { return None; }
 
         Some(PageType::Page4KB(PageCache::from(&pte)))
     }
@@ -578,7 +562,7 @@ fn page_table_test() {
 #[test]
 fn page_walk_legacy_test() {
     let hw = hardware::Hardware::new(0x2000);
-    let dev = device::Device::new(std::sync::Arc::clone(&hw.mem));
+    let (dev, _) = device::Device::new();
     let mut ac = super::Access::new(hw, dev);
 
     ac.pgmd = Some(super::PagingMode::Legacy);
@@ -612,7 +596,7 @@ fn page_walk_legacy_test() {
 #[test]
 fn page_walk_pae_test() {
     let hw = hardware::Hardware::new(0x3000);
-    let dev = device::Device::new(std::sync::Arc::clone(&hw.mem));
+    let (dev, _) = device::Device::new();
     let mut ac = super::Access::new(hw, dev);
 
     ac.pgmd = Some(super::PagingMode::LegacyPAE);
@@ -650,7 +634,7 @@ fn page_walk_pae_test() {
 #[test]
 fn page_walk_ia32e4l_test() {
     let hw = hardware::Hardware::new(0x5000);
-    let dev = device::Device::new(std::sync::Arc::clone(&hw.mem));
+    let (dev, _) = device::Device::new();
     let mut ac = super::Access::new(hw, dev);
 
     ac.pgmd = Some(super::PagingMode::Ia32e4Lv);
@@ -705,7 +689,7 @@ fn page_walk_ia32e4l_test() {
 #[test]
 fn page_walk_ia32e5l_test() {
     let hw = hardware::Hardware::new(0x6000);
-    let dev = device::Device::new(std::sync::Arc::clone(&hw.mem));
+    let (dev, _) = device::Device::new();
     let mut ac = super::Access::new(hw, dev);
 
     ac.pgmd = Some(super::PagingMode::Ia32e5Lv);
@@ -766,7 +750,7 @@ fn page_walk_ia32e5l_test() {
 #[should_panic]
 fn page_walk_test_panic() {
     let hw = hardware::Hardware::new(0x1000);
-    let dev = device::Device::new(std::sync::Arc::clone(&hw.mem));
+    let (dev, _) = device::Device::new();
     let mut ac = super::Access::new(hw, dev);
 
     ac.pgmd = Some(super::PagingMode::Legacy);
@@ -779,7 +763,7 @@ fn page_walk_test_panic() {
 #[test]
 fn real_mem_test() {
     let hw = hardware::Hardware::new(0x1000);
-    let dev = device::Device::new(std::sync::Arc::clone(&hw.mem));
+    let (dev, _) = device::Device::new();
     let mut ac = super::Access::new(hw, dev);
 
     ac.set_data32((SgReg::DS, 0x10), 0xdeadbeef).unwrap();

@@ -26,8 +26,8 @@ impl TestTimer {
 
     fn start_timer(&mut self) {
         let interval = self.reg as u64;
-        let irq = super::IReq::clone(&self.irq);
-        let running = Arc::clone(&self.running);
+        let irq = self.irq.clone();
+        let running = self.running.clone();
         running.store(true, Ordering::Relaxed);
 
         let (tx, rx) = mpsc::channel();
@@ -58,13 +58,13 @@ impl super::PortIO for TestTimer {
         if addr != 0x20 { 0 } else { self.reg }
     }
 
-    fn out8(&mut self, addr: u16, data: u8) -> () {
+    fn out8(&mut self, addr: u16, val: u8) -> () {
         if addr != 0x20 { return; }
 
-        self.reg = data;
+        self.reg = val;
 
         self.stop_timer();
-        if data > 0 {
+        if val > 0 {
             self.start_timer();
         }
     }

@@ -1,6 +1,7 @@
+extern init_vga
 global start
 
-bits 16
+BITS 16
 start:
 	mov ax, cs
 	mov ds, ax
@@ -14,6 +15,7 @@ start:
 	pusha
 
 	; some initialize process
+	call dword init_vga
 
 	popa
 	mov ds, ax

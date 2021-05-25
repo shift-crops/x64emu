@@ -73,8 +73,8 @@ macro_rules! repeat_reg {
             if let Some(r) = &self.pdata.repeat {
                 self.ac.update_gpreg($reg, -1)?;
                 rep = match (self.ac.get_gpreg($reg)?, r, self.ac.core.rflags.is_zero()) {
-                (0, _, _) | (_, Rep::REPZ, false) | (_, Rep::REPNZ, true) => false,
-                _ => true,
+                    (0, _, _) | (_, Rep::REPZ, false) | (_, Rep::REPNZ, true) => false,
+                    _ => true,
                 }
             }
             if rep { self.ac.update_ip(-(self.idata.len as i64))?; }
