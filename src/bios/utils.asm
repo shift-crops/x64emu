@@ -1,36 +1,68 @@
-global write_esb, write_esw, write_esd, memcpy_es
+global store_esb, store_esw, store_esd
+global load_esb, load_esw, load_esd
+global memcpy_es, memset_es, strlen_es
 global in_byte, out_byte, in_word, out_word, cli, sti
 
 BITS 16
-write_esb:
+store_esb:
+	push ebp
+	mov bp, sp
+	push di
+	mov di, word [bp+0x8]
+	mov al, byte [bp+0xc]
+	stosb
+	pop di
+	o32 leave
+	o32 ret
+
+store_esw:
 	push ebp
 	mov bp, sp
 	push di
 	mov di, word [bp+0x8]
 	mov ax, word [bp+0xc]
-	mov byte [es:di], al
+	stosw
 	pop di
 	o32 leave
 	o32 ret
 
-write_esw:
-	push ebp
-	mov bp, sp
-	push di
-	mov di, word [bp+0x8]
-	mov ax, word [bp+0xc]
-	mov word [es:di], ax
-	pop di
-	o32 leave
-	o32 ret
-
-write_esd:
+store_esd:
 	push ebp
 	mov bp, sp
 	push di
 	mov di, word [bp+0x8]
 	mov eax, dword [bp+0xc]
-	mov dword [es:di], eax
+	stosd
+	pop di
+	o32 leave
+	o32 ret
+
+load_esb:
+	push ebp
+	mov bp, sp
+	push di
+	mov di, word [bp+0x8]
+	lodsb
+	pop di
+	o32 leave
+	o32 ret
+
+load_esw:
+	push ebp
+	mov bp, sp
+	push di
+	mov di, word [bp+0x8]
+	lodsw
+	pop di
+	o32 leave
+	o32 ret
+
+load_esd:
+	push ebp
+	mov bp, sp
+	push di
+	mov di, word [bp+0x8]
+	lodsd
 	pop di
 	o32 leave
 	o32 ret
@@ -48,6 +80,38 @@ memcpy_es:
 	pop cx
 	pop di
 	pop si
+	o32 leave
+	o32 ret
+
+memset_es:
+	push ebp
+	mov bp, sp
+	push di
+	push cx
+	mov di, word [bp+0x8]
+	mov al, byte [bp+0xc]
+	mov cx, word [bp+0x10]
+	repnz stosb
+	pop cx
+	pop di
+	o32 leave
+	o32 ret
+
+strlen_es:
+	push ebp
+	mov bp, sp
+	push di
+	push cx
+	mov di, word [bp+0x8]
+	xor ax, ax
+	xor cx, cx
+	not cx
+	repnz scasb
+	xor ax, ax
+	sub ax, cx
+	sub ax, 2
+	pop cx
+	pop di
 	o32 leave
 	o32 ret
 

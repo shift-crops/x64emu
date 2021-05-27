@@ -1,10 +1,10 @@
 TARGET   := bios.bin
 OBJS     := startup.o utils.o
-SUB_OBJS := init/init.a
+SUB_OBJS := init/init.a service/service.a
 
 CC 	     := gcc
 AS 	     := nasm
-CFLAGS   += -masm=intel -nostdlib -fno-asynchronous-unwind-tables -fcf-protection=none -fno-stack-protector -fno-pie -m16
+CFLAGS   += -I./include -masm=intel -nostdlib -fno-asynchronous-unwind-tables -fcf-protection=none -fno-stack-protector -fno-pie -m16
 LDFLAGS  += --entry=start --oformat=binary -Ttext 0x0 -melf_i386
 
 all : $(TARGET) crt0.bin

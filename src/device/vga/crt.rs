@@ -125,6 +125,10 @@ impl CRT {
             }
         } else { None }
     }
+
+    pub fn get_startaddr(&self) -> u16 {
+        (self.sahr as u16) << 8 + self.salr as u16
+    }
 }
 
 #[derive(Debug, Default, PackedStruct)]

@@ -1,4 +1,4 @@
-extern init_vga
+extern init_vga, init_ivt
 global start
 
 BITS 16
@@ -16,6 +16,7 @@ start:
 
 	; some initialize process
 	call dword init_vga
+	call dword init_ivt
 
 	popa
 	mov ds, ax

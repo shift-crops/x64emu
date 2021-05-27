@@ -96,6 +96,7 @@ impl VGA {
     }
 
     fn refresh(&self, buf: &mut Vec<[u8; 3]>, fc: u8) -> () {
+        let base = self.crt.get_startaddr() as usize;
         for i in 0..buf.len() {
             let attr_idx = match self.gmode {
                 GraphicMode::TEXT => {
@@ -106,7 +107,7 @@ impl VGA {
 
                     let (x, y) = self.crt.pixel_to_pos(i as u32);
                     let idx    = self.crt.pos_to_chridx(x, y);
-                    let (chr, attr) = (self.plane[0][idx as usize], self.plane[1][idx as usize]);
+                    let (chr, attr) = (self.plane[0][base + idx as usize], self.plane[1][base + idx as usize]);
 
                     let (cx, cy) = (x as u8 % 8, y as u8 % c_height);
                     let chr_bit = if !(blink && (attr & 0x80 != 0) && chr_frq) {
@@ -126,7 +127,7 @@ impl VGA {
                     }
                 },
                 GraphicMode::GRAPHIC => {
-                    let idx = i/8;
+                    let idx = base + i/8;
                     let bit = 7-(i%8);
 
                     let mut attr_idx = 0;
@@ -137,7 +138,7 @@ impl VGA {
                 },
                 GraphicMode::GRAPHIC_SHIFT => {
                     let num = (i/4)%2;
-                    let idx = i/8;
+                    let idx = base + i/8;
                     let bit = 6-((i%4)*2);
 
                     (((self.plane[num+2][idx] >> bit) & 3) << 2) | ((self.plane[num][idx] >> bit) & 3)

@@ -1,5 +1,5 @@
-TARGET  := init.a
-OBJS    := interrupt.o vga.o
+TARGET  := service.a
+OBJS    := bsv.o video.o
 
 CC      := gcc
 AS      := nasm
