@@ -15,7 +15,7 @@ pub(in crate::emulator) struct PrefixData {
     pub(super) segment: Option<SgReg>,
     pub(super) repeat: Option<Rep>,
     pub(super) size: OverrideSize,
-    pub(super) rex: Rex,
+    pub(super) rex: Option<Rex>,
 }
 
 pub(in crate::emulator) enum Rep { REPZ, REPNZ }
@@ -34,10 +34,10 @@ impl Default for OverrideSize {
 #[derive(Debug, Default, Clone, Copy, PackedStruct)]
 #[packed_struct(bit_numbering="lsb0", size_bytes="1")]
 pub struct Rex {
-    #[packed_field(bits="0")] pub b:  u8,
-    #[packed_field(bits="1")] pub x:  u8,
-    #[packed_field(bits="2")] pub r:  u8,
-    #[packed_field(bits="3")] pub w:  u8,
+    #[packed_field(bits="0")] pub b:   u8,
+    #[packed_field(bits="1")] pub x:   u8,
+    #[packed_field(bits="2")] pub r:   u8,
+    #[packed_field(bits="3")] pub w:   u8,
 }
 
 #[derive(Default)]
@@ -48,10 +48,10 @@ pub(super) struct InstrData {
     pub opcode: u16,
     pub modrm: ModRM,
     pub sib: Sib,
-    pub disp: u32,
-    pub imm: u64,
-    pub ptr16: u16,
-    pub moffs: u64,
+    pub disp: i64,
+    pub imm: Option<u64>,
+    pub ptr16: Option<u16>,
+    pub moffs: Option<u64>,
 }
 
 #[derive(Debug, Default, Clone, Copy, PackedStruct)]
@@ -101,12 +101,12 @@ impl ParseInstr {
                 opcode::OpFlags::SZ64 => (ac.get_code64(self.instr.len)? as u64, 8),
                 _ => (0, 0),
             };
-            self.instr.imm = imm;
+            self.instr.imm = Some(imm);
             self.instr.len += len;
         }
 
         if flag.contains(opcode::OpFlags::PTR16) {
-            self.instr.ptr16 = ac.get_code16(self.instr.len)? as u16;
+            self.instr.ptr16 = Some(ac.get_code16(self.instr.len)? as u16);
             self.instr.len += 2;
         }
 
@@ -144,9 +144,10 @@ impl ParseInstr {
         let code = ac.get_code8(self.instr.len)?;
         if (code >> 4) != 4 { return Ok(()); }
 
-        self.prefix.rex = Rex::unpack(&code.to_be_bytes()).unwrap();
+        let rex = Rex::unpack(&code.to_be_bytes()).unwrap();
+        debug!("{:} ", rex);
+        self.prefix.rex = Some(rex);
         self.instr.len += 1;
-        debug!("{:} ", self.prefix.rex);
         Ok(())
     }
 
@@ -179,11 +180,11 @@ impl ParseInstr {
             access::AcsSize::BIT16 => {
                 match (mod_, rm) {
                     (1, _) => {
-                        self.instr.disp = ac.get_code8(self.instr.len)? as u32;
+                        self.instr.disp = ac.get_code8(self.instr.len)? as i8 as i64;
                         self.instr.len += 1;
                     },
                     (2, _) | (0, 6) => {
-                        self.instr.disp = ac.get_code16(self.instr.len)? as u32;
+                        self.instr.disp = ac.get_code16(self.instr.len)? as i16 as i64;
                         self.instr.len += 2;
                     },
                     _ => {},
@@ -199,11 +200,11 @@ impl ParseInstr {
 
                 match (mod_, rm, self.instr.sib.base) {
                     (1, _, _) => {
-                        self.instr.disp = ac.get_code8(self.instr.len)? as u32;
+                        self.instr.disp = ac.get_code8(self.instr.len)? as i8 as i64;
                         self.instr.len += 1;
                     },
                     (2, _, _) | (0, 5, _) | (0, 4, 5)=> {
-                        self.instr.disp = ac.get_code32(self.instr.len)? as u32;
+                        self.instr.disp = ac.get_code32(self.instr.len)? as i32 as i64;
                         self.instr.len += 4;
                     },
                     _ => {},
@@ -215,20 +216,13 @@ impl ParseInstr {
     }
 
     fn get_moffs(&mut self, ac: &mut access::Access) -> Result<(), EmuException> {
-        match self.instr.adsize {
-            access::AcsSize::BIT16 => {
-                self.instr.moffs = ac.get_code16(self.instr.len)? as u64;
-                self.instr.len += 2;
-            },
-            access::AcsSize::BIT32 => {
-                self.instr.moffs = ac.get_code32(self.instr.len)? as u64;
-                self.instr.len += 4;
-            },
-            access::AcsSize::BIT64 => {
-                self.instr.moffs = ac.get_code64(self.instr.len)? as u64;
-                self.instr.len += 8;
-            },
-        }
+        let (moffs, len) = match self.instr.adsize {
+            access::AcsSize::BIT16 => (ac.get_code16(self.instr.len)? as u64, 2),
+            access::AcsSize::BIT32 => (ac.get_code32(self.instr.len)? as u64, 4),
+            access::AcsSize::BIT64 => (ac.get_code64(self.instr.len)?, 8),
+        };
+        self.instr.moffs = Some(moffs);
+        self.instr.len += len;
         Ok(())
     }
 }

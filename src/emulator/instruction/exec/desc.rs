@@ -8,7 +8,7 @@ macro_rules! jmp_far {
             match self.ac.mode {
                 access::CpuMode::Real => {
                     self.ac.load_segment(SgReg::CS, sel)?;
-                    self.ac.set_ip(abs)?;
+                    self.ac.set_ip(abs as u64)?;
                 },
                 access::CpuMode::Protected | access::CpuMode::Long => {
                     let cpl  = self.ac.get_cpl()?;
@@ -29,7 +29,7 @@ macro_rules! jmp_far {
 
                             let cache = self.ac.select_segdesc(SgReg::CS, cpl, Some(SegDescType::Code(desc)))?;
                             self.ac.set_sgreg(SgReg::CS, (sel & 0xfff8) | cpl as u16, cache)?;
-                            self.ac.set_ip(abs)?;
+                            self.ac.set_ip(abs as u64)?;
                         },
                         Some(DescType::System(SysDescType::Call(gate))) => {
                             if gate.DPL < cpl || gate.DPL < rpl { return Err(EmuException::CPUException(CPUException::GP(None))); }
@@ -48,7 +48,7 @@ macro_rules! jmp_far {
 
                             let cache = self.ac.select_segdesc(SgReg::CS, cpl, Some(SegDescType::Code(desc)))?;
                             self.ac.set_sgreg(SgReg::CS, (sel & 0xfff8) | cpl as u16, cache)?;
-                            self.ac.set_ip(ip)?;
+                            self.ac.set_ip(ip as u64)?;
                         },
                         Some(DescType::System(SysDescType::Task(gate))) => {
                             if gate.DPL < cpl || gate.DPL < rpl { return Err(EmuException::CPUException(CPUException::GP(None))); }
@@ -76,7 +76,7 @@ macro_rules! call_far {
         pub fn [<call_far_ $type>](&mut self, sel: u16, abs: $type) -> Result<(), EmuException> {
             let cs = self.ac.get_sgreg(SgReg::CS)?;
             let cs_sel = cs.0 as $type;
-            let ip: $type = self.ac.get_ip()?;
+            let ip = self.ac.get_ip()? as $type;
 
             match self.ac.mode {
                 access::CpuMode::Real => {
@@ -85,7 +85,7 @@ macro_rules! call_far {
                     }
 
                     self.ac.load_segment(SgReg::CS, sel)?;
-                    self.ac.set_ip(abs)?;
+                    self.ac.set_ip(abs as u64)?;
                     self.ac.[<push_ $type>](cs_sel)?;
                     self.ac.[<push_ $type>](ip)?;
                 },
@@ -111,7 +111,7 @@ macro_rules! call_far {
                             self.ac.[<push_ $type>](cs_sel)?;
                             self.ac.[<push_ $type>](ip)?;
                             self.ac.set_sgreg(SgReg::CS, (sel & 0xfff8) | cpl as u16, cache)?;
-                            self.ac.set_ip(abs)?;
+                            self.ac.set_ip(abs as u64)?;
                         },
                         Some(DescType::System(SysDescType::Call(gate))) => {
                             if gate.DPL < cpl || gate.DPL < rpl { return Err(EmuException::CPUException(CPUException::GP(None))); }
@@ -132,7 +132,7 @@ macro_rules! call_far {
                                 self.ac.[<push_ $type>](cs_sel)?;
                                 self.ac.[<push_ $type>](ip)?;
                                 self.ac.set_sgreg(SgReg::CS, (sel & 0xfff8) | cpl as u16, cache)?;
-                                self.ac.set_ip(ip)?;
+                                self.ac.set_ip(ip as u64)?;
                             }
                         },
                         Some(DescType::System(SysDescType::Task(gate))) => {
@@ -204,7 +204,7 @@ macro_rules! ret_far {
                 },
             }
 
-            self.ac.set_ip(new_ip)?;
+            self.ac.set_ip(new_ip as u64)?;
             self.ac.update_opadsize()
         }
     } };
@@ -267,7 +267,7 @@ macro_rules! int_ret {
             }
 
             self.ac.core.rflags.from_u64(new_flag);
-            self.ac.set_ip(new_ip)?;
+            self.ac.set_ip(new_ip as u64)?;
             self.ac.update_opadsize()
         }
     } };

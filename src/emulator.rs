@@ -82,6 +82,10 @@ impl Emulator {
         }
     }
 
+    pub fn wake(&mut self) -> () {
+        self.halt = false;
+    }
+
     pub fn step(&mut self, debugged: bool) -> Option<Event> {
         if !self.halt {
             debug!("IP : 0x{:016x}", self.ac.core.ip.get_rip());
@@ -145,5 +149,9 @@ impl Emulator {
         self.ac.mem.write().unwrap().write_data(addr, buf.as_ptr() as *const _, len)?;
 
         Ok(())
+    }
+
+    pub fn dump(&self) -> () {
+        self.ac.dump();
     }
 }

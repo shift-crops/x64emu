@@ -86,22 +86,22 @@ struct PageCache {
     PWT: bool,
     PCD: bool,
     G:   bool,
-    base: u32,
+    base: u64,
     XD:  bool,
 }
 impl From<&PDPTE> for PageCache {
     fn from(e: &PDPTE) -> Self {
-        Self { RW: e.RW, US: e.US, PWT: e.PWT, PCD: e.PCD, G: e.G, base: e.pdt_base, XD: e.XD, }
+        Self { RW: e.RW, US: e.US, PWT: e.PWT, PCD: e.PCD, G: e.G, base: (e.pdt_base as u64) << 12, XD: e.XD, }
     }
 }
 impl From<&PDE> for PageCache {
     fn from(e: &PDE) -> Self {
-        Self { RW: e.RW, US: e.US, PWT: e.PWT, PCD: e.PCD, G: e.G, base: e.pt_base, XD: e.XD, }
+        Self { RW: e.RW, US: e.US, PWT: e.PWT, PCD: e.PCD, G: e.G, base: (e.pt_base as u64) << 12, XD: e.XD, }
     }
 }
 impl From<&PTE> for PageCache {
     fn from(e: &PTE) -> Self {
-        Self { RW: e.RW, US: e.US, PWT: e.PWT, PCD: e.PCD, G: e.G, base: e.page_base, XD: e.XD, }
+        Self { RW: e.RW, US: e.US, PWT: e.PWT, PCD: e.PCD, G: e.G, base: (e.page_base as u64) << 12, XD: e.XD, }
     }
 }
 
@@ -181,10 +181,11 @@ impl TLB {
 
     fn add_cache(&mut self, vpn: u64, cache: PageType) -> () {
         match cache {
-            PageType::Page1GB(tbl) => { if !tbl.PCD { self.p1gb.insert(vpn >> 18, tbl); } },
-            PageType::Page4MB(tbl) => { if !tbl.PCD { self.p4mb.insert(vpn >> 10, tbl); } },
-            PageType::Page2MB(tbl) => { if !tbl.PCD { self.p2mb.insert(vpn >> 9, tbl); } },
-            PageType::Page4KB(tbl) => { if !tbl.PCD { self.p4kb.insert(vpn, tbl); } },
+            PageType::Page1GB(tbl) if !tbl.PCD => { self.p1gb.insert(vpn >> 18, tbl); },
+            PageType::Page4MB(tbl) if !tbl.PCD => { self.p4mb.insert(vpn >> 10, tbl); },
+            PageType::Page2MB(tbl) if !tbl.PCD => { self.p2mb.insert(vpn >> 9, tbl); },
+            PageType::Page4KB(tbl) if !tbl.PCD => { self.p4kb.insert(vpn, tbl); },
+            _ => {},
         }
     }
 
@@ -254,30 +255,28 @@ impl super::Access {
         self.get_data64((SgReg::SS, rsp-8))
     }
 
-    pub fn read_p(&self, dst: *mut c_void, src_addr: u64, len: usize) -> Result<usize, EmuException> {
-        if let Ok(n) = self.mem.read().unwrap().read_data(dst, src_addr as usize, len) { return Ok(n); }
-        panic!("{:?}", EmuException::UnexpectedError);
+    pub fn read_p(&self, dst: *mut c_void, src_addr: u64, len: usize) -> usize {
+        if let Ok(n) = self.mem.read().unwrap().read_data(dst, src_addr as usize, len) { n } else { 0 }
     }
 
-    pub fn write_p(&mut self, dst_addr: u64, src: *const c_void, len: usize) -> Result<usize, EmuException> {
-        if let Ok(n) = self.mem.write().unwrap().write_data(dst_addr as usize, src, len) { return Ok(n); }
-        panic!("{:?}", EmuException::UnexpectedError);
+    pub fn write_p(&mut self, dst_addr: u64, src: *const c_void, len: usize) -> usize {
+        if let Ok(n) = self.mem.write().unwrap().write_data(dst_addr as usize, src, len) { n } else { 0 }
     }
 
     pub fn read_l(&self, dst: *mut c_void, src_addr: u64, len: usize) -> Result<usize, EmuException> {
-        self.read_p(dst, self.trans_l2p(MemAccessMode::Read, src_addr)?, len)
+        Ok(self.read_p(dst, self.trans_l2p(MemAccessMode::Read, src_addr)?, len))
     }
 
     pub fn write_l(&mut self, dst_addr: u64, src: *const c_void, len: usize) -> Result<usize, EmuException> {
-        self.write_p(self.trans_l2p(MemAccessMode::Write, dst_addr)?, src, len)
+        Ok(self.write_p(self.trans_l2p(MemAccessMode::Write, dst_addr)?, src, len))
     }
 
     pub fn read_v(&self, seg: SgReg, dst: *mut c_void, src_addr: u64, len: usize) -> Result<usize, EmuException> {
-        self.read_p(dst, self.trans_v2p(MemAccessMode::Read, seg, src_addr)?, len)
+        Ok(self.read_p(dst, self.trans_v2p(MemAccessMode::Read, seg, src_addr)?, len))
     }
 
     pub fn write_v(&mut self, seg: SgReg, dst_addr: u64, src: *const c_void, len: usize) -> Result<usize, EmuException> {
-        self.write_p(self.trans_v2p(MemAccessMode::Write, seg, dst_addr)?, src, len)
+        Ok(self.write_p(self.trans_v2p(MemAccessMode::Write, seg, dst_addr)?, src, len))
     }
 
     pub fn addr_v2p(&mut self, seg: SgReg, vaddr: u64) -> Result<u64, EmuException> {
@@ -324,11 +323,12 @@ impl super::Access {
             u64::from_le_bytes(dst)
         } else {
             let paddr = paddr as usize;
+            let mem = self.mem.read().unwrap();
             match size {
-                MemAccessSize::Byte  => self.mem.read().unwrap().read8(paddr) as u64,
-                MemAccessSize::Word  => self.mem.read().unwrap().read16(paddr) as u64,
-                MemAccessSize::DWord => self.mem.read().unwrap().read32(paddr) as u64,
-                MemAccessSize::QWord => self.mem.read().unwrap().read64(paddr),
+                MemAccessSize::Byte  => mem.read8(paddr) as u64,
+                MemAccessSize::Word  => mem.read16(paddr) as u64,
+                MemAccessSize::DWord => mem.read32(paddr) as u64,
+                MemAccessSize::QWord => mem.read64(paddr),
             }
         };
         Ok(v)
@@ -340,11 +340,12 @@ impl super::Access {
             self.dev.write_memio(paddr, &v.to_le_bytes()[..size as usize]);
         } else {
             let paddr = paddr as usize;
+            let mut mem = self.mem.write().unwrap();
             match size {
-                MemAccessSize::Byte  => self.mem.write().unwrap().write8(paddr, v as u8),
-                MemAccessSize::Word  => self.mem.write().unwrap().write16(paddr, v as u16),
-                MemAccessSize::DWord => self.mem.write().unwrap().write32(paddr, v as u32),
-                MemAccessSize::QWord => self.mem.write().unwrap().write64(paddr, v),
+                MemAccessSize::Byte  => mem.write8(paddr, v as u8),
+                MemAccessSize::Word  => mem.write16(paddr, v as u16),
+                MemAccessSize::DWord => mem.write32(paddr, v as u32),
+                MemAccessSize::QWord => mem.write64(paddr, v),
             }
         }
         Ok(())
@@ -353,11 +354,12 @@ impl super::Access {
     fn get_code_size(&self, index: u64, size: MemAccessSize) -> Result<u64, EmuException> {
         let ip: u64 = self.get_ip()?;
         let paddr = self.trans_v2p(MemAccessMode::Exec, SgReg::CS, ip + index)? as usize;
+        let mem = self.mem.read().unwrap();
         let v = match size {
-            MemAccessSize::Byte  => self.mem.read().unwrap().read8(paddr) as u64,
-            MemAccessSize::Word  => self.mem.read().unwrap().read16(paddr) as u64,
-            MemAccessSize::DWord => self.mem.read().unwrap().read32(paddr) as u64,
-            MemAccessSize::QWord => self.mem.read().unwrap().read64(paddr),
+            MemAccessSize::Byte  => mem.read8(paddr) as u64,
+            MemAccessSize::Word  => mem.read16(paddr) as u64,
+            MemAccessSize::DWord => mem.read32(paddr) as u64,
+            MemAccessSize::QWord => mem.read64(paddr),
         };
         Ok(v)
     }
@@ -416,12 +418,18 @@ impl super::Access {
                         PagingStructIndex::from(&LAddrPAE::unpack(&(laddr as u32).to_be_bytes()).unwrap())
                     },
                     super::PagingMode::Ia32e4Lv => {
+                        if laddr >> 48 != 0 {
+                            return Err(EmuException::CPUException(CPUException::GP(None)));
+                        }
                         let l = LAddrIa32e::unpack(&laddr.to_be_bytes()).unwrap();
                         let mut psi = PagingStructIndex::from(&l);
                         psi.pml5 = None;
                         psi
                     },
                     super::PagingMode::Ia32e5Lv => {
+                        if laddr >> 57 != 0 {
+                            return Err(EmuException::CPUException(CPUException::GP(None)));
+                        }
                         PagingStructIndex::from(&LAddrIa32e::unpack(&laddr.to_be_bytes()).unwrap())
                     },
                 };
@@ -436,101 +444,72 @@ impl super::Access {
             };
 
             match ptype {
-                PageType::Page1GB(tbl) => { ((tbl.base as u64) << 30) + (laddr & ((1<<30)-1)) },
-                PageType::Page4MB(tbl) => { ((tbl.base as u64) << 22) + (laddr & ((1<<22)-1)) },
-                PageType::Page2MB(tbl) => { ((tbl.base as u64) << 21) + (laddr & ((1<<21)-1)) },
-                PageType::Page4KB(tbl) => { ((tbl.base as u64) << 12) + (laddr & ((1<<12)-1)) },
+                PageType::Page1GB(tbl) => { tbl.base + (laddr & ((1<<30)-1)) },
+                PageType::Page4MB(tbl) => { tbl.base + (laddr & ((1<<22)-1)) },
+                PageType::Page2MB(tbl) => { tbl.base + (laddr & ((1<<21)-1)) },
+                PageType::Page4KB(tbl) => { tbl.base + (laddr & ((1<<12)-1)) },
             }
         } else { laddr };
-        //println!("{:x} -> {:x}", laddr, paddr);
         Ok(paddr)
    }
 
     fn page_walk(&self, acs: MemAccessMode, pmd: &super::PagingMode, psidx: PagingStructIndex) -> Option<PageType> {
         let cpl = self.get_cpl().ok()?;
         let cr3 = &self.core.cregs.3;
-        let table_size = if let super::PagingMode::Legacy = pmd { 4 } else { 8 };
+        let mem = self.mem.read().unwrap();
 
         let pml5e: Option<PML5E> = if let Some(idx) = psidx.pml5 {
-            let pml5_base = cr3.get_pagedir_base();
-            let mut raw: [u8; 8] = [0; 8];
-            self.read_p(raw.as_mut_ptr() as *mut _, pml5_base + idx*8, 8).ok()?;
-            raw.reverse();
-            Some(PML5E::unpack(&raw).unwrap())
+            let pml5_base = cr3.get_pagedir_base() as usize;
+            Some(PML5E::unpack(&mem.read64(pml5_base + (idx as usize)*8).to_be_bytes()).unwrap())
         } else { None };
 
         let pml4e: Option<PML4E> = if let Some(idx) = psidx.pml4 {
-            let pml4_base = match pml5e {
-                Some(e) => {
-                    if !e.P || (acs == MemAccessMode::Write && !e.RW) || (cpl > 2 && !e.US ){
-                        return None;
-                    }
-                    (e.pml4_base as u64) << 12
-                },
-                None => cr3.get_pagedir_base(),
-            };
-            let mut raw: [u8; 8] = [0; 8];
-            self.read_p(raw.as_mut_ptr() as *mut _, pml4_base + idx*8, 8).ok()?;
-            raw.reverse();
-            Some(PML4E::unpack(&raw).unwrap())
+            let pml4_base = if let Some(e) = pml5e {
+                if !e.P || (acs == MemAccessMode::Write && !e.RW) || (cpl > 2 && !e.US) { return None; }
+                (e.pml4_base as usize) << 12
+            } else { cr3.get_pagedir_base() as usize };
+            Some(PML4E::unpack(&mem.read64(pml4_base + (idx as usize)*8).to_be_bytes()).unwrap())
         } else { None };
 
         let pdpte: Option<PDPTE> = if let Some(idx) = psidx.pdpt {
-            let pdpt_base = match pml4e {
-                Some(e) => {
-                    if !e.P || (acs == MemAccessMode::Write && !e.RW) || (cpl > 2 && !e.US ){
-                        return None;
-                    }
-                    (e.pdpt_base as u64) << 12
-                },
-                None => cr3.get_pagedir_base(),
-            };
-            let mut raw: [u8; 8] = [0; 8];
-            self.read_p(raw.as_mut_ptr() as *mut _, pdpt_base + idx*table_size, table_size as usize).ok()?;
-            raw.reverse();
-            Some(PDPTE::unpack(&raw).unwrap())
+            let pdpt_base = if let Some(e) = pml4e {
+                if !e.P || (acs == MemAccessMode::Write && !e.RW) || (cpl > 2 && !e.US) { return None; }
+                (e.pdpt_base as usize) << 12
+            } else { cr3.get_pagedir_base() as usize };
+            let raw = if let super::PagingMode::Legacy = pmd { mem.read32(pdpt_base + (idx as usize)*4) as u64 } else { mem.read64(pdpt_base + (idx as usize)*8) };
+            Some(PDPTE::unpack(&raw.to_be_bytes()).unwrap())
         } else { None };
 
-        let pd_base = match pdpte {
-            Some(e) => {
-                if e.PS {
-                    return Some(PageType::Page1GB(PageCache::from(&e)));
-                } else {
-                    if !e.P || (acs == MemAccessMode::Write && !e.RW) || (cpl > 2 && !e.US ){
-                        return None;
-                    }
-                    (e.pdt_base as u64) << 12
-                }
-            },
-            None => cr3.get_pagedir_base(),
-        };
-        let mut raw: [u8; 8] = [0; 8];
-        self.read_p(raw.as_mut_ptr() as *mut _, pd_base + psidx.pd*table_size, table_size as usize).ok()?;
-        raw.reverse();
-        let pde = PDE::unpack(&raw).unwrap();
+        let pd_base = if let Some(mut e) = pdpte {
+            if e.PS {
+                e.pdt_base &= !((1<<18)-1);
+                return Some(PageType::Page1GB(PageCache::from(&e)));
+            } else {
+                if !e.P || (acs == MemAccessMode::Write && !e.RW) || (cpl > 2 && !e.US) { return None; }
+                (e.pdt_base as usize) << 12
+            }
+        } else { cr3.get_pagedir_base() as usize };
+        let raw = if let super::PagingMode::Legacy = pmd { mem.read32(pd_base + (psidx.pd as usize)*4) as u64 } else { mem.read64(pd_base + (psidx.pd as usize)*8) };
+        let mut pde = PDE::unpack(&raw.to_be_bytes()).unwrap();
 
         let pt_base = match (psidx.legacy, self.core.cregs.4.PSE, pde.PS) {
             (true, 1, true) => {
+                pde.pt_base &= !((1<<10)-1);
                 return Some(PageType::Page4MB(PageCache::from(&pde)));
             },
             (false, _, true) => {
+                pde.pt_base &= !((1<<9)-1);
                 return Some(PageType::Page2MB(PageCache::from(&pde)));
             },
             _ => {
-                if !pde.P || (acs == MemAccessMode::Write && !pde.RW) || (cpl > 2 && !pde.US ){
-                    return None;
-                }
-                (pde.pt_base as u64) << 12
+                if !pde.P || (acs == MemAccessMode::Write && !pde.RW) || (cpl > 2 && !pde.US) { return None; }
+                (pde.pt_base as usize) << 12
             },
         };
-        let mut raw: [u8; 8] = [0; 8];
-        self.read_p(raw.as_mut_ptr() as *mut _, pt_base + psidx.pt*table_size, table_size as usize).ok()?;
-        raw.reverse();
-        let pte = PTE::unpack(&raw).unwrap();
+        let raw = if let super::PagingMode::Legacy = pmd { mem.read32(pt_base + (psidx.pt as usize)*4) as u64 } else { mem.read64(pt_base + (psidx.pt as usize)*8) };
+        let pte = PTE::unpack(&raw.to_be_bytes()).unwrap();
 
-        if !pte.P || (acs == MemAccessMode::Write && !pte.RW) || (cpl > 2 && !pte.US ){
-            return None;
-        }
+        if !pte.P || (acs == MemAccessMode::Write && !pte.RW) || (cpl > 2 && !pte.US) { return None; }
 
         Some(PageType::Page4KB(PageCache::from(&pte)))
     }
@@ -538,7 +517,251 @@ impl super::Access {
 
 #[cfg(test)]
 #[test]
-fn access_mem_test() {
+fn laddr_test() {
+    let laddr_32: u32 = 0x44332211;
+    let laddr_64: u64 = 0x77665544332211;
+
+    let legacy = LAddrLegacy::unpack(&laddr_32.to_be_bytes()).unwrap();
+    assert_eq!(legacy.p_ofs, 0x211);
+    assert_eq!(legacy.pt_ofs, 0x332);
+    assert_eq!(legacy.pd_ofs, 0x110);
+
+    let pae = LAddrPAE::unpack(&laddr_32.to_be_bytes()).unwrap();
+    assert_eq!(pae.p_ofs, 0x211);
+    assert_eq!(pae.pt_ofs, 0x132);
+    assert_eq!(pae.pd_ofs, 0x21);
+    assert_eq!(pae.pdpt_ofs, 0x1);
+
+    let ia32e = LAddrIa32e::unpack(&laddr_64.to_be_bytes()).unwrap();
+    assert_eq!(ia32e.p_ofs, 0x211);
+    assert_eq!(ia32e.pt_ofs, 0x132);
+    assert_eq!(ia32e.pd_ofs, 0x21);
+    assert_eq!(ia32e.pdpt_ofs, 0x155);
+    assert_eq!(ia32e.pml4_ofs, 0xcc);
+    assert_eq!(ia32e.pml5_ofs, 0x77);
+}
+
+#[cfg(test)]
+#[test]
+fn page_table_test() {
+    let paddr: u64 = 0xdeadbee000;
+    let mut raw = paddr.to_le_bytes();
+    raw[0] |= 0x01;
+    raw[1] |= 0x01;
+    raw[7] |= 0x80;
+    raw.reverse();
+
+    let pte = PTE::unpack(&raw).unwrap();
+    assert_eq!(pte.P, true);
+    assert_eq!(pte.G, true);
+    assert_eq!(pte.page_base, 0xdeadbee);
+    assert_eq!(pte.XD, true);
+}
+
+#[cfg(test)]
+#[test]
+fn page_walk_legacy_test() {
+    let hw = hardware::Hardware::new(0x2000);
+    let (dev, _) = device::Device::new();
+    let mut ac = super::Access::new(hw, dev);
+
+    ac.pgmd = Some(super::PagingMode::Legacy);
+    ac.core.cregs.3.from_u64(0);
+    ac.core.cregs.4.PSE = 1;
+    {
+        let mut mem = ac.mem.write().unwrap();
+
+        let mut pde: PDE = Default::default();
+        pde.P = true;
+        pde.pt_base = 0x1;
+        mem.write32(0 + 4*0x32b, u64::from_be_bytes(pde.pack().unwrap()) as u32);
+
+        let mut pde: PDE = Default::default();
+        pde.P = true;
+        pde.PS = true;
+        pde.pt_base = 0x2fc00;
+        mem.write32(0 + 4*0x37a, u64::from_be_bytes(pde.pack().unwrap()) as u32);
+
+        let mut pte: PTE = Default::default();
+        pte.P = true;
+        pte.page_base = 0x1ffff;
+        mem.write32(0x1000 + 4*0x3eb, u64::from_be_bytes(pte.pack().unwrap()) as u32);
+    }
+
+    assert_eq!(ac.trans_l2p(MemAccessMode::Read, 0xcafebabe).unwrap(), 0x1ffffabe);
+    assert_eq!(ac.trans_l2p(MemAccessMode::Read, 0xdeadbeef).unwrap(), 0x2fedbeef);
+}
+
+#[cfg(test)]
+#[test]
+fn page_walk_pae_test() {
+    let hw = hardware::Hardware::new(0x3000);
+    let (dev, _) = device::Device::new();
+    let mut ac = super::Access::new(hw, dev);
+
+    ac.pgmd = Some(super::PagingMode::LegacyPAE);
+    ac.core.cregs.3.from_u64(0);
+    {
+        let mut mem = ac.mem.write().unwrap();
+
+        let mut pdpte: PDPTE = Default::default();
+        pdpte.P = true;
+        pdpte.pdt_base = 0x1;
+        mem.write64(0 + 8*0x3, u64::from_be_bytes(pdpte.pack().unwrap()));
+
+        let mut pde: PDE = Default::default();
+        pde.P = true;
+        pde.pt_base = 0x2;
+        mem.write64(0x1000 + 8*0x57, u64::from_be_bytes(pde.pack().unwrap()));
+
+        let mut pde: PDE = Default::default();
+        pde.P = true;
+        pde.PS = true;
+        pde.pt_base = 0x2fffc00;
+        mem.write64(0x1000 + 8*0xf5, u64::from_be_bytes(pde.pack().unwrap()));
+
+        let mut pte: PTE = Default::default();
+        pte.P = true;
+        pte.page_base = 0x1ffffff;
+        mem.write64(0x2000 + 8*0x1eb, u64::from_be_bytes(pte.pack().unwrap()));
+    }
+
+    assert_eq!(ac.trans_l2p(MemAccessMode::Read, 0xcafebabe).unwrap(), 0x1ffffffabe);
+    assert_eq!(ac.trans_l2p(MemAccessMode::Read, 0xdeadbeef).unwrap(), 0x2fffcdbeef);
+}
+
+#[cfg(test)]
+#[test]
+fn page_walk_ia32e4l_test() {
+    let hw = hardware::Hardware::new(0x5000);
+    let (dev, _) = device::Device::new();
+    let mut ac = super::Access::new(hw, dev);
+
+    ac.pgmd = Some(super::PagingMode::Ia32e4Lv);
+    ac.core.cregs.3.from_u64(0);
+    {
+        let mut mem = ac.mem.write().unwrap();
+
+        let mut pdpte: PML4E = Default::default();
+        pdpte.P = true;
+        pdpte.pdpt_base = 0x1;
+        mem.write64(0 + 8*0xff, u64::from_be_bytes(pdpte.pack().unwrap()));
+
+        let mut pdpte: PML4E = Default::default();
+        pdpte.P = true;
+        pdpte.pdpt_base = 0x2;
+        mem.write64(0 + 8*0x100, u64::from_be_bytes(pdpte.pack().unwrap()));
+
+        let mut pdpte: PDPTE = Default::default();
+        pdpte.P = true;
+        pdpte.pdt_base = 0x3;
+        mem.write64(0x1000 + 8*0x1c3, u64::from_be_bytes(pdpte.pack().unwrap()));
+
+        let mut pdpte: PDPTE = Default::default();
+        pdpte.P = true;
+        pdpte.PS = true;
+        pdpte.pdt_base = 0x3fc0000;
+        mem.write64(0x2000 + 8*0x3, u64::from_be_bytes(pdpte.pack().unwrap()));
+
+        let mut pde: PDE = Default::default();
+        pde.P = true;
+        pde.pt_base = 0x4;
+        mem.write64(0x3000 + 8*0x57, u64::from_be_bytes(pde.pack().unwrap()));
+
+        let mut pde: PDE = Default::default();
+        pde.P = true;
+        pde.PS = true;
+        pde.pt_base = 0x2fffc00;
+        mem.write64(0x3000 + 8*0xf5, u64::from_be_bytes(pde.pack().unwrap()));
+
+        let mut pte: PTE = Default::default();
+        pte.P = true;
+        pte.page_base = 0x1ffffff;
+        mem.write64(0x4000 + 8*0x1eb, u64::from_be_bytes(pte.pack().unwrap()));
+    }
+
+    assert_eq!(ac.trans_l2p(MemAccessMode::Read, 0x7ff0cafebabe).unwrap(), 0x1ffffffabe);
+    assert_eq!(ac.trans_l2p(MemAccessMode::Read, 0x7ff0deadbeef).unwrap(), 0x2fffcdbeef);
+    assert_eq!(ac.trans_l2p(MemAccessMode::Read, 0x8000feedc0de).unwrap(), 0x3ffeedc0de);
+}
+
+#[cfg(test)]
+#[test]
+fn page_walk_ia32e5l_test() {
+    let hw = hardware::Hardware::new(0x6000);
+    let (dev, _) = device::Device::new();
+    let mut ac = super::Access::new(hw, dev);
+
+    ac.pgmd = Some(super::PagingMode::Ia32e5Lv);
+    ac.core.cregs.3.from_u64(0);
+    {
+        let mut mem = ac.mem.write().unwrap();
+
+        let mut pdpte: PML5E = Default::default();
+        pdpte.P = true;
+        pdpte.pml4_base = 0x1;
+        mem.write64(0 + 8*0x100, u64::from_be_bytes(pdpte.pack().unwrap()));
+
+        let mut pdpte: PML4E = Default::default();
+        pdpte.P = true;
+        pdpte.pdpt_base = 0x2;
+        mem.write64(0x1000 + 8*0xff, u64::from_be_bytes(pdpte.pack().unwrap()));
+
+        let mut pdpte: PML4E = Default::default();
+        pdpte.P = true;
+        pdpte.pdpt_base = 0x3;
+        mem.write64(0x1000 + 8*0x100, u64::from_be_bytes(pdpte.pack().unwrap()));
+
+        let mut pdpte: PDPTE = Default::default();
+        pdpte.P = true;
+        pdpte.pdt_base = 0x4;
+        mem.write64(0x2000 + 8*0x1c3, u64::from_be_bytes(pdpte.pack().unwrap()));
+
+        let mut pdpte: PDPTE = Default::default();
+        pdpte.P = true;
+        pdpte.PS = true;
+        pdpte.pdt_base = 0x3fc0000;
+        mem.write64(0x3000 + 8*0x3, u64::from_be_bytes(pdpte.pack().unwrap()));
+
+        let mut pde: PDE = Default::default();
+        pde.P = true;
+        pde.pt_base = 0x5;
+        mem.write64(0x4000 + 8*0x57, u64::from_be_bytes(pde.pack().unwrap()));
+
+        let mut pde: PDE = Default::default();
+        pde.P = true;
+        pde.PS = true;
+        pde.pt_base = 0x2fffc00;
+        mem.write64(0x4000 + 8*0xf5, u64::from_be_bytes(pde.pack().unwrap()));
+
+        let mut pte: PTE = Default::default();
+        pte.P = true;
+        pte.page_base = 0x1ffffff;
+        mem.write64(0x5000 + 8*0x1eb, u64::from_be_bytes(pte.pack().unwrap()));
+    }
+
+    assert_eq!(ac.trans_l2p(MemAccessMode::Read, 0x1007ff0cafebabe).unwrap(), 0x1ffffffabe);
+    assert_eq!(ac.trans_l2p(MemAccessMode::Read, 0x1007ff0deadbeef).unwrap(), 0x2fffcdbeef);
+    assert_eq!(ac.trans_l2p(MemAccessMode::Read, 0x1008000feedc0de).unwrap(), 0x3ffeedc0de);
+}
+
+#[cfg(test)]
+#[test]
+#[should_panic]
+fn page_walk_test_panic() {
+    let hw = hardware::Hardware::new(0x1000);
+    let (dev, _) = device::Device::new();
+    let mut ac = super::Access::new(hw, dev);
+
+    ac.pgmd = Some(super::PagingMode::Legacy);
+    ac.core.cregs.3.from_u64(0);
+
+    ac.trans_l2p(MemAccessMode::Read, 0xdeadbeef).unwrap();
+}
+
+#[cfg(test)]
+#[test]
+fn real_mem_test() {
     let hw = hardware::Hardware::new(0x1000);
     let (dev, _) = device::Device::new();
     let mut ac = super::Access::new(hw, dev);

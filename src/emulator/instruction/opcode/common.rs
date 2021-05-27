@@ -1,4 +1,3 @@
-use crate::emulator::access::register::*;
 use crate::emulator::instruction::exec;
 use crate::emulator::instruction::opcode::*;
 
@@ -65,7 +64,7 @@ pub fn init_cmn_opcode(op: &mut super::OpcodeArr){
     setcmnop!(0xce, into,          OpFlags::NONE);
     setcmnop!(0xe4, in_al_imm8,    OpFlags::IMM8);
     setcmnop!(0xe6, out_imm8_al,   OpFlags::IMM8);
-    setcmnop!(0xeb, jmp_imm8,      OpFlags::IMM8);
+    setcmnop!(0xeb, jmp_rel_imm8,  OpFlags::IMM8);
     setcmnop!(0xec, in_al_dx,      OpFlags::NONE);
     setcmnop!(0xee, out_dx_al,     OpFlags::NONE);
     setcmnop!(0xf1, icebp,         OpFlags::NONE);
@@ -77,6 +76,8 @@ pub fn init_cmn_opcode(op: &mut super::OpcodeArr){
 
     setcmnop!(0x0f20, mov_r32_cr,  OpFlags::MODRM);
     setcmnop!(0x0f22, mov_cr_r32,  OpFlags::MODRM);
+    setcmnop!(0x0f30, wrmsr,       OpFlags::NONE);
+    setcmnop!(0x0f32, rdmsr,       OpFlags::NONE);
     setcmnop!(0x0f90, seto_rm8,    OpFlags::MODRM);
     setcmnop!(0x0f91, setno_rm8,   OpFlags::MODRM);
     setcmnop!(0x0f92, setb_rm8,    OpFlags::MODRM);
@@ -95,9 +96,11 @@ pub fn init_cmn_opcode(op: &mut super::OpcodeArr){
     setcmnop!(0x0f9f, setnle_rm8,  OpFlags::MODRM);
 
     setcmnop!(0x80, code_80,       OpFlags::MODRM | OpFlags::IMM8);
-    //setcmnop!(0x82, code_82,       OpFlags::MODRM | OpFlags::IMM8);
     setcmnop!(0xc0, code_c0,       OpFlags::MODRM | OpFlags::IMM8);
-    //setcmnop!(0xf6, code_f6,       OpFlags::MODRM);
+    setcmnop!(0xd0, code_d0,       OpFlags::MODRM);
+    setcmnop!(0xd2, code_d2,       OpFlags::MODRM);
+    setcmnop!(0xf6, code_f6,       OpFlags::MODRM | OpFlags::IMM8);
+    setcmnop!(0xfe, code_fe,       OpFlags::MODRM);
     setcmnop!(0x0f00, code_0f00,   OpFlags::MODRM);
 }
 
@@ -183,8 +186,11 @@ fn std(exec: &mut exec::Exec) -> Result<(), EmuException> { exec.ac.core.rflags.
 
 fn hlt(_exec: &mut exec::Exec) -> Result<(), EmuException> { Err(EmuException::Halt) }
 
-fn mov_r32_cr(exec: &mut exec::Exec) -> Result<(), EmuException> { exec.cr_to_r32() }
-fn mov_cr_r32(exec: &mut exec::Exec) -> Result<(), EmuException> { exec.cr_from_r32() }
+fn mov_r32_cr(exec: &mut exec::Exec) -> Result<(), EmuException> { exec.cr_to_reg() }
+fn mov_cr_r32(exec: &mut exec::Exec) -> Result<(), EmuException> { exec.cr_from_reg() }
+
+fn wrmsr(exec: &mut exec::Exec) -> Result<(), EmuException> { exec.msr_from_reg() }
+fn rdmsr(exec: &mut exec::Exec) -> Result<(), EmuException> { exec.msr_to_reg() }
 
 setcc_dst!(8, o, rm8);
 setcc_dst!(8, b, rm8);
@@ -219,6 +225,10 @@ sub_dst_src!(8, rm8, imm8);
 xor_dst_src!(8, rm8, imm8);
 cmp_dst_src!(8, rm8, imm8);
 
+pub fn code_82(exec: &mut exec::Exec) -> Result<(), EmuException> {
+    code_80(exec)
+}
+
 fn code_c0(exec: &mut exec::Exec) -> Result<(), EmuException> {
     match exec.idata.modrm.reg as u8 {
         /*
@@ -246,6 +256,96 @@ shl_dst_src!(8, rm8, imm8);
 shr_dst_src!(8, rm8, imm8);
 sal_dst_src!(8, rm8, imm8);
 sar_dst_src!(8, rm8, imm8);
+
+fn code_d0(exec: &mut exec::Exec) -> Result<(), EmuException> {
+    match exec.idata.modrm.reg as u8 {
+        /*
+        0 => rol_rm8_one(exec)?,
+        1 => ror_rm8_one(exec)?,
+        2 => rcl_rm8_one(exec)?,
+        3 => rcr_rm8_one(exec)?,
+        */
+        4 => shl_rm8_one(exec)?,
+        5 => shr_rm8_one(exec)?,
+        6 => sal_rm8_one(exec)?,
+        7 => sar_rm8_one(exec)?,
+        _ => { return Err(EmuException::UnexpectedError); },
+    }
+    Ok(())
+}
+
+/*
+rol_dst_src!(8, rm8, one);
+ror_dst_src!(8, rm8, one);
+rcl_dst_src!(8, rm8, one);
+rcr_dst_src!(8, rm8, one);
+*/
+shl_dst_src!(8, rm8, one);
+shr_dst_src!(8, rm8, one);
+sal_dst_src!(8, rm8, one);
+sar_dst_src!(8, rm8, one);
+
+fn code_d2(exec: &mut exec::Exec) -> Result<(), EmuException> {
+    match exec.idata.modrm.reg as u8 {
+        /*
+        0 => rol_rm8_cl(exec)?,
+        1 => ror_rm8_cl(exec)?,
+        2 => rcl_rm8_cl(exec)?,
+        3 => rcr_rm8_cl(exec)?,
+        */
+        4 => shl_rm8_cl(exec)?,
+        5 => shr_rm8_cl(exec)?,
+        6 => sal_rm8_cl(exec)?,
+        7 => sar_rm8_cl(exec)?,
+        _ => { return Err(EmuException::UnexpectedError); },
+    }
+    Ok(())
+}
+
+/*
+rol_dst_src!(8, rm8, cl);
+ror_dst_src!(8, rm8, cl);
+rcl_dst_src!(8, rm8, cl);
+rcr_dst_src!(8, rm8, cl);
+*/
+shl_dst_src!(8, rm8, cl);
+shr_dst_src!(8, rm8, cl);
+sal_dst_src!(8, rm8, cl);
+sar_dst_src!(8, rm8, cl);
+
+fn code_f6(exec: &mut exec::Exec) -> Result<(), EmuException> {
+    let back = match exec.idata.modrm.reg as u8 {
+        0 => { test_rm8_imm8(exec)?; 0},
+        2 => { not_rm8(exec)?; -1},
+        3 => { neg_rm8(exec)?; -1},
+        4 => { mul_ah_al_rm8(exec)?; -1},
+        5 => { imul_ah_al_rm8(exec)?; -1},
+        6 => { div_al_ah_rm8(exec)?; -1},
+        7 => { idiv_al_ah_rm8(exec)?; -1},
+        _ => { return Err(EmuException::UnexpectedError); },
+    };
+    exec.ac.update_ip(back)
+}
+
+test_dst_src!(8, rm8, imm8);
+not_dst!(8, rm8);
+neg_dst!(8, rm8);
+mul_high_low_src!(8, ah, al, rm8);
+imul_high_low_src!(8, ah, al, rm8);
+div_quot_rem_src!(8, al, ah, rm8);
+idiv_quot_rem_src!(8, al, ah, rm8);
+
+fn code_fe(exec: &mut exec::Exec) -> Result<(), EmuException> {
+    match exec.idata.modrm.reg as u8 {
+        0 => inc_rm8(exec)?,
+        1 => dec_rm8(exec)?,
+        _ => { return Err(EmuException::UnexpectedError); },
+    }
+    Ok(())
+}
+
+inc_dst!(rm8);
+dec_dst!(rm8);
 
 fn code_0f00(exec: &mut exec::Exec) -> Result<(), EmuException> {
     match exec.idata.modrm.reg as u16 {
