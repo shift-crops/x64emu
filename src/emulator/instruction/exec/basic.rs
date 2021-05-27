@@ -79,4 +79,8 @@ impl<'a> super::Exec<'a> {
         let sreg = SgReg::try_from(self.idata.modrm.reg as usize).unwrap();
         self.mov_to_sreg(sreg, v)
     }
+
+    pub fn get_one(&self) -> Result<u8, EmuException> {
+        Ok(1)
+    }
 }

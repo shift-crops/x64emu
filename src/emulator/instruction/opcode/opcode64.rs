@@ -187,6 +187,8 @@ impl super::OpcodeTrait for Opcode64 {
         setop!(0x83, code_83, OpFlags::MODRM | OpFlags::IMM8);
         // 0xc0 : code_c0
         setop!(0xc1, code_c1, OpFlags::MODRM | OpFlags::IMM8);
+        // 0xd0 : code_d0
+        setop!(0xd1, code_d1, OpFlags::MODRM);
         // 0xd2 : code_d2
         setop!(0xd3, code_d3, OpFlags::MODRM);
         // 0xf6 : code_f6
@@ -406,6 +408,34 @@ impl Opcode64 {
     shr_dst_src!(64, rm64, imm8);
     sal_dst_src!(64, rm64, imm8);
     sar_dst_src!(64, rm64, imm8);
+
+    fn code_d1(exec: &mut exec::Exec) -> Result<(), EmuException> {
+        match exec.idata.modrm.reg as u8 {
+            /*
+            0 => Opcode64::rol_rm64_one(exec)?,
+            1 => Opcode64::ror_rm64_one(exec)?,
+            2 => Opcode64::rcl_rm64_one(exec)?,
+            3 => Opcode64::rcr_rm64_one(exec)?,
+            */
+            4 => Opcode64::shl_rm64_one(exec)?,
+            5 => Opcode64::shr_rm64_one(exec)?,
+            6 => Opcode64::sal_rm64_one(exec)?,
+            7 => Opcode64::sar_rm64_one(exec)?,
+            _ => { return Err(EmuException::UnexpectedError); },
+        }
+        Ok(())
+    }
+
+    /*
+    rol_dst_src!(64, rm64, one);
+    ror_dst_src!(64, rm64, one);
+    rcl_dst_src!(64, rm64, one);
+    rcr_dst_src!(64, rm64, one);
+    */
+    shl_dst_src!(64, rm64, one);
+    shr_dst_src!(64, rm64, one);
+    sal_dst_src!(64, rm64, one);
+    sar_dst_src!(64, rm64, one);
 
     fn code_d3(exec: &mut exec::Exec) -> Result<(), EmuException> {
         match exec.idata.modrm.reg as u8 {

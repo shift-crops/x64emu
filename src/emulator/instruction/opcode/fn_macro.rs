@@ -529,7 +529,7 @@ macro_rules! mul_high_low_src {
             exec.update_rflags_mul(src1h, src2)?;
             let v = src1.wrapping_mul(src2 as u128);
             exec.[<set_ $high>]((v >> $size) as u!($size))?;
-            exec.[<set_ $low>](v  as u!($size))?;
+            exec.[<set_ $low>](v as u!($size))?;
             Ok(())
         }
     } };
@@ -547,7 +547,7 @@ macro_rules! imul_high_low_src {
             exec.update_rflags_imul(src1h, src2)?;
             let v = src1.wrapping_mul(src2 as i128);
             exec.[<set_ $high>]((v >> $size) as u!($size))?;
-            exec.[<set_ $low>](v  as u!($size))?;
+            exec.[<set_ $low>](v as u!($size))?;
             Ok(())
         }
     } };
