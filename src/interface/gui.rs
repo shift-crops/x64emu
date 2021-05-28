@@ -28,13 +28,15 @@ impl GUI {
         let event_loop = EventLoop::new();
         let config = config! {
             window_title: "x64emu".to_string(),
-            window_size: LogicalSize::from(self.size),
+            //window_size: LogicalSize::from(self.size),
+            window_size: LogicalSize::from((self.size.0*4, self.size.1*4)),
             resizable: true,
             invert_y: false,
         };
         let mut fb = get_fancy(config, &event_loop);
 
         fb.change_buffer_format::<u8>(BufferFormat::RGB);
+        fb.resize_buffer(self.size.0, self.size.1);
 
         let mut resume = time::Instant::now();
         event_loop.run(move |event, _, control_flow| {

@@ -206,7 +206,7 @@ impl VGA {
             MemAcsMode::CHAIN4   => {
                 let sel = (ofs as u8) %4;
                 ofs /= 4;
-                PlaneFlag::from_bits_truncate(sel)
+                PlaneFlag::from_bits_truncate(1 << sel)
             },
         };
 

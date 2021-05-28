@@ -3,11 +3,10 @@ global reg, bsv_video
 
 BITS 16
 bsv_video:
-	call prepare_bsv
-	call dword _bsv_video
-	jmp return_kernel
+	push _bsv_video
+	jmp do_service
 
-prepare_bsv:
+do_service:
 	mov [cs:reg.ax], ax
 	mov [cs:reg.cx], cx
 	mov [cs:reg.dx], dx
@@ -16,9 +15,8 @@ prepare_bsv:
 	mov [cs:reg.ds], ds
 	mov ax, cs
 	mov ds, ax
-	ret
-
-return_kernel:
+	pop ax
+	call eax
 	mov ax, [reg.ax]
 	mov cx, [reg.cx]
 	mov dx, [reg.dx]
