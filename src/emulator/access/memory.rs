@@ -232,7 +232,7 @@ impl super::Access {
 
     pub fn pop_u16(&mut self) -> Result<u16, EmuException> {
         let sp = self.stack_update(2)?;
-        self.get_data16((SgReg::SS, sp-2))
+        self.get_data16((SgReg::SS, sp.wrapping_sub(2)))
     }
 
     pub fn push_u32(&mut self, v: u32) -> Result<(), EmuException> {
@@ -242,7 +242,7 @@ impl super::Access {
 
     pub fn pop_u32(&mut self) -> Result<u32, EmuException> {
         let esp = self.stack_update(4)?;
-        self.get_data32((SgReg::SS, esp-4))
+        self.get_data32((SgReg::SS, esp.wrapping_sub(4)))
     }
 
     pub fn push_u64(&mut self, v: u64) -> Result<(), EmuException> {
@@ -252,7 +252,7 @@ impl super::Access {
 
     pub fn pop_u64(&mut self) -> Result<u64, EmuException> {
         let rsp = self.stack_update(8)?;
-        self.get_data64((SgReg::SS, rsp-8))
+        self.get_data64((SgReg::SS, rsp.wrapping_sub(8)))
     }
 
     pub fn read_p(&self, dst: *mut c_void, src_addr: u64, len: usize) -> usize {
