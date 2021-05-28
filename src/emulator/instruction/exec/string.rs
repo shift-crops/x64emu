@@ -68,12 +68,12 @@ macro_rules! scan_str {
 
 macro_rules! repeat_reg {
     ( $size:expr, $reg:ty ) => { paste::item! {
-        pub fn [<repeat_ $size>](&mut self) -> Result<(), EmuException> {
+        pub fn [<repeat_ $size>](&mut self, cmp: bool) -> Result<(), EmuException> {
             let mut rep = false;
             if let Some(r) = &self.pdata.repeat {
                 self.ac.update_gpreg($reg, -1)?;
-                rep = match (self.ac.get_gpreg($reg)?, r, self.ac.core.rflags.is_zero()) {
-                    (0, _, _) | (_, Rep::REPZ, false) | (_, Rep::REPNZ, true) => false,
+                rep = match (self.ac.get_gpreg($reg)?, cmp, r, self.ac.core.rflags.is_zero()) {
+                    (0, _, _, _) | (_, true, Rep::REPZ, false) | (_, true, Rep::REPNZ, true) => false,
                     _ => true,
                 }
             }

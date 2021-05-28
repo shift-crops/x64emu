@@ -257,7 +257,7 @@ macro_rules! movs_dst_src {
     ( $opsize:expr, $adsize:expr ) => { paste::item! {
         fn [<movs_m $adsize>](exec: &mut exec::Exec) -> Result<(), EmuException> {
             exec.[<move_str $adsize>]()?;
-            exec.[<repeat_ $opsize>]()
+            exec.[<repeat_ $opsize>](false)
         }
     } };
 }
@@ -266,7 +266,7 @@ macro_rules! cmps_src_dst {
     ( $opsize:expr, $adsize:expr ) => { paste::item! {
         fn [<cmps_m $adsize>](exec: &mut exec::Exec) -> Result<(), EmuException> {
             exec.[<cmp_str $adsize>]()?;
-            exec.[<repeat_ $opsize>]()
+            exec.[<repeat_ $opsize>](true)
         }
     } };
 }
@@ -275,7 +275,7 @@ macro_rules! stos_dst_src {
     ( $opsize:expr, $adsize:expr ) => { paste::item! {
         fn [<stos_m $adsize>](exec: &mut exec::Exec) -> Result<(), EmuException> {
             exec.[<store_str $adsize>]()?;
-            exec.[<repeat_ $opsize>]()
+            exec.[<repeat_ $opsize>](false)
         }
     } };
 }
@@ -284,7 +284,7 @@ macro_rules! lods_dst_src {
     ( $opsize:expr, $adsize:expr ) => { paste::item! {
         fn [<lods_m $adsize>](exec: &mut exec::Exec) -> Result<(), EmuException> {
             exec.[<load_str $adsize>]()?;
-            exec.[<repeat_ $opsize>]()
+            exec.[<repeat_ $opsize>](false)
         }
     } };
 }
@@ -293,7 +293,7 @@ macro_rules! scas_src_dst {
     ( $opsize:expr, $adsize:expr ) => { paste::item! {
         fn [<scas_m $adsize>](exec: &mut exec::Exec) -> Result<(), EmuException> {
             exec.[<scan_str $adsize>]()?;
-            exec.[<repeat_ $opsize>]()
+            exec.[<repeat_ $opsize>](true)
         }
     } };
 }
