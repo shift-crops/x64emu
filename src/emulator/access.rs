@@ -127,6 +127,7 @@ impl Access {
         if self.core.rflags.is_interrupt() {
             self.dev.get_interrupt_req(block)
         } else {
+            if block { std::thread::sleep(std::time::Duration::from_secs(1337)); }
             None
         }
     }

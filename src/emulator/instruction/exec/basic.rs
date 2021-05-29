@@ -47,6 +47,30 @@ impl<'a> super::Exec<'a> {
         self.ac.get_gpreg(GpReg8::CL)
     }
 
+    pub fn get_cx(&self) -> Result<u16, EmuException> {
+        self.ac.get_gpreg(GpReg16::CX)
+    }
+
+    pub fn set_cx(&mut self, v: u16) -> Result<(), EmuException> {
+        self.ac.set_gpreg(GpReg16::CX, v)
+    }
+
+    pub fn get_ecx(&self) -> Result<u32, EmuException> {
+        self.ac.get_gpreg(GpReg32::ECX)
+    }
+
+    pub fn set_ecx(&mut self, v: u32) -> Result<(), EmuException> {
+        self.ac.set_gpreg(GpReg32::ECX, v)
+    }
+
+    pub fn get_rcx(&self) -> Result<u64, EmuException> {
+        self.ac.get_gpreg(GpReg64::RCX)
+    }
+
+    pub fn set_rcx(&mut self, v: u64) -> Result<(), EmuException> {
+        self.ac.set_gpreg(GpReg64::RCX, v)
+    }
+
     pub fn get_dx(&self) -> Result<u16, EmuException> {
         self.ac.get_gpreg(GpReg16::DX)
     }

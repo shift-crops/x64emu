@@ -211,7 +211,7 @@ fn code_80(exec: &mut exec::Exec) -> Result<(), EmuException> {
         5 => sub_rm8_imm8(exec)?,
         6 => xor_rm8_imm8(exec)?,
         7 => cmp_rm8_imm8(exec)?,
-        _ => { return Err(EmuException::UnexpectedError); },
+        _ => { panic!("{:?}", EmuException::UnexpectedError); },
     }
     Ok(())
 }
@@ -241,7 +241,7 @@ fn code_c0(exec: &mut exec::Exec) -> Result<(), EmuException> {
         5 => shr_rm8_imm8(exec)?,
         6 => sal_rm8_imm8(exec)?,
         7 => sar_rm8_imm8(exec)?,
-        _ => { return Err(EmuException::UnexpectedError); },
+        _ => { panic!("{:?}", EmuException::UnexpectedError); },
     }
     Ok(())
 }
@@ -269,7 +269,7 @@ fn code_d0(exec: &mut exec::Exec) -> Result<(), EmuException> {
         5 => shr_rm8_one(exec)?,
         6 => sal_rm8_one(exec)?,
         7 => sar_rm8_one(exec)?,
-        _ => { return Err(EmuException::UnexpectedError); },
+        _ => { panic!("{:?}", EmuException::UnexpectedError); },
     }
     Ok(())
 }
@@ -297,7 +297,7 @@ fn code_d2(exec: &mut exec::Exec) -> Result<(), EmuException> {
         5 => shr_rm8_cl(exec)?,
         6 => sal_rm8_cl(exec)?,
         7 => sar_rm8_cl(exec)?,
-        _ => { return Err(EmuException::UnexpectedError); },
+        _ => { panic!("{:?}", EmuException::UnexpectedError); },
     }
     Ok(())
 }
@@ -322,7 +322,7 @@ fn code_f6(exec: &mut exec::Exec) -> Result<(), EmuException> {
         5 => { imul_ah_al_rm8(exec)?; -1},
         6 => { div_al_ah_rm8(exec)?; -1},
         7 => { idiv_al_ah_rm8(exec)?; -1},
-        _ => { return Err(EmuException::UnexpectedError); },
+        _ => { panic!("{:?}", EmuException::UnexpectedError); },
     };
     exec.ac.update_ip(back)
 }
@@ -339,7 +339,7 @@ fn code_fe(exec: &mut exec::Exec) -> Result<(), EmuException> {
     match exec.idata.modrm.reg as u8 {
         0 => inc_rm8(exec)?,
         1 => dec_rm8(exec)?,
-        _ => { return Err(EmuException::UnexpectedError); },
+        _ => { panic!("{:?}", EmuException::UnexpectedError); },
     }
     Ok(())
 }

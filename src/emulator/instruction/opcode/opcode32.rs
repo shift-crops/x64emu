@@ -144,6 +144,10 @@ impl super::OpcodeTrait for Opcode32 {
 
         setop!(0xcf, iret,              OpFlags::NONE);
 
+        setop!(0xe0, loopnz_ecx_imm8,   OpFlags::IMM8);
+        setop!(0xe1, loopz_ecx_imm8,    OpFlags::IMM8);
+        setop!(0xe2, loop_ecx_imm8,     OpFlags::IMM8);
+
         // 0xe4 : in_al_imm8
         setop!(0xe5, in_eax_imm8,       OpFlags::IMM8);
         // 0xe6 : out_imm8_al
@@ -333,6 +337,8 @@ impl Opcode32 {
 
     iret!(32);
 
+    loop_reg!(ecx);
+
     in_reg_port!(32, eax, imm8);
     out_port_reg!(32, imm8, eax);
     call_rel!(32, imm32);
@@ -367,7 +373,7 @@ impl Opcode32 {
             5 => Opcode32::sub_rm32_imm32(exec)?,
             6 => Opcode32::xor_rm32_imm32(exec)?,
             7 => Opcode32::cmp_rm32_imm32(exec)?,
-            _ => { return Err(EmuException::UnexpectedError); },
+            _ => { panic!("{:?}", EmuException::UnexpectedError); },
         }
         Ok(())
     }
@@ -395,7 +401,7 @@ impl Opcode32 {
             5 => Opcode32::sub_rm32_imm8(exec)?,
             6 => Opcode32::xor_rm32_imm8(exec)?,
             7 => Opcode32::cmp_rm32_imm8(exec)?,
-            _ => { return Err(EmuException::UnexpectedError); },
+            _ => { panic!("{:?}", EmuException::UnexpectedError); },
         }
         Ok(())
     }
@@ -421,7 +427,7 @@ impl Opcode32 {
             5 => Opcode32::shr_rm32_imm8(exec)?,
             6 => Opcode32::sal_rm32_imm8(exec)?,
             7 => Opcode32::sar_rm32_imm8(exec)?,
-            _ => { return Err(EmuException::UnexpectedError); },
+            _ => { panic!("{:?}", EmuException::UnexpectedError); },
         }
         Ok(())
     }
@@ -449,7 +455,7 @@ impl Opcode32 {
             5 => Opcode32::shr_rm32_one(exec)?,
             6 => Opcode32::sal_rm32_one(exec)?,
             7 => Opcode32::sar_rm32_one(exec)?,
-            _ => { return Err(EmuException::UnexpectedError); },
+            _ => { panic!("{:?}", EmuException::UnexpectedError); },
         }
         Ok(())
     }
@@ -477,7 +483,7 @@ impl Opcode32 {
             5 => Opcode32::shr_rm32_cl(exec)?,
             6 => Opcode32::sal_rm32_cl(exec)?,
             7 => Opcode32::sar_rm32_cl(exec)?,
-            _ => { return Err(EmuException::UnexpectedError); },
+            _ => { panic!("{:?}", EmuException::UnexpectedError); },
         }
         Ok(())
     }
@@ -502,7 +508,7 @@ impl Opcode32 {
             5 => { Opcode32::imul_edx_eax_rm32(exec)?; -4},
             6 => { Opcode32::div_eax_edx_rm32(exec)?; -4},
             7 => { Opcode32::idiv_eax_edx_rm32(exec)?; -4},
-            _ => { return Err(EmuException::UnexpectedError); },
+            _ => { panic!("{:?}", EmuException::UnexpectedError); },
         };
         exec.ac.update_ip(back)
     }
@@ -524,7 +530,7 @@ impl Opcode32 {
             4 => Opcode32::jmp_abs_rm32(exec)?,
             5 => Opcode32::jmpf_m16_32(exec)?,
             6 => Opcode32::push_rm32(exec)?,
-            _ => { return Err(EmuException::UnexpectedError); },
+            _ => { panic!("{:?}", EmuException::UnexpectedError); },
         }
         Ok(())
     }

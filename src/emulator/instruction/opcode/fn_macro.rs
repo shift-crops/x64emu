@@ -324,6 +324,45 @@ macro_rules! iret {
     } };
 }
 
+macro_rules! loop_reg {
+    ( $reg:ident ) => { paste::item! {
+        fn [<loopnz_ $reg _imm8>](exec: &mut exec::Exec) -> Result<(), EmuException> {
+            let c = exec.[<get_ $reg>]()?.wrapping_sub(1);
+            exec.[<set_ $reg>](c)?;
+            let z = exec.check_rflags_z()?;
+            if(c > 0 && !z){
+                let rel = exec.get_imm8()? as i8;
+                debug!("loopnz: {}", rel);
+                exec.ac.update_ip(rel as i64)?;
+            }
+            Ok(())
+        }
+
+        fn [<loopz_ $reg _imm8>](exec: &mut exec::Exec) -> Result<(), EmuException> {
+            let c = exec.[<get_ $reg>]()?.wrapping_sub(1);
+            exec.[<set_ $reg>](c)?;
+            let z = exec.check_rflags_z()?;
+            if(c > 0 && z){
+                let rel = exec.get_imm8()? as i8;
+                debug!("loopz: {}", rel);
+                exec.ac.update_ip(rel as i64)?;
+            }
+            Ok(())
+        }
+
+        fn [<loop_ $reg _imm8>](exec: &mut exec::Exec) -> Result<(), EmuException> {
+            let c = exec.[<get_ $reg>]()?.wrapping_sub(1);
+            exec.[<set_ $reg>](c)?;
+            if(c > 0){
+                let rel = exec.get_imm8()? as i8;
+                debug!("loop: {}", rel);
+                exec.ac.update_ip(rel as i64)?;
+            }
+            Ok(())
+        }
+    } };
+}
+
 macro_rules! in_reg_port {
     ( $size:expr, $reg:ident, $port:ident ) => { paste::item! {
         fn [<in_ $reg _ $port>](exec: &mut exec::Exec) -> Result<(), EmuException> {
@@ -349,7 +388,7 @@ macro_rules! out_port_reg {
 macro_rules! call_rel {
     ( $size:expr, $rel:ident ) => { paste::item! {
         fn [<call_rel_ $rel>](exec: &mut exec::Exec) -> Result<(), EmuException> {
-            let offs = exec.[<get_ $rel>]()? as i64;
+            let offs = exec.[<get_ $rel>]()? as i!($size) as i64;
             let rip = exec.ac.get_ip()?;
             debug!("call rel: 0x{:04x}", rip as i64 + offs);
             exec.ac.[<push_u $size>](rip as u!($size))?;
@@ -361,7 +400,7 @@ macro_rules! call_rel {
 macro_rules! jmp_rel {
     ( $size:expr, $rel:ident ) => { paste::item! {
         fn [<jmp_rel_ $rel>](exec: &mut exec::Exec) -> Result<(), EmuException> {
-            let rel = exec.[<get_ $rel>]()?;
+            let rel = exec.[<get_ $rel>]()? as i!($size);
             debug!("jmp rel: {:04x}", rel);
             exec.ac.update_ip(rel as i64)
         }

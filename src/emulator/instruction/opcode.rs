@@ -78,6 +78,8 @@ pub(super) trait OpcodeTrait {
     fn flag(&self, opcode: u16) -> OpFlags;
 }
 
-pub fn undefined(_exec: &mut exec::Exec) -> Result<(), EmuException> {
-    Err(EmuException::CPUException(CPUException::UD))
+pub fn undefined(exec: &mut exec::Exec) -> Result<(), EmuException> {
+    //Err(EmuException::CPUException(CPUException::UD))
+    exec.ac.dump();
+    panic!("{:?}", EmuException::CPUException(CPUException::UD));
 }

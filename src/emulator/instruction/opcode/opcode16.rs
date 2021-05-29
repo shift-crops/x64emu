@@ -144,6 +144,10 @@ impl super::OpcodeTrait for Opcode16 {
 
         setop!(0xcf, iret,              OpFlags::NONE);
 
+        setop!(0xe0, loopnz_cx_imm8,    OpFlags::IMM8);
+        setop!(0xe1, loopz_cx_imm8,     OpFlags::IMM8);
+        setop!(0xe2, loop_cx_imm8,      OpFlags::IMM8);
+
         // 0xe4 : in_al_imm8
         setop!(0xe5, in_ax_imm8,        OpFlags::IMM8);
         // 0xe6 : out_imm8_al
@@ -333,6 +337,8 @@ impl Opcode16 {
 
     iret!(16);
 
+    loop_reg!(cx);
+
     in_reg_port!(16, ax, imm8);
     out_port_reg!(16, imm8, ax);
     call_rel!(16, imm16);
@@ -367,7 +373,7 @@ impl Opcode16 {
             5 => Opcode16::sub_rm16_imm16(exec)?,
             6 => Opcode16::xor_rm16_imm16(exec)?,
             7 => Opcode16::cmp_rm16_imm16(exec)?,
-            _ => { return Err(EmuException::UnexpectedError); },
+            _ => { panic!("{:?}", EmuException::UnexpectedError); },
         }
         Ok(())
     }
@@ -395,7 +401,7 @@ impl Opcode16 {
             5 => Opcode16::sub_rm16_imm8(exec)?,
             6 => Opcode16::xor_rm16_imm8(exec)?,
             7 => Opcode16::cmp_rm16_imm8(exec)?,
-            _ => { return Err(EmuException::UnexpectedError); },
+            _ => { panic!("{:?}", EmuException::UnexpectedError); },
         }
         Ok(())
     }
@@ -421,7 +427,7 @@ impl Opcode16 {
             5 => Opcode16::shr_rm16_imm8(exec)?,
             6 => Opcode16::sal_rm16_imm8(exec)?,
             7 => Opcode16::sar_rm16_imm8(exec)?,
-            _ => { return Err(EmuException::UnexpectedError); },
+            _ => { panic!("{:?}", EmuException::UnexpectedError); },
         }
         Ok(())
     }
@@ -449,7 +455,7 @@ impl Opcode16 {
             5 => Opcode16::shr_rm16_one(exec)?,
             6 => Opcode16::sal_rm16_one(exec)?,
             7 => Opcode16::sar_rm16_one(exec)?,
-            _ => { return Err(EmuException::UnexpectedError); },
+            _ => { panic!("{:?}", EmuException::UnexpectedError); },
         }
         Ok(())
     }
@@ -477,7 +483,7 @@ impl Opcode16 {
             5 => Opcode16::shr_rm16_cl(exec)?,
             6 => Opcode16::sal_rm16_cl(exec)?,
             7 => Opcode16::sar_rm16_cl(exec)?,
-            _ => { return Err(EmuException::UnexpectedError); },
+            _ => { panic!("{:?}", EmuException::UnexpectedError); },
         }
         Ok(())
     }
@@ -502,7 +508,7 @@ impl Opcode16 {
             5 => { Opcode16::imul_dx_ax_rm16(exec)?; -2},
             6 => { Opcode16::div_ax_dx_rm16(exec)?; -2},
             7 => { Opcode16::idiv_ax_dx_rm16(exec)?; -2},
-            _ => { return Err(EmuException::UnexpectedError); },
+            _ => { panic!("{:?}", EmuException::UnexpectedError); },
         };
         exec.ac.update_ip(back)
     }
@@ -524,7 +530,7 @@ impl Opcode16 {
             4 => Opcode16::jmp_abs_rm16(exec)?,
             5 => Opcode16::jmpf_m16_16(exec)?,
             6 => Opcode16::push_rm16(exec)?,
-            _ => { return Err(EmuException::UnexpectedError); },
+            _ => { panic!("{:?}", EmuException::UnexpectedError); },
         }
         Ok(())
     }
