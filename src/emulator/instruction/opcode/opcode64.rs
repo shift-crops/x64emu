@@ -143,6 +143,10 @@ impl super::OpcodeTrait for Opcode64 {
 
         setop!(0xcf, iret,              OpFlags::NONE);
 
+        setop!(0xe0, loopnz_rcx_imm8,   OpFlags::IMM8);
+        setop!(0xe1, loopz_rcx_imm8,    OpFlags::IMM8);
+        setop!(0xe2, loop_rcx_imm8,     OpFlags::IMM8);
+
         // 0xe4 : in_al_imm8
         setop!(0xe5, in_eax_imm8,       OpFlags::IMM8);
         // 0xe6 : out_imm8_al
@@ -305,6 +309,8 @@ impl Opcode64 {
 
     iret!(64);
 
+    loop_reg!(rcx);
+
     in_reg_port!(32, eax, imm8);
     out_port_reg!(32, imm8, eax);
     call_rel!(64, imm64);
@@ -339,7 +345,7 @@ impl Opcode64 {
             5 => Opcode64::sub_rm64_imm64(exec)?,
             6 => Opcode64::xor_rm64_imm64(exec)?,
             7 => Opcode64::cmp_rm64_imm64(exec)?,
-            _ => { return Err(EmuException::UnexpectedError); },
+            _ => { panic!("{:?}", EmuException::UnexpectedError); },
         }
         Ok(())
     }
@@ -367,7 +373,7 @@ impl Opcode64 {
             5 => Opcode64::sub_rm64_imm8(exec)?,
             6 => Opcode64::xor_rm64_imm8(exec)?,
             7 => Opcode64::cmp_rm64_imm8(exec)?,
-            _ => { return Err(EmuException::UnexpectedError); },
+            _ => { panic!("{:?}", EmuException::UnexpectedError); },
         }
         Ok(())
     }
@@ -393,7 +399,7 @@ impl Opcode64 {
             5 => Opcode64::shr_rm64_imm8(exec)?,
             6 => Opcode64::sal_rm64_imm8(exec)?,
             7 => Opcode64::sar_rm64_imm8(exec)?,
-            _ => { return Err(EmuException::UnexpectedError); },
+            _ => { panic!("{:?}", EmuException::UnexpectedError); },
         }
         Ok(())
     }
@@ -421,7 +427,7 @@ impl Opcode64 {
             5 => Opcode64::shr_rm64_one(exec)?,
             6 => Opcode64::sal_rm64_one(exec)?,
             7 => Opcode64::sar_rm64_one(exec)?,
-            _ => { return Err(EmuException::UnexpectedError); },
+            _ => { panic!("{:?}", EmuException::UnexpectedError); },
         }
         Ok(())
     }
@@ -449,7 +455,7 @@ impl Opcode64 {
             5 => Opcode64::shr_rm64_cl(exec)?,
             6 => Opcode64::sal_rm64_cl(exec)?,
             7 => Opcode64::sar_rm64_cl(exec)?,
-            _ => { return Err(EmuException::UnexpectedError); },
+            _ => { panic!("{:?}", EmuException::UnexpectedError); },
         }
         Ok(())
     }
@@ -474,7 +480,7 @@ impl Opcode64 {
             5 => { Opcode64::imul_rdx_rax_rm64(exec)?; -8},
             6 => { Opcode64::div_rax_rdx_rm64(exec)?; -8},
             7 => { Opcode64::idiv_rax_rdx_rm64(exec)?; -8},
-            _ => { return Err(EmuException::UnexpectedError); },
+            _ => { panic!("{:?}", EmuException::UnexpectedError); },
         };
         exec.ac.update_ip(back)
     }
@@ -496,7 +502,7 @@ impl Opcode64 {
             4 => Opcode64::jmp_abs_rm64(exec)?,
             5 => Opcode64::jmpf_m16_64(exec)?,
             6 => Opcode64::push_rm64(exec)?,
-            _ => { return Err(EmuException::UnexpectedError); },
+            _ => { panic!("{:?}", EmuException::UnexpectedError); },
         }
         Ok(())
     }
