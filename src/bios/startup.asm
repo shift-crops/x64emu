@@ -15,8 +15,8 @@ start:
 	pusha
 
 	; some initialize process
-	call dword init_vga
 	call dword init_ivt
+	call dword init_vga
 
 	popa
 	mov ds, ax

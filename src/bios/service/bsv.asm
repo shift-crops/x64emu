@@ -3,7 +3,7 @@ global reg, bsv_video
 
 BITS 16
 bsv_video:
-	push _bsv_video
+	push dword _bsv_video
 	jmp do_service
 
 do_service:
@@ -15,7 +15,7 @@ do_service:
 	mov [cs:reg.ds], ds
 	mov ax, cs
 	mov ds, ax
-	pop ax
+	pop eax
 	call eax
 	mov ax, [reg.ax]
 	mov cx, [reg.cx]

@@ -1,6 +1,5 @@
 #include <stdint.h>
 #include "utils.h"
-#include "font8x8.h"
 
 typedef struct {
 	uint8_t red;
@@ -28,10 +27,7 @@ const rgb_t palette[0x10] = {
 	{0x3f, 0x3f, 0x3f}
 };
 
-static void load_font(void);
 static void config_crt(void);
-static void config_seq(void);
-static void config_gc(void);
 static void config_attr(void);
 static void config_dac(void);
 
@@ -41,57 +37,22 @@ void init_vga(void){
 	out_byte(0x3c2, 0x2);    // gr.msr = 2 (mem_ena)
 	out_word(0x3ce, 0xff08); // gc.bmr = 0xff (bit mask)
 
-	load_font();
-
 	config_crt();
-	config_seq();
-	config_gc();
 	config_attr();
 	config_dac();
+
+	asm volatile (
+		"xor ax, ax\n"	// set mode 0
+		"int 0x10\n"
+	);
 
 	sti();
 }
 
-static void load_font(void){
-	out_word(0x3c4, 0x0402); // seq.pmr = 0x4 (mask only plane2)
-	out_word(0x3c4, 0x0604); // seq.mmr = 0x6 (ext_mem, oe_dis)
-
-	out_word(0x3ce, 0x0005); // gc.gmr = 0 (read/write mode : 0)
-	out_word(0x3ce, 0x0006); // gc.mr = 0 (text mode, map mode : 0)
-
-	asm(
-		"mov ax, es\n"
-		"push ax\n"
-		"mov ax, 0xa000\n"
-		"mov es, ax"
-	);
-
-	for(int i=0; i<0x80; i++)
-		memcpy_es((void*)(i*0x20), font8x8_basic[i], 8);
-
-	asm(
-		"pop ax\n"
-		"mov es, ax"
-	);
-}
-
 static void config_crt(void){
-	out_word(0x3b4, 0x2801); // hdeer = 0x28
-	out_word(0x3b4, 0x1912); // vdeer = 0x19
 	out_word(0x3b4, 0x0709); // mslr = 0x7 (scan_count : 8-1)
 	out_word(0x3b4, 0x060a); // tcsr = 0x6 (cur_srt : 6)
 	out_word(0x3b4, 0x270b); // tcer = 0x7 (cur_end : 7, cur_skew : 1)
-}
-
-static void config_seq(void){
-	out_word(0x3c4, 0x0302); // pmr = 0x3 (mask only plane0,1)
-	out_word(0x3c4, 0x0003); // cfr = 0x0 (char font A/B : 0)
-	out_word(0x3c4, 0x0204); // mmr = 0x2 (ext_mem, oe_dis : 0)
-}
-
-static void config_gc(void){
-	out_word(0x3ce, 0x1005); // gmr = 0x10 (oe_cga)
-	out_word(0x3ce, 0x0e06); // mr = 0x0e (oe_decode, map mode : 3)
 }
 
 static void config_attr(void){

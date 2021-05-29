@@ -6,11 +6,11 @@ use mini_gl_fb::{get_fancy, config};
 use mini_gl_fb::core::BufferFormat;
 use mini_gl_fb::glutin::event::*;
 use mini_gl_fb::glutin::event_loop::*;
-use mini_gl_fb::glutin::dpi::LogicalSize;
+use mini_gl_fb::glutin::dpi::*;
 
 
 pub struct GUI {
-    pub buffer: Arc<Mutex<Vec<[u8; 3]>>>,
+    pub buffer: Arc<Mutex<(Vec<[u8; 3]>, (u32, u32))>>,
     size: (u32, u32),
     grab: bool,
 }
@@ -18,7 +18,7 @@ pub struct GUI {
 impl GUI {
     pub fn new(width: u32, height: u32) -> Self {
         Self {
-            buffer: Arc::new(Mutex::new(vec![[0, 0, 0]; (width * height) as usize])),
+            buffer: Arc::new(Mutex::new((vec![[0, 0, 0]; (width*height) as usize], (width, height)))),
             size: (width, height),
             grab: false,
         }
@@ -36,7 +36,6 @@ impl GUI {
         let mut fb = get_fancy(config, &event_loop);
 
         fb.change_buffer_format::<u8>(BufferFormat::RGB);
-        fb.resize_buffer(self.size.0, self.size.1);
 
         let mut resume = time::Instant::now();
         event_loop.run(move |event, _, control_flow| {
@@ -46,7 +45,9 @@ impl GUI {
                 Event::LoopDestroyed => return,
                 Event::NewEvents(StartCause::ResumeTimeReached { .. }) =>  {
                     resume = time::Instant::now() + time::Duration::from_millis(100);
-                    fb.update_buffer(&self.buffer.lock().unwrap());
+                    let buffer = self.buffer.lock().unwrap();
+                    fb.resize_buffer(buffer.1.0, buffer.1.1);
+                    fb.update_buffer(&buffer.0);
                 },
                 Event::WindowEvent { event, .. } => match &event {
                     WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,

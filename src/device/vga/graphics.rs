@@ -85,8 +85,8 @@ impl GraphicCtrl {
         }
     }
 
-    pub fn mask_latch(&self, v: u8, latch: u8) -> u8 {
-        (v & self.bmr) | (latch & !self.bmr)
+    pub fn mask_select(&self, v1: u8, v2: u8) -> u8 {
+        (v1 & self.bmr) | (v2 & !self.bmr)
     }
 }
 

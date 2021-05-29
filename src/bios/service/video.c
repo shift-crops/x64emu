@@ -2,6 +2,7 @@
 #include <stdbool.h>
 #include "utils.h"
 #include "regs.h"
+#include "font8x8.h"
 
 static void set_video_mode(uint8_t mode);
 static void set_cursor_size(uint8_t start, uint8_t end);
@@ -31,19 +32,11 @@ struct VGAState {
     } cursor[8];
 };
 
-static struct VGAState state = {
-    .mode = 1,
-    .cols = 0x28,
-    .rows = 0x19,
-    .page_number = 0,
-    .page_size = 0x800,
-    .cursor = {},
-};
+static struct VGAState state = {};
 static uint8_t seq_pmr;
 static uint8_t seq_mmr;
 static uint8_t gc_gmr;
 static uint8_t gc_mr;
-
 
 void _bsv_video(void) {
     switch(reg.ah) {
@@ -92,14 +85,21 @@ void _bsv_video(void) {
     }
 }
 
+static void clear_planes(void);
+static void load_font(void);
 static void apply_cursor(uint8_t x, uint8_t y);
 static void save_regs(void);
 static void restore_regs(void);
 
 static void set_video_mode(uint8_t mode){
+    clear_planes();
+
     switch(mode) {
+        case 0x00:
         case 0x01:
-            state.page_size = 0x800;
+        case 0x02:
+        case 0x03:
+            load_font();
             out_word(0x3c4, 0x0302); // seq.pmr = 0x03 (mask only plane0,1)
             out_word(0x3c4, 0x0003); // seq.cfr = 0x00 (char font A/B : 0)
             out_word(0x3c4, 0x0204); // seq.mmr = 0x02 (ext_mem, oe_dis : 0)
@@ -109,24 +109,49 @@ static void set_video_mode(uint8_t mode){
             apply_cursor(state.cursor[0].x, state.cursor[0].y);
             break;
         case 0x0d:
-            state.page_size = 0x2000;
+        case 0x0e:
+        case 0x10:
+        case 0x12:
             out_word(0x3c4, 0x0f02); // seq.pmr = 0x0f
             out_word(0x3c4, 0x0604); // seq.mmr = 0x06 (ext_mem, oe_dis)
 
             out_word(0x3ce, 0x0005); // gc.gmr = 0x00
-            out_word(0x3ce, 0x0706); // gc.mr = 0x07 (graph, oe_decode : 0, map mode : 1)
+            out_word(0x3ce, 0x0506); // gc.mr = 0x05 (graph, oe_decode : 0, map mode : 1)
             break;
         case 0x13:
-            state.page_size = 0;
             out_word(0x3c4, 0x0f02); // seq.pmr = 0x0f
             out_word(0x3c4, 0x0e04); // seq.mmr = 0x0e (ext_mem, oe_dis, chain4)
 
             out_word(0x3ce, 0x4005); // gc.gmr = 0x40 (c256)
-            out_word(0x3ce, 0x0106); // gc.mr = 0x01 (graph, oe_decode : 0, map mode : 0)
+            out_word(0x3ce, 0x0506); // gc.mr = 0x01 (graph, oe_decode : 0, map mode : 1)
             break;
         default:
             reg.al = 0xff;
             return;
+    }
+
+    switch(mode) {
+        case 0x00:
+        case 0x01:
+            state.page_size = 0x800;
+            break;
+        case 0x02:
+        case 0x03:
+            state.page_size = 0x1000;
+            break;
+        case 0x0d:
+            state.page_size = 0x2000;
+            break;
+        case 0x0e:
+            state.page_size = 0x4000;
+            break;
+        case 0x10:
+            state.page_size = 0x8000;
+            break;
+        case 0x12:
+        case 0x13:
+            state.page_size = 0;
+            break;
     }
 
     switch(mode) {
@@ -226,7 +251,7 @@ static void scroll_up(uint8_t count, uint8_t attr, uint8_t cols, uint8_t rows){
     out_word(0x3ce, 0x0005); // gc.gmr = 0x00 (read/write mode : 0)
     out_word(0x3ce, 0x0006); // gc.mr = 0x00 (oe_decode : 0, map mode : 0)
 
-    asm(
+    asm volatile(
         "mov ax, ds\n"
         "push ax\n"
         "mov ax, es\n"
@@ -255,7 +280,7 @@ static void scroll_up(uint8_t count, uint8_t attr, uint8_t cols, uint8_t rows){
         }
     }
 
-    asm(
+    asm volatile(
         "pop ax\n"
         "mov es, ax\n"
         "pop ax\n"
@@ -276,7 +301,7 @@ static void scroll_down(uint8_t count, uint8_t attr, uint8_t cols, uint8_t rows)
     out_word(0x3ce, 0x0005); // gc.gmr = 0x00 (read/write mode : 0)
     out_word(0x3ce, 0x0006); // gc.mr = 0x00 (oe_decode : 0, map mode : 0)
 
-    asm(
+    asm volatile(
         "mov ax, ds\n"
         "push ax\n"
         "mov ax, es\n"
@@ -304,7 +329,7 @@ static void scroll_down(uint8_t count, uint8_t attr, uint8_t cols, uint8_t rows)
         }
     }
 
-    asm(
+    asm volatile(
         "pop ax\n"
         "mov es, ax\n"
         "pop ax\n"
@@ -324,7 +349,7 @@ static void read_char_attr(uint8_t page){
     out_word(0x3ce, 0x0005); // gc.gmr = 0x00 (read/write mode : 0)
     out_word(0x3ce, 0x0e06); // gc.mr = 0x0e (oe_decode, map mode : 3)
 
-    asm(
+    asm volatile(
         "mov dx, ds\n"
         "push dx\n"
         "mov ds, %1\n"
@@ -349,7 +374,7 @@ static void write_char_attr(uint8_t page, uint8_t chr, uint8_t attr, uint16_t co
     out_word(0x3ce, 0x0005); // gc.gmr = 0x00 (read/write mode : 0)
     out_word(0x3ce, 0x0e06); // gc.mr = 0x0e (oe_decode, map mode : 3)
 
-    asm(
+    asm volatile(
         "mov dx, es\n"
         "push dx\n"
         "mov es, %0\n"
@@ -372,7 +397,7 @@ static void write_char(uint8_t page, uint8_t chr, uint16_t count){
     out_word(0x3ce, 0x0005); // gc.gmr = 0x00 (read/write mode : 0)
     out_word(0x3ce, 0x0006); // gc.mr = 0x00 (oe_decode : 0, map mode : 0)
 
-    asm(
+    asm volatile(
         "mov dx, es\n"
         "push dx\n"
         "mov es, %0\n"
@@ -401,7 +426,7 @@ static void write_teletype(uint8_t page, uint8_t chr, uint8_t attr){
     out_word(0x3ce, 0x0005); // gc.gmr = 0x00 (read/write mode : 0)
     out_word(0x3ce, 0x0e06); // gc.mr = 0x0e (oe_decode, map mode : 3)
 
-    asm(
+    asm volatile(
         "mov dx, es\n"
         "push dx\n"
         "mov es, %0\n"
@@ -445,7 +470,7 @@ static void write_string(uint8_t mode, uint16_t buf, uint8_t attr, uint8_t x, ui
     out_word(0x3ce, 0x0005); // gc.gmr = 0x00 (read/write mode : 0)
     out_word(0x3ce, 0x0006); // gc.mr = 0x00 (oe_decode : 0, map mode : 0)
 
-    asm(
+    asm volatile(
         "mov ax, ds\n"
         "push ax\n"
         "mov ax, es\n"
@@ -460,7 +485,7 @@ static void write_string(uint8_t mode, uint16_t buf, uint8_t attr, uint8_t x, ui
         memset_es((void*)(uint32_t)dst_idx, attr, len+1);
     }
 
-    asm(
+    asm volatile(
         "pop ax\n"
         "mov es, ax\n"
         "pop ax\n"
@@ -472,6 +497,55 @@ static void write_string(uint8_t mode, uint16_t buf, uint8_t attr, uint8_t x, ui
         dst_idx += len;
         set_cursor_position(state.page_number, dst_idx % state.cols, dst_idx / state.cols);
     }
+}
+
+static void clear_planes(void){
+    out_word(0x3c4, 0x0f02); // seq.pmr = 0x0f
+	out_word(0x3c4, 0x0604); // seq.mmr = 0x6 (ext_mem, oe_dis)
+
+	out_word(0x3ce, 0x0005); // gc.gmr = 0 (read/write mode : 0)
+	out_word(0x3ce, 0x0006); // gc.mr = 0 (map mode : 0)
+
+	asm volatile(
+		"mov ax, es\n"
+		"push ax\n"
+		"pushf\n"
+
+		"mov ax, 0xa000\n"
+		"mov es, ax\n"
+	    "xor di, di\n"
+	    "xor eax, eax\n"
+		"mov ecx, 0x4000\n"
+	    "cld\n"
+	    "rep stosd\n"
+
+		"popf\n"
+		"pop ax\n"
+		"mov es, ax"
+	);
+}
+
+static void load_font(void){
+	out_word(0x3c4, 0x0402); // seq.pmr = 0x4 (mask only plane2)
+	out_word(0x3c4, 0x0604); // seq.mmr = 0x6 (ext_mem, oe_dis)
+
+	out_word(0x3ce, 0x0005); // gc.gmr = 0 (read/write mode : 0)
+	out_word(0x3ce, 0x0006); // gc.mr = 0 (text mode, map mode : 0)
+
+	asm volatile(
+		"mov ax, es\n"
+		"push ax\n"
+		"mov ax, 0xa000\n"
+		"mov es, ax"
+	);
+
+	for(int i=0; i<0x80; i++)
+		memcpy_es((void*)(i*0x20), font8x8_basic[i], 8);
+
+	asm volatile(
+		"pop ax\n"
+		"mov es, ax"
+	);
 }
 
 static void apply_cursor(uint8_t x, uint8_t y){

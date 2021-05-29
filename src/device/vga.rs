@@ -63,7 +63,7 @@ pub struct VGA {
 }
 
 impl VGA {
-    pub fn new(image: Arc<Mutex<Vec<[u8; 3]>>>) -> (Reg, Vram) {
+    pub fn new(image: Arc<Mutex<(Vec<[u8; 3]>, (u32, u32))>>) -> (Reg, Vram) {
         let mut crt: crt::CRT = Default::default();
         crt.hdeer = 40;
         crt.vdeer = 25;
@@ -95,9 +95,15 @@ impl VGA {
         (Reg(vga.clone()), Vram(vga.clone()))
     }
 
-    fn refresh(&self, buf: &mut Vec<[u8; 3]>, fc: u8) -> () {
+    fn refresh(&self, buf: &mut (Vec<[u8; 3]>, (u32, u32)), fc: u8) -> () {
+        let size = self.crt.get_windowsize();
+        if size != buf.1 {
+            buf.0 = vec![[0, 0, 0]; (size.0*size.1) as usize];
+            buf.1 = size;
+        }
+
         let base = self.crt.get_startaddr() as usize;
-        for i in 0..buf.len() {
+        for i in 0..buf.0.len() {
             let attr_idx = match self.gmode {
                 GraphicMode::TEXT => {
                     let (cur_frq, chr_frq) = ((fc/3) % 2 == 0, (fc/6) % 2 == 0);
@@ -149,7 +155,7 @@ impl VGA {
             };
 
             let dac_idx = if let GraphicMode::GRAPHIC_256 = self.gmode { attr_idx } else { self.atr.dac_index(attr_idx) };
-            buf[i] = self.dac.get_palette(dac_idx);
+            buf.0[i] = self.dac.get_palette(dac_idx);
         }
     }
 
@@ -335,7 +341,7 @@ impl super::MemoryIO for Vram {
 
                         let v = vga.gc.set_reset(i, Some(rot));
                         let v = vga.gc.calc_latch(v, latch);
-                        let v = vga.gc.mask_latch(v, latch);
+                        let v = vga.gc.mask_select(v, latch);
                         vga.write_plane(i, ofs, v);
                     }
                 },
@@ -346,18 +352,19 @@ impl super::MemoryIO for Vram {
 
                         let v = if (val >> i) & 1 == 0 { 0 } else { 0xff };
                         let v = vga.gc.calc_latch(v, latch);
-                        let v = vga.gc.mask_latch(v, latch);
+                        let v = vga.gc.mask_select(v, latch);
                         vga.write_plane(i, ofs, v);
                     }
                 },
                 3 => {
                     let rot = vga.gc.rotate(val);
-                    let mask = vga.gc.mask_latch(rot, 0);
+                    let mask = vga.gc.mask_select(rot, 0); // and with mask register
                     for i in 0..4 {
                         if !pf.check(i) { continue; }
 
                         let sr = vga.gc.set_reset(i, None);
-                        vga.write_plane(i, ofs, (sr & mask) | (latch & !mask));
+                        let v = vga.gc.calc_latch(sr, latch);
+                        vga.write_plane(i, ofs, (v & mask) | (latch & !mask));
                     }
                 },
                 _ => panic!("Unknown write mode: {}", vga.gc.gmr.write),

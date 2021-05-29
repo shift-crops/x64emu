@@ -135,7 +135,7 @@ impl Device {
         (irq_tx, res_tx))
     }
 
-    pub fn init_devices(&mut self, chan: (Sender<u8>, Sender<IOResult>), mem: Arc<RwLock<memory::Memory>>, imgbuf: Arc<Mutex<Vec<[u8; 3]>>>) {
+    pub fn init_devices(&mut self, chan: (Sender<u8>, Sender<IOResult>), mem: Arc<RwLock<memory::Memory>>, imgbuf: Arc<Mutex<(Vec<[u8; 3]>, (u32, u32))>>) {
         let (irq_tx, res_tx) = chan;
 
         self.memio_range.push(0x1000..0x1000+0x100);
