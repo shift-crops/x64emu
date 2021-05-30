@@ -72,7 +72,7 @@ impl GraphicCtrl {
         let sr = if super::PlaneFlag::from(self.spr).check(n) { 0xff } else { 0 };
 
         if let Some(v) = v {
-            if super::PlaneFlag::from(self.espr).check(n) {sr } else { v }
+            if super::PlaneFlag::from(self.espr).check(n) { sr } else { v }
         } else { sr }
     }
 

@@ -1,4 +1,5 @@
 mod vga;
+mod keymouse;
 mod testtimer;
 mod testdma;
 
@@ -10,6 +11,7 @@ use std::sync::mpsc::{Receiver, Sender};
 use std::collections::VecDeque;
 
 use super::hardware::memory;
+use super::interface::gui;
 
 pub struct Device {
     io_req_que: Arc<IOQueue<IORequest>>,
@@ -135,8 +137,8 @@ impl Device {
         (irq_tx, res_tx))
     }
 
-    pub fn init_devices(&mut self, chan: (Sender<u8>, Sender<IOResult>), mem: Arc<RwLock<memory::Memory>>, imgbuf: Arc<Mutex<(Vec<[u8; 3]>, (u32, u32))>>) {
-        let (irq_tx, res_tx) = chan;
+    pub fn init_devices(&mut self, chan_dev: (Sender<u8>, Sender<IOResult>), mem: Arc<RwLock<memory::Memory>>, chan_gui: Receiver<gui::InputEvent>, imgbuf: Arc<Mutex<gui::ImageBuffer>>) {
+        let (irq_tx, res_tx) = chan_dev;
 
         self.memio_range.push(0x1000..0x1000+0x100);
         self.memio_range.push(0xa0000..0xa0000+0x20000);
@@ -147,15 +149,18 @@ impl Device {
             let mut memory_io_map: MemoryIOMap = Vec::new();
 
             let mut vga = vga::VGA::new(imgbuf);
-            let (mut tst_dma_ctl, mut tst_dma_adr) = testdma::TestDMA::new(IReq::new(&irq_tx, 1), mem.clone());
-            let mut tst_timer = testtimer::TestTimer::new(IReq::new(&irq_tx, 2));
+            let mut km = keymouse::KeyMouse::new(IReq::new(&irq_tx, 1), IReq::new(&irq_tx, 12), chan_gui);
 
+            port_io_map.push((0x60..0x60+8, &mut km));
             port_io_map.push((0x3b4..0x3e0, &mut vga.0));
+
+            memory_io_map.push((0xa0000..0xa0000+0x20000, &mut vga.1));
+
+            let (mut tst_dma_ctl, mut tst_dma_adr) = testdma::TestDMA::new(IReq::new(&irq_tx, 16), mem.clone());
+            let mut tst_timer = testtimer::TestTimer::new(IReq::new(&irq_tx, 17));
             port_io_map.push((0x10..0x10+1, &mut tst_dma_ctl));
             port_io_map.push((0x20..0x20+1, &mut tst_timer));
-
             memory_io_map.push((0x1000..0x1000+0x10, &mut tst_dma_adr));
-            memory_io_map.push((0xa0000..0xa0000+0x20000, &mut vga.1));
 
             Self::io_handle(port_io_map, memory_io_map, req_que, res_tx);
         });

@@ -9,6 +9,8 @@ use std::{thread, time};
 use std::sync::{Arc, Mutex, RwLock};
 use packed_struct::prelude::*;
 
+use crate::interface::gui;
+
 enum GraphicMode { TEXT, GRAPHIC, GRAPHIC_SHIFT, GRAPHIC_256 }
 enum MemAcsMode  { ODD_EVEN, SEQUENCE, CHAIN4 }
 
@@ -63,7 +65,7 @@ pub struct VGA {
 }
 
 impl VGA {
-    pub fn new(image: Arc<Mutex<(Vec<[u8; 3]>, (u32, u32))>>) -> (Reg, Vram) {
+    pub fn new(image: Arc<Mutex<gui::ImageBuffer>>) -> (VRegAccess, VRamAccess) {
         let mut crt: crt::CRT = Default::default();
         crt.hdeer = 40;
         crt.vdeer = 25;
@@ -92,18 +94,18 @@ impl VGA {
             }
         });
 
-        (Reg(vga.clone()), Vram(vga.clone()))
+        (VRegAccess(vga.clone()), VRamAccess(vga.clone()))
     }
 
-    fn refresh(&self, buf: &mut (Vec<[u8; 3]>, (u32, u32)), fc: u8) -> () {
+    fn refresh(&self, imgbuf: &mut gui::ImageBuffer, fc: u8) -> () {
         let size = self.crt.get_windowsize();
-        if size != buf.1 {
-            buf.0 = vec![[0, 0, 0]; (size.0*size.1) as usize];
-            buf.1 = size;
+        if size != imgbuf.size {
+            imgbuf.buf = vec![[0, 0, 0]; (size.0*size.1) as usize];
+            imgbuf.size = size;
         }
 
         let base = self.crt.get_startaddr() as usize;
-        for i in 0..buf.0.len() {
+        for i in 0..imgbuf.buf.len() {
             let attr_idx = match self.gmode {
                 GraphicMode::TEXT => {
                     let (cur_frq, chr_frq) = ((fc/3) % 2 == 0, (fc/6) % 2 == 0);
@@ -155,7 +157,7 @@ impl VGA {
             };
 
             let dac_idx = if let GraphicMode::GRAPHIC_256 = self.gmode { attr_idx } else { self.atr.dac_index(attr_idx) };
-            buf.0[i] = self.dac.get_palette(dac_idx);
+            imgbuf.buf[i] = self.dac.get_palette(dac_idx);
         }
     }
 
@@ -175,14 +177,6 @@ impl VGA {
 
     fn write_plane(&mut self, n: u8, ofs: u16, v: u8) -> () {
         self.plane[n as usize][ofs as usize] = v;
-    }
-
-    fn write_planes(&mut self, pf: PlaneFlag, ofs: u16, v: u8) -> () {
-        for i in 0..4 {
-            if pf.check(i) {
-                self.write_plane(i, ofs, v);
-            }
-        }
     }
 
     fn plane_offset(&self, mut ofs: u32) -> Option<(PlaneFlag, u16)> {
@@ -220,9 +214,9 @@ impl VGA {
     }
 }
 
-pub struct Reg(Arc<RwLock<VGA>>);
+pub struct VRegAccess(Arc<RwLock<VGA>>);
 
-impl super::PortIO for Reg {
+impl super::PortIO for VRegAccess {
     fn in8(&self, addr: u16) -> u8 {
         let mut vga = self.0.write().unwrap();
         match (addr, vga.gr.msr.io_sel) {
@@ -292,9 +286,9 @@ impl super::PortIO for Reg {
     }
 }
 
-pub struct Vram(Arc<RwLock<VGA>>);
+pub struct VRamAccess(Arc<RwLock<VGA>>);
 
-impl super::MemoryIO for Vram {
+impl super::MemoryIO for VRamAccess {
     fn read8(&self, ofs: u64) -> u8 {
         let mut vga = self.0.write().unwrap();
         if !vga.gr.msr.mem_ena { return 0; }
@@ -345,7 +339,13 @@ impl super::MemoryIO for Vram {
                         vga.write_plane(i, ofs, v);
                     }
                 },
-                1 => vga.write_planes(pf, ofs, latch),
+                1 => {
+                    for i in 0..4 {
+                        if pf.check(i) {
+                            vga.write_plane(i, ofs, latch);
+                        }
+                    }
+                },
                 2 => {
                     for i in 0..4 {
                         if !pf.check(i) { continue; }

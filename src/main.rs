@@ -19,10 +19,10 @@ fn main() {
     env_logger::init();
 
     let hw  = hardware::Hardware::new(0x400*0x400);
-    let gui = interface::gui::GUI::new(320, 200);
+    let (gui, chan_gui) = interface::gui::GUI::new();
 
     let (mut dev, chan_dev)  = device::Device::new();
-    dev.init_devices(chan_dev, hw.mem.clone(), gui.buffer.clone());
+    dev.init_devices(chan_dev, hw.mem.clone(), chan_gui, gui.imgbuf.clone());
 
     let mut emu = emulator::Emulator::new(hw, dev);
 
@@ -42,7 +42,7 @@ fn main() {
             emu.run();
         }
     });
-    gui.persistent();
+    gui.persistent(320*4, 200*4);
 }
 
 fn print_usage(program: &str, opts: &Options) {
